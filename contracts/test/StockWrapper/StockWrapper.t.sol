@@ -8,6 +8,8 @@ import {StockWrapper} from "../../src/StockWrapper.sol";
 import {IStockWrapper} from "../../src/interfaces/IStockWrapper.sol";
 import {MockStockToken} from "../mocks/MockStockToken.sol";
 import {MorphoDeployer} from "../utils/MorphoDeployer.sol";
+import {BlocklistHolderAllowlist} from "../../src/adapters/BlocklistHolderAllowlist.sol";
+import {MockAccessControlsRegistry} from "../mocks/MockAccessControlsRegistry.sol";
 
 contract StockWrapperTest is Test {
     MockStockToken internal nvda;
@@ -291,5 +293,70 @@ contract StockWrapperTest is Test {
         // A later wrap still mints exactly what it receives; the donation does not leak into it.
         _wrap(alice, 1e18, bob);
         assertEq(wNVDA.balanceOf(bob), 1e18);
+    }
+
+    // ------------------------------------------------------------------ LM-R8: backingShortfall (D10 R1)
+
+    function test_LM_R8_backingShortfallIsZeroWhenBacked() public {
+        assertEq(wNVDA.backingShortfall(), 0);
+        _wrap(alice, 10e18, alice);
+        assertEq(wNVDA.backingShortfall(), 0);
+        vm.prank(alice);
+        nvda.transfer(address(wNVDA), 3e18); // a donation is surplus, never a shortfall
+        assertEq(wNVDA.backingShortfall(), 0);
+    }
+
+    /// The failure mode LM-R7 (restated) excludes: the issuer's `adminBurn` on the wrapper. First unwrappers exit
+    /// whole, the last units revert, and `backingShortfall()` reports the gap for the P0 alert.
+    function test_LM_R7_R8_adminBurnBreaksBackingAndShowsShortfall() public {
+        _wrap(alice, 10e18, alice);
+        _wrap(alice, 5e18, bob);
+        nvda.adminBurn(address(wNVDA), 4e18);
+
+        assertLt(nvda.balanceOf(address(wNVDA)), wNVDA.totalSupply(), "LM-R7 no longer holds");
+        assertEq(wNVDA.backingShortfall(), 4e18);
+
+        vm.prank(alice);
+        wNVDA.unwrap(10e18, alice); // first out is whole
+        assertEq(wNVDA.backingShortfall(), 4e18);
+
+        vm.prank(bob);
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, address(wNVDA), 1e18, 5e18)
+        );
+        wNVDA.unwrap(5e18, bob);
+        vm.prank(bob);
+        wNVDA.unwrap(1e18, bob); // only the backed remainder can leave
+        assertEq(wNVDA.backingShortfall(), 4e18);
+        assertEq(nvda.balanceOf(address(wNVDA)), 0);
+    }
+
+    // ------------------------------------------------------------------ LM-R6: BlocklistHolderAllowlist (D10 R3)
+
+    function test_LM_R6_blocklistAdapterPrechecksRecipient() public {
+        MockAccessControlsRegistry registry = new MockAccessControlsRegistry();
+        BlocklistHolderAllowlist adapter = new BlocklistHolderAllowlist(address(registry));
+        StockWrapper w = new StockWrapper(address(nvda), "NVDA", address(adapter));
+        vm.startPrank(alice);
+        nvda.approve(address(w), type(uint256).max);
+        w.wrap(10e18, alice);
+        vm.stopPrank();
+
+        assertTrue(adapter.isAllowed(bob));
+        registry.setBlocked(bob, true);
+        assertFalse(adapter.isAllowed(bob));
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(IStockWrapper.RecipientNotAllowed.selector, bob));
+        w.unwrap(1e18, bob);
+
+        registry.setBlocked(bob, false);
+        vm.prank(alice);
+        w.unwrap(1e18, bob);
+        assertEq(nvda.balanceOf(bob), 1e18);
+    }
+
+    function test_LM_R6_blocklistAdapterRejectsZeroRegistry() public {
+        vm.expectRevert(BlocklistHolderAllowlist.ZeroAddress.selector);
+        new BlocklistHolderAllowlist(address(0));
     }
 }

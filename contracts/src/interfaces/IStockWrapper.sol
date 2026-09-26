@@ -21,4 +21,6 @@ interface IStockWrapper is IERC20Metadata {
     function unwrap(uint256 amount, address to) external returns (uint256 rawOut);
     function multiplier() external view returns (uint256); // 1e18 = 1.0
     function underlyingEquivalent(uint256 amount) external view returns (uint256);
+    /// @notice LM-R8: wrapper units not backed by held Stock Tokens (non-zero only after an issuer `adminBurn`).
+    function backingShortfall() external view returns (uint256);
 }

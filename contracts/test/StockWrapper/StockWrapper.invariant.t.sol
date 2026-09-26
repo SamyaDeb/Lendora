@@ -119,6 +119,11 @@ contract StockWrapperInvariantTest is Test {
         assertEq(sum, wrapper.totalSupply());
     }
 
+    /// LM-R8: without an issuer `adminBurn` (the handler never calls it) there is never a shortfall.
+    function invariant_LM_R8_noShortfallWithoutAdminBurn() public view {
+        assertEq(wrapper.backingShortfall(), 0);
+    }
+
     /// LM-R3: the wrapper always reports the token's effective multiplier.
     function invariant_LM_R3_multiplierPassThrough() public view {
         assertEq(wrapper.multiplier(), stock.uiMultiplier());

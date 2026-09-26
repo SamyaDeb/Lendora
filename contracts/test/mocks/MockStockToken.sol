@@ -94,6 +94,11 @@ contract MockStockToken is ERC20, IScaledUIAmount, IHolderAllowlist {
         _burn(from, amount);
     }
 
+    /// @notice Live signature (`Stock.adminBurn`): burns from any address with no pause or blocklist check (D10 R1).
+    function adminBurn(address from, uint256 amount) external {
+        _burn(from, amount);
+    }
+
     function setAllowlistEnabled(bool enabled) external {
         allowlistEnabled = enabled;
     }

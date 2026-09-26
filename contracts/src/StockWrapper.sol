@@ -14,7 +14,15 @@ import {IScaledUIAmount} from "./interfaces/external/IScaledUIAmount.sol";
 /// @notice Fixed-balance ERC-20 wrapper of one Stock Token, so Morpho Blue only ever sees a plain ERC-20 (LM-R1…R7).
 /// One wrapper unit is one raw Stock Token unit. Corporate actions change the ERC-8056 multiplier, never balances.
 /// @dev No owner, no pause, no upgrade path (LM-R5). Stock Tokens sent here without `wrap` are not backed by any
-/// wrapper unit and cannot be recovered; `underlying.balanceOf(this) >= totalSupply()` always holds (LM-R7).
+/// wrapper unit and cannot be recovered.
+///
+/// Issuer powers this contract cannot prevent (verified Phase 0, docs/phase0/01-chain-facts.md §3.2):
+/// - Pause (per token or global) and blocklisting of this wrapper or a recipient make `wrap`/`unwrap` revert with the
+///   token's own `IsPaused()` / `Blocked(account)` errors. Wrapped units keep moving, so Morpho accounting keeps
+/// working (LM-R5 as restated: anyone can unwrap whenever the Stock Token allows transfers).
+/// - `adminBurn(address(this), x)` burns backing with no pause or blocklist check. `underlying.balanceOf(this) >=
+///   totalSupply()` (LM-R7) therefore holds only absent `adminBurn`; afterwards the last `x` units cannot be unwrapped.
+///   `backingShortfall()` (LM-R8) exposes the gap so monitoring can page (P0) without any event or state change here.
 contract StockWrapper is ERC20, IStockWrapper {
     using SafeERC20 for IERC20;
 
@@ -67,7 +75,7 @@ contract StockWrapper is ERC20, IStockWrapper {
     }
 
     /// @notice Burns `amount` of the caller's wrapper units and sends the same raw Stock Token units to `to` (LM-R1).
-    /// Open to any holder at any time, including liquidators (LM-R5).
+    /// Open to any holder, including liquidators, whenever the Stock Token allows the transfer (LM-R5).
     function unwrap(uint256 amount, address to) external returns (uint256 rawOut) {
         if (amount == 0) revert ZeroAmount();
         if (to == address(0)) revert ZeroAddress();
@@ -85,6 +93,15 @@ contract StockWrapper is ERC20, IStockWrapper {
     /// corporate action is visible in the same block it takes effect.
     function multiplier() public view returns (uint256) {
         return IScaledUIAmount(address(_underlying)).uiMultiplier();
+    }
+
+    /// @notice Wrapper units not backed by the Stock Token held here: `max(0, totalSupply − balance)` (LM-R8).
+    /// @dev Zero unless the issuer has `adminBurn`ed this contract's balance (or the underlying misbehaves). A pure
+    /// view: the monitoring hook is to read it every block and page on any non-zero value.
+    function backingShortfall() external view returns (uint256) {
+        uint256 backing = _underlying.balanceOf(address(this));
+        uint256 supply = totalSupply();
+        return supply > backing ? supply - backing : 0;
     }
 
     /// @notice Shares of the underlying stock represented by `amount` wrapper units, rounded down (LM-R3).
