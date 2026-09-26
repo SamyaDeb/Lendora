@@ -12,7 +12,8 @@ Stock Tokens can be bought, held and borrowed *against*, but they cannot be borr
 - **No shorting.** When a token trades above its real stock, only buyers can act, so prices drift high (Miller, 1977).
 - **Broken weekends.** Minting and burning pause from Saturday to Monday, and Chainlink stock feeds freeze from Friday ~20:00 ET (end of post-market)
   to Sunday 20:00 ET (verified Phase 0, 2026-09-26).
-  Premiums of about 12% have been documented.
+  Off-hours DEX prices drift from the frozen feed; Phase 0 measured weekend premiums of up to 2.5% for SPY, NVDA and
+  AAPL (July–September 2026, [WS-C §5](../../sim/reports/phase0-weekend-gaps.md)).
 - **Missing yield.** Stablecoins on the chain have few places to earn beyond basic lending.
 
 ## Goals (v1, through guarded mainnet)

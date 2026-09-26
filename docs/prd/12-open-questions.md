@@ -18,6 +18,34 @@ is "no".
 - [~] **Liquidators.** Which Morpho liquidator operators run on Robinhood Chain? Will they add `clUSDG` unwrap support? Affects the fallback liquidator's importance. **Phase 0:** 248 Morpho liquidations by 65 distinct callers; none yet in stock-loan markets. **Open:** whether operators will add `clUSDG` unwrap (outreach). Evidence: [01 §8](../phase0/01-chain-facts.md#8-liquidators).
 - [~] **Perp venues.** Which venues list these stocks (Lighter, Arcus)? Funding history, depth, weekend trading, and whether contracts can hold margin. Affects [08](08-delta-neutral-vault.md). **Phase 0:** Lighter (RH instance) lists SPY/NVDA/AAPL perps, trades on weekends, publishes hourly funding. Arcus lists stock perps (details unverified). **Open (UNVERIFIED):** contract-held margin accounts. Evidence: [01 §7](../phase0/01-chain-facts.md#7-perp-venues-phase-4).
 
+## Phase 0 decisions (applied 2026-09-27)
+
+All approved decisions from [`../phase0/04-prd-decisions.md`](../phase0/04-prd-decisions.md) are applied to the PRD.
+
+| # | Decision | Applied in |
+|---|---|---|
+| D1 | `P_wrapped = chainlink(STOCK/USD)`; multiplier for display and guard only | [04 §1](04-oracle.md#1-price-math) (OR-R1, OR-R3, both formulas), OR-R22, [08](08-delta-neutral-vault.md) DN-R4, [07](07-short-interest.md) |
+| D2 | `overnightMode` on, overnight buffer 0; `MarketHours` models feed sessions; 4h ramp-in, ramp-out on first fresh round | [04 §2–3](04-oracle.md#2-markethours) (OR-R10, R11, R13, R20, R23), [10](10-risk-compliance.md#launch-parameters) |
+| D3 | OR-R6: optional sequencer uptime feed + keeper L2 gap detection | [04 §1](04-oracle.md#1-price-math) (OR-R6), [04 §4](04-oracle.md#4-guards), [10](10-risk-compliance.md) alerts |
+| D4 | Guard trips on `oraclePaused()`, `paused()`, blocked wrapper; OR-R7 sanity band | [04 §1, §4](04-oracle.md#4-guards) (OR-R2, OR-R7, OR-R30–R32), [03](03-lending-markets.md) LM-R5 |
+| D5 | Event windows + event buffers (NVDA ≥ 10%, AAPL ≥ 8%); pre-earnings liquidity pull; LLTV 77% kept; instant-drop property | [04](04-oracle.md) OR-R8, OR-R10, OR-R14, OR-R20, [03 §4](03-lending-markets.md#4-allocator-keeper-utilization-cap-and-borrow-pause) LM-R31, [05](05-collateral-router.md) RT-R1, [10](10-risk-compliance.md) |
+| D6 | Morpho Vault V2 via the official factory; no idle market; relative caps; `deallocate` on guard trip; Sentinel = Guardian | [03 §3–4](03-lending-markets.md#3-lender-vault-morpho-vault-v2-rnvda-d6) (LM-R20–R23, LM-R30–R34), [02](02-architecture.md) contracts and roles, [05](05-collateral-router.md) |
+| D7 | A1–A8 status | table below |
+| D8 | DEX floor off; caps SPY $1M / NVDA $1M / AAPL $250k; per-address $75k / $250k / $35k; σ 17/52/28%, z 2.5; "~12%" line dropped | [10](10-risk-compliance.md#launch-parameters), [04 §3–4](04-oracle.md#3-closure-and-event-buffers), [05](05-collateral-router.md) RT-R1, [00](00-overview.md), [litepaper](../LITEPAPER.md) |
+| D9 | Keep the `StockWrapper` | [03 §1](03-lending-markets.md#1-stockwrapper) |
+| D10 | R1 LM-R7 + LM-R8 `backingShortfall`; R2 LM-R5; R3 LM-R6 + optional adapter; R4 comment; R5 mocks; R6 `vault-v2` submodule | [03 §1](03-lending-markets.md#1-stockwrapper), [11](11-milestones.md) tasks 3b, 3c, 7 |
+
+**Proposals raised while applying (need your OK; built as configurable so nothing blocks):**
+
+- **OR-R3 quiet multiplier step.** Phase 0 saw dividend multiplier updates on SPY, NVDA and AAPL with no
+  `oraclePaused()` window (01 §3.2–3.3). The strict D1 rule would trip the guard on every dividend and need a 48h
+  timelock to clear. Proposed: changes ≤ `maxQuietMultiplierStep` (default 5%) need no pause window; splits and
+  anything larger still do. Set it to 0 for the strict rule.
+- **Event timing (OR-R14).** The event buffer protects only if the release (first round at/after `endTs`) coincides with
+  the jump round, exactly like the Monday open. That makes `endTs` timing-sensitive under a live 24/5 feed. An
+  alternative for the sim to evaluate: anchor `P_eff ≥ P_pre-event · (1 + b)` during the window, which is
+  timing-robust but needs a stored pre-event price.
+
 ## Market validation
 
 - [ ] 15 borrower interviews (kit: [`../phase0/05-interview-kit.md`](../phase0/05-interview-kit.md); pending, run by the owner) (perp makers, arb desks, active traders): would they borrow at 3–15% APR? Which stocks? Which size?
@@ -30,9 +58,9 @@ is "no".
 | Question | Default in this PRD | Decide by |
 |---|---|---|
 | Fees "in USDG" vs lender yield in stock | Lenders earn in stock; protocol share converted to USDG | Phase 1 start |
-| DEX floor on the oracle | Off until sim | Before mainnet |
-| Overnight buffer when Chainlink is 24/5 | Smaller or zero (`overnightMode`) | After feed check |
-| Per-address caps vs whale borrowers (market makers) | $100k default, allowlist for larger limits | Before mainnet |
+| DEX floor on the oracle | **Off (D8, applied)** | Revisit only with sim + OR-R8 |
+| Overnight buffer when Chainlink is 24/5 | **0, `overnightMode` on (D2, applied)** | Done |
+| Per-address caps vs whale borrowers (market makers) | **SPY $75k, NVDA $250k, AAPL $35k; allowlist for larger (D8, applied)** | Revisit with weekday depth |
 | Attestation provider (sanctions API) | Chainalysis or TRM | Phase 2 |
 | Upgradeable router | Yes, UUPS, 48h timelock | Phase 1 start |
 | Brand name (Stockline is a working name) | Stockline | Before public testnet |
@@ -56,14 +84,14 @@ interface or a constructor parameter. Items marked *public docs* come from Robin
 |---|---|---|---|
 | A1 | Stock Tokens implement ERC-8056 as published: `uiMultiplier()` (1e18 = 1.0) returns the *effective* multiplier, and scheduled changes are exposed via `newUIMultiplier()` / `effectiveAt()`. *Public docs* confirm the function names. | `src/interfaces/external/IScaledUIAmount.sol`, `StockWrapper.multiplier()` | If `uiMultiplier()` lags until someone pokes, the wrapper and SDK must compute the effective value from `newUIMultiplier`/`effectiveAt`. |
 | A2 | Stock Tokens are 18-decimal, non-rebasing, no fee-on-transfer; raw balances never change outside transfers (*public docs*). | `StockWrapper.wrap` reverts if the received amount ≠ `rawAmount` | If fee-on-transfer or rebasing, LM-R1/LM-R7 do not hold and the wrapper design changes. |
-| A3 | No issuer allowlist or blocklist on Stock Tokens (*public docs* mention none). LM-R6 is still implemented through an optional, immutable `IHolderAllowlist` adapter (`address(0)` = none). | `src/interfaces/IHolderAllowlist.sol` | If the issuer has an allowlist with a different interface, deploy an adapter; the wrapper does not change. |
+| A3 | **Changed (Phase 0, D10 applied):** no allowlist, but an issuer blocklist, token/global pause and `adminBurn`. LM-R6 keeps the optional `IHolderAllowlist` adapter (`address(0)` at deploy); `BlocklistHolderAllowlist` gives a pre-check. | `src/interfaces/IHolderAllowlist.sol` | – |
 | A4 | EVM target `cancun` for Robinhood Chain. | `contracts/foundry.toml` | Lower `evm_version` and rebuild. |
-| A5 | Morpho Blue on Robinhood Chain has `irm = address(0)` and `lltv = 0` enabled, which the idle market (LM-R21) needs. | Deploy scripts (task 7) | Ask Morpho governance to enable them, or run the idle reserve outside Morpho. |
-| A6 | LM-R20 uses MetaMorpho v1.1 (`morpho-org/metamorpho-v1.1`, pinned at `3b17547`, no release tags). Morpho Vaults V2 now exists; the PRD says "v1.1 or current". | `contracts/lib/metamorpho-v1.1` | Decide before task 7 whether V2 is "current". V2 changes the allocator design (adapters, no idle market). |
+| A5 | Holds, but **moot** after D6 (no idle market with Vault V2). | – | – |
+| A6 | **Resolved (D6):** Morpho Vault V2 from the official factory; `contracts/lib/vault-v2` pinned at tag `2025-12-04` (`425f6b1`), whose sources match the onchain factories on Sourcify. | `contracts/lib/vault-v2` | – |
 | A7 | USDG on Robinhood Chain has 6 decimals and supports EIP-2612 `permit`, like Paxos USDG elsewhere. | `test/mocks/MockUSDG.sol` (decimals are a constructor arg) | Decimals only change test setup (Morpho's price scaling handles any value). No `permit` means the router uses Permit2 only. |
 | A8 | Router swaps and guard-keeper prices go through one allowlisted aggregator target called with opaque `swapData`. The real venue is unknown. | `test/mocks/MockSwapAggregator.sol` | Only the mock and the keeper's price source change; RT-R3 already forbids trusting return values (the mock can lie to test that). |
 
-### PRD issues found against public docs (need a decision before task 5)
+### PRD issues found against public docs (resolved by D1–D5, applied 2026-09-27)
 
 - **OR-R1 double-counts the multiplier.** Robinhood's docs say the Chainlink Stock Token feed "returns the price of one
   token, which is the underlying share price times the multiplier… don't apply the multiplier yourself". The PRD computes
@@ -82,3 +110,9 @@ interface or a constructor parameter. Items marked *public docs* come from Robin
   able to change instantly such that the new price is less than the old price multiplied by LLTV·LIF". At 77% LLTV that is
   about a 17% instant drop. OR-R3's 0.1×–10× multiplier bound and any step change in the buffer must stay inside this. The
   ramp-in already does; confirm again in task 5.
+
+### Phase 1 assumptions added after Phase 0 (A9+)
+
+| # | Assumption | Where it lives | If wrong |
+|---|---|---|---|
+| A9 | On NYSE early-close days (13:00 ET) the 24/5 feed stops at 17:00 ET (end of the shortened post-market), not 20:00 ET. Conservative: a longer closure and an earlier ramp. No early close has occurred since the feeds launched (first: 2026-11-27). | `packages/sdk/scripts/genSessions.ts` | Regenerate sessions; only the buffer timing on those days changes. |

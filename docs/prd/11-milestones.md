@@ -16,18 +16,20 @@ TypeScript/full-stack and 1 risk/quant person.
 
 Ordered so each task unblocks the next. IDs map to requirements.
 
-1. **Repo scaffold.** Monorepo per [02](02-architecture.md); Foundry with Morpho Blue + MetaMorpho submodules; CI (forge test, fmt, slither); `packages/sdk` with addresses and ABIs.
+1. **Repo scaffold.** Monorepo per [02](02-architecture.md); Foundry with Morpho Blue + Vault V2 submodules; CI (forge test, fmt, slither); `packages/sdk` with addresses and ABIs.
 2. **Mocks.** Mock Stock Token with ERC-8056 multiplier, mock Chainlink feed with `updatedAt` control, mock USDG, mock DEX/aggregator.
 3. **`StockWrapper`.** LM-R1…R7, invariant tests.
-4. **`MarketHours`.** OR-R10…R12, plus the calendar generator script (`script/genSessions.ts`).
-5. **`StocklineOracle`.** OR-R1…R5, OR-R20…R23, OR-R30…R32. SDK mirror `bufferAt`, `priceAt`, and a cross-check test.
-6. **`clUSDG`.** CL-R1…R6.
-7. **Deploy scripts.** Market + MetaMorpho vault + idle market per stock (LM-R10, LM-R20…R22).
-8. **`StocklineRouter`.** RT-R1…R7, all flows, fork tests.
-9. **Allocator keeper.** LM-R30…R34.
-10. **Guard keeper.** OR-R31, including `poke()`.
-11. **Fallback liquidator bot.** Uses the Morpho callback; unwraps `clUSDG`.
-12. **Full lifecycle fork test.** Lend → open short → weekend ramp → Monday gap → liquidation → lender withdraws whole.
+3b. **`StockWrapper` changes (D10 R1–R4).** `backingShortfall()` (LM-R8), `adminBurn` failure-mode test, optional `BlocklistHolderAllowlist` (LM-R6), `IScaledUIAmount` comment.
+3c. **Extend mocks (D10 R5).** `oraclePaused()`, per-token and global `paused()`, blocklist reverting `Blocked(addr)`, `adminBurn`; mock sequencer uptime feed; mock Uniswap v3 pool (`observe`).
+4. **`MarketHours`.** OR-R10…R14 (feed sessions and event windows), plus `packages/sdk/scripts/genSessions.ts` and `packages/sdk/data/events.json`.
+5. **`StocklineOracle` + `ReceiptCollateralOracle`.** OR-R1…R8, OR-R20…R23, OR-R30…R33. SDK `priceAt`, `bufferAt`, `liquidationPriceAt`, `healthFactorAt`, shared test vectors.
+6. **`clUSDG`.** CL-R1…R7, Paxos-freeze fork test.
+7. **Deploy scripts (Vault V2).** `DeployCore` + `DeployStock`: wrapper → oracle → market → Vault V2 + adapter → caps → fee → roles → timelocks (LM-R10, LM-R20, LM-R22, LM-R23); `addresses.json`; Vault V2 code-hash fork test; `docs/runbooks/list-stock.md`.
+8. **`StocklineRouter`.** RT-R1…R7, all flows, fork tests, gas report.
+9. **Allocator keeper.** LM-R30…R34 (Vault V2 `allocate`/`deallocate`), pre-earnings pull.
+10. **Guard keeper.** OR-R31, OR-R32, OR-R6 (L2 gaps), issuer flags.
+11. **Fallback liquidator.** `StocklineLiquidator` (Morpho callback, unwraps `clUSDG`) + bot.
+12. **Full lifecycle fork test.** Lend → open short → Friday ramp-in → weekend hold → Monday gap → liquidation → lender withdraws whole; plus earnings event, 1e18 feed incident, issuer pause, `adminBurn`.
 
 ## Phase 2 task breakdown
 

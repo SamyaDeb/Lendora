@@ -10,9 +10,9 @@ All values are per stock and all include only Stockline markets. Every response 
 
 | Field | Definition |
 |---|---|
-| `supplied` | `market.totalSupplyAssets` + idle-market assets of the `rSTOCK` vault, in shares of stock (after multiplier) |
+| `supplied` | `market.totalSupplyAssets` + idle (unallocated) assets of the `rSTOCK` Vault V2, in shares of stock (after multiplier) |
 | `borrowed` (short interest) | `market.totalBorrowAssets`, in shares of stock (after multiplier) |
-| `borrowedUsd` | `borrowed × P_stock` (Chainlink, no buffer) |
+| `borrowedUsd` | `market.totalBorrowAssets × P_wrapped` (Chainlink feed per wrapped unit, no buffer, D1) |
 | `utilization` | `totalBorrowAssets / totalSupplyAssets` of the stock-loan market |
 | `utilizationVault` | `borrowed / supplied` (includes idle reserve) |
 | `borrowApr` / `supplyApy` | From the IRM's current rate. Supply APY is net of the vault performance fee. |
@@ -26,7 +26,7 @@ All values are per stock and all include only Stockline markets. Every response 
 
 | ID | Requirement |
 |---|---|
-| SI-R1 | Ponder indexes Morpho Blue (`CreateMarket`, `Supply`, `Withdraw`, `Borrow`, `Repay`, `SupplyCollateral`, `WithdrawCollateral`, `Liquidate`, `AccrueInterest`) filtered to Stockline market IDs, plus MetaMorpho vault events, router events, oracle `GuardChanged` and wrapper multiplier changes. |
+| SI-R1 | Ponder indexes Morpho Blue (`CreateMarket`, `Supply`, `Withdraw`, `Borrow`, `Repay`, `SupplyCollateral`, `WithdrawCollateral`, `Liquidate`, `AccrueInterest`) filtered to Stockline market IDs, plus Vault V2 events, router events, oracle `GuardChanged` and wrapper multiplier changes. |
 | SI-R2 | It stores per-position state (user, market, borrowShares, collateral) and per-market snapshots every block where state changed, plus 1-minute, 1-hour and 1-day rollups. |
 | SI-R3 | Reorg-safe: data is marked `confirmed` after N blocks (N from chain finality: the `safe` tag trails head by ~11.5 min / ~6.9k blocks and `finalized` by ~18 min / ~11k blocks; blocks are ~0.1 s (verified Phase 0, 2026-09-26)). The API exposes the confirmation state. |
 | SI-R4 | Head lag ≤ 3 blocks at p95. Backfill from Stockline deployment block completes in < 1 hour. |

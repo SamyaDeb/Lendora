@@ -18,7 +18,7 @@ Stockline is a lending layer for Stock Tokens, built on Morpho Blue. Holders len
 
 - **Idle holdings.** Fewer than 1 in 20 holders transact monthly. Their tokens earn nothing.
 - **No shorting.** When a token trades above its real stock, only optimists can act. Research has shown since Miller (1977) that when short selling is constrained, prices drift above fair value.
-- **Broken weekends.** Stock Token minting and burning pauses from Saturday to Monday, and price oracles freeze at Friday's close. Documented premiums have reached around 12%, and thin off-hours liquidity has triggered liquidation cascades on perp venues.
+- **Broken weekends.** Stock Token minting and burning pauses from Saturday to Monday, and price oracles freeze at Friday's close. Off-hours token prices drift from the frozen reference (up to 2.5% on sampled weekends for SPY, NVDA and AAPL), and thin off-hours liquidity has triggered liquidation cascades on perp venues.
 - **A missing yield layer.** Hundreds of millions in stablecoins sit on the chain with few places to earn beyond basic lending.
 
 In traditional markets, stock lending is a core part of market plumbing: it pays holders, enables shorts and hedges, and keeps prices honest. Robinhood Chain doesn't have it yet.

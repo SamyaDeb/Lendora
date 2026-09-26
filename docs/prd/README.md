@@ -36,10 +36,11 @@ that Phase 0 must confirm before code depends on it (see [`12-open-questions.md`
 
 1. **Morpho Blue is the engine.** No custom lending logic. Stockline builds wrappers, an oracle, a router, vaults and data.
 2. **Stock is the loan asset.** One isolated Morpho market per stock: loan = wrapped stock, collateral = gated USDG collateral token.
-3. **Lenders supply through a per-stock MetaMorpho vault** (ERC-4626). Its share token *is* the receipt (`rNVDA`). The vault
-   enforces supply caps, keeps an idle reserve (utilization cap) and takes the protocol fee.
-4. **Weekend mode lives in the oracle.** When US markets are closed the oracle marks the borrowed stock *up* by a
-   volatility-scaled buffer, so borrowers need more collateral. The buffer ramps in before close to avoid a liquidation cliff.
+3. **Lenders supply through a per-stock Morpho Vault V2** (ERC-4626, official factory; D6). Its share token *is* the receipt
+   (`rNVDA`). The vault enforces supply caps, keeps an idle reserve (relative cap = utilization cap) and takes the protocol fee.
+4. **Weekend mode lives in the oracle.** While the 24/5 Chainlink feed is frozen (weekends, holidays) and ahead of
+   earnings, the oracle marks the borrowed stock *up* by a volatility-scaled buffer, so borrowers need more collateral. The
+   buffer ramps in before the freeze to avoid a liquidation cliff. The feed already includes the ERC-8056 multiplier (D1).
 5. **"Pause new borrowing" is done by liquidity, not by a switch.** Morpho Blue borrows are permissionless, so a guard trip
-   makes the vault allocator pull unborrowed liquidity into the idle market. Existing positions and liquidations keep working.
+   makes the vault allocator `deallocate` unborrowed liquidity back into the vault. Existing positions and liquidations keep working.
 6. **No token at launch.** Fees go to lenders (~90%), backstop (~5%) and treasury (~5%).

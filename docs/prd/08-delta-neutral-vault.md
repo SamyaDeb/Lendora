@@ -32,7 +32,7 @@ Yield = lending APY on 90% of S + funding on S (positive when longs pay shorts) 
 | DN-R1 | ERC-4626 over USDG for deposits. Withdrawals are instant up to the cash buffer, then async via an ERC-7540-style request queue settled within 72h or next US market open, whichever is later. |
 | DN-R2 | Delta band: absolute net delta per sleeve ≤ 2% of sleeve NAV. The rebalancer trades to 0 when breached and at least once per US trading session. |
 | DN-R3 | Perp margin ratio stays ≥ 2× the venue maintenance margin. The rebalancer tops up from the cash buffer, then by redeeming `rSTOCK` and selling spot. |
-| DN-R4 | NAV = USDG cash + spot (Chainlink price, no buffer, after multiplier) + `rSTOCK` value + perp equity. Perp equity comes from a signed NAV report (venue API or onchain read [VERIFY]). A report that changes NAV by more than 1% vs the onchain estimate needs a second signer. |
+| DN-R4 | NAV = USDG cash + spot (Chainlink feed price, already multiplier-adjusted (D1); no buffer) + `rSTOCK` value + perp equity. Perp equity comes from a signed NAV report (venue API or onchain read [VERIFY]). A report that changes NAV by more than 1% vs the onchain estimate needs a second signer. |
 | DN-R5 | Deposits and withdrawals are paused while the market is closed *and* NAV relies on stale perp data older than 15 minutes. The vault never mints or burns shares on a stale NAV. |
 | DN-R6 | Per-sleeve cap and total cap, both set by the curator through the timelock. Launch total cap: $2M. |
 | DN-R7 | Funding kill switch: if 7-day average funding is negative beyond the lending APY for 72h, the sleeve unwinds to USDG. |
