@@ -7,6 +7,9 @@
   "_triage": {
     "comment": "False positives triaged here (JSON has no comments). Each entry is also marked inline with slither-disable-next-line.",
     "uninitialized-state: MarketHours._events": "Written through the `EventWindow[] storage list = _events[stock]` pointer (list.push/pop) in replaceEventsFrom; slither does not track writes via storage pointers. Covered by test_OR_R14_eventsViews.",
-    "timestamp: MarketHours.replace*From": "Intentional: only entries that have not started (openTs/startTs > block.timestamp) may be rewritten. Low."
+    "timestamp: MarketHours.replace*From": "Intentional: only entries that have not started (openTs/startTs > block.timestamp) may be rewritten. Low.",
+    "incorrect-equality: StocklineOracleBase buffer helpers, liveReasons": "`x == 0` on calendar bounds (prevClose/prevReopen/nextClose/nextReopen, event startTs) is the documented 'unknown' sentinel from IMarketHours.closureWindows/eventWindows, not an ether/token balance equality. Covered by bufferAt vectors and OR-R12 tests.",
+    "unused-return: StocklineOracleBase.liveReasons closureWindows": "Only reopen and nextClose are needed for STALE/CALENDAR; the other two tuple members are intentionally ignored.",
+    "low/informational (not suppressed)": "timestamp (calendar logic is timestamp-based by design), low-level-calls (fail-closed staticcalls, OR-R2), missing-zero-check on optional roles/feeds (address(0) disables them by design), naming of immutables/constants."
   }
 }

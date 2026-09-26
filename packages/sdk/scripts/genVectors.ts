@@ -1,0 +1,185 @@
+/**
+ * Shared test vectors for Solidity ↔ SDK cross-checks (OR-R1, OR-R22; Phase 1 brief §4 "one source of math").
+ * The SDK computes every expected value; forge reads the files with vm.readFile/vm.parseJson (no ffi).
+ *
+ *   pnpm --filter @stockline/sdk gen:vectors
+ *
+ * Writes contracts/test/vectors/{buffer,price,receipt,fullbuffer,health,nvda_launch_rounds}.json.
+ * Deterministic (fixed seed): re-running produces identical files.
+ */
+import {mkdirSync, readFileSync, writeFileSync} from "node:fs";
+import {dirname, join} from "node:path";
+import {fileURLToPath} from "node:url";
+import {generateSessions} from "../src/calendar/sessions.js";
+import {etToUnix, parseYmd, nthWeekday, type YMD} from "../src/calendar/time.js";
+import {
+  bufferAt,
+  fullBuffer,
+  healthFactor,
+  receiptPrice,
+  stockLoanPrice,
+  type BufferConfig,
+  type EventWindowBig,
+} from "../src/math/oracle.js";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const outDir = join(here, "../../../contracts/test/vectors");
+mkdirSync(outDir, {recursive: true});
+
+// ------------------------------------------------------------------ deterministic PRNG (splitmix64)
+let state = 0x5eed_2026_0927n;
+function next(): bigint {
+  state = (state + 0x9e3779b97f4a7c15n) & 0xffffffffffffffffn;
+  let z = state;
+  z = ((z ^ (z >> 30n)) * 0xbf58476d1ce4e5b9n) & 0xffffffffffffffffn;
+  z = ((z ^ (z >> 27n)) * 0x94d049bb133111ebn) & 0xffffffffffffffffn;
+  return z ^ (z >> 31n);
+}
+/** Uniform in [lo, hi]. */
+function rand(lo: bigint, hi: bigint): bigint {
+  return lo + (next() % (hi - lo + 1n));
+}
+function pick<T>(xs: T[]): T {
+  return xs[Number(next() % BigInt(xs.length))];
+}
+/** Log-uniform-ish: 10^[a, b] with a random mantissa. */
+function logRand(a: number, b: number): bigint {
+  const e = BigInt(Number(rand(BigInt(a), BigInt(b))));
+  return rand(10n ** e, 10n ** (e + 1n) - 1n);
+}
+
+/** JSON with bigints written as bare numbers (forge parses arbitrary-size JSON integers). */
+function write(name: string, data: unknown): void {
+  const s = JSON.stringify(data, (_k, v) => (typeof v === "bigint" ? `__BIG__${v.toString()}` : v), 1).replace(
+    /"__BIG__(\d+)"/g,
+    "$1",
+  );
+  writeFileSync(join(outDir, name), s + "\n");
+}
+
+const H = 3600n;
+
+// ------------------------------------------------------------------ buffer.json (OR-R20, OR-R14, OR-R23)
+const sessions = generateSessions(parseYmd("2026-06-22"), parseYmd("2027-12-31"));
+const params = {z: 25n * 10n ** 17n, sigma: 52n * 10n ** 16n, bMin: 10n ** 16n, bMax: 2n * 10n ** 17n, rampIn: 4n * H};
+
+// Synthetic event windows (not real dates): third Wednesday of each month, release 16:20 ET, 1h hold, and every
+// third month an extra window on the last Friday at 18:00 ET that overlaps the weekend ramp-in.
+const events: EventWindowBig[] = [];
+const buffers = [8n * 10n ** 16n, 10n ** 17n, 2n * 10n ** 17n, 5n * 10n ** 16n];
+for (let i = 0; i < 18; i++) {
+  const year = 2026 + Math.floor((6 + i) / 12);
+  const month = ((6 + i) % 12) + 1;
+  const wed = nthWeekday(year, month, 3, 3);
+  const end = BigInt(etToUnix(wed, 16, 20));
+  events.push({startTs: end - H, endTs: end, bufferWad: buffers[i % buffers.length]});
+  if (i % 3 === 0) {
+    const fri = nthWeekday(year, month, 5, -1);
+    const endF = BigInt(etToUnix(fri, 18, 0));
+    events.push({startTs: endF - 2n * H, endTs: endF, bufferWad: 12n * 10n ** 16n});
+  }
+}
+events.sort((a, b) => Number(a.startTs - b.startTs));
+
+const cfg: BufferConfig = {params, sessions, events, floor: 0n};
+const first = BigInt(sessions[0].openTs);
+const last = BigInt(sessions[sessions.length - 1].closeTs);
+const boundaries: bigint[] = [
+  ...sessions.flatMap((s) => [BigInt(s.openTs), BigInt(s.closeTs)]),
+  ...events.flatMap((e) => [e.startTs, e.endTs]),
+];
+const focusDays: YMD[] = [
+  "2026-07-02", "2026-07-03", "2026-07-05", "2026-09-04", "2026-09-07", "2026-10-30", "2026-11-01", "2026-11-02",
+  "2026-11-25", "2026-11-26", "2026-11-27", "2026-12-24", "2026-12-31", "2027-01-18", "2027-03-12", "2027-03-14",
+  "2027-03-15", "2027-03-25", "2027-03-26", "2027-03-28", "2027-07-02", "2027-07-05", "2027-11-05", "2027-11-07",
+  "2027-11-26", "2027-12-24", "2027-12-31",
+].map(parseYmd);
+
+type BufferCase = {expected: bigint; t: bigint; u: bigint};
+const bufferCases: BufferCase[] = [];
+const N_BUFFER = 12_000;
+while (bufferCases.length < N_BUFFER) {
+  const kind = next() % 10n;
+  let t: bigint;
+  if (kind < 4n) t = rand(first - 72n * H, last + 120n * H);
+  else if (kind < 8n) t = pick(boundaries) + rand(-5n * H, 5n * H);
+  else t = BigInt(etToUnix(pick(focusDays), 0)) + rand(0n, 30n * H);
+  const uKind = next() % 6n;
+  let u: bigint;
+  if (uKind === 0n) u = 0n;
+  else if (uKind === 1n) u = t;
+  else if (uKind === 2n) u = pick(boundaries) + rand(-2n * H, 2n * H);
+  else u = t - rand(0n, 100n * H);
+  if (u > t) u = t;
+  if (u < 0n) u = 0n;
+  bufferCases.push({expected: bufferAt(cfg, t, u), t, u});
+}
+write("buffer.json", {
+  $comment: "Generated by packages/sdk/scripts/genVectors.ts; expected = sdk bufferAt(t, u). Do not edit.",
+  params: {bMax: params.bMax, bMin: params.bMin, rampIn: params.rampIn, sigma: params.sigma, z: params.z},
+  sessions: sessions.map((s) => ({closeTs: BigInt(s.closeTs), openTs: BigInt(s.openTs)})),
+  events: events.map((e) => ({bufferWad: e.bufferWad, endTs: e.endTs, startTs: e.startTs})),
+  cases: bufferCases,
+});
+
+// ------------------------------------------------------------------ price.json (OR-R1)
+const priceCases = [];
+for (let i = 0; i < 12_000; i++) {
+  const p = rand(10n ** 6n, 10n ** 14n); // $0.01 .. $1e6 at 8 dp
+  const u = rand(5n * 10n ** 7n, 2n * 10n ** 8n); // $0.50 .. $2.00
+  const vpt = i % 4 === 0 ? 10n ** 18n : rand(10n ** 18n, 2n * 10n ** 18n);
+  const b = i % 5 === 0 ? 0n : rand(0n, 2n * 10n ** 17n);
+  priceCases.push({b, expected: stockLoanPrice(vpt, u, p, b, 48n), p, u, vpt});
+}
+write("price.json", {
+  $comment: "stockLoanPrice(vpt, usdgAnswer=u, stockAnswer=p, buffer=b, scaleExp=48). Generated; do not edit.",
+  scaleExp: 48,
+  cases: priceCases,
+});
+
+// ------------------------------------------------------------------ receipt.json
+const receiptCases = [];
+for (let i = 0; i < 3_000; i++) {
+  const a = rand(10n ** 18n, 3n * 10n ** 18n);
+  const p = rand(10n ** 6n, 10n ** 14n);
+  const u = rand(5n * 10n ** 7n, 2n * 10n ** 8n);
+  const b = rand(0n, 2n * 10n ** 17n);
+  receiptCases.push({a, b, expected: receiptPrice(a, p, u, b, 6n), p, u});
+}
+write("receipt.json", {$comment: "receiptPrice(a, p, u, b, scaleExp=6). Generated; do not edit.", scaleExp: 6, cases: receiptCases});
+
+// ------------------------------------------------------------------ fullbuffer.json
+const fullCases = [];
+for (let i = 0; i < 3_000; i++) {
+  const z = rand(10n ** 18n, 4n * 10n ** 18n);
+  const sigma = rand(5n * 10n ** 16n, 15n * 10n ** 17n);
+  const bMax = rand(5n * 10n ** 16n, 2n * 10n ** 17n);
+  const bMin = rand(0n, bMax);
+  const len = rand(1n, 400n * H);
+  fullCases.push({bMax, bMin, expected: fullBuffer(z, sigma, bMin, bMax, len), len, sigma, z});
+}
+write("fullbuffer.json", {$comment: "fullBuffer(z, sigma, bMin, bMax, len). Generated; do not edit.", cases: fullCases});
+
+// ------------------------------------------------------------------ health.json
+const healthCases = [];
+for (let i = 0; i < 3_000; i++) {
+  const collateral = logRand(0, 13); // raw clUSDG (6 dp)
+  const price = logRand(40, 50);
+  const lltv = pick([77n * 10n ** 16n, 625n * 10n ** 15n, 86n * 10n ** 16n]);
+  const borrowed = i % 50 === 0 ? 0n : logRand(0, 25);
+  healthCases.push({borrowed, collateral, expected: healthFactor(collateral, price, lltv, borrowed), lltv, price});
+}
+write("health.json", {$comment: "healthFactor(collateral, price, lltv, borrowed). Generated; do not edit.", cases: healthCases});
+
+// ------------------------------------------------------------------ nvda_launch_rounds.json (OR-R7 replay)
+const rows = readFileSync(join(here, "../../../sim/data/feeds/NVDA.csv"), "utf8").trim().split("\n").slice(1, 41);
+write("nvda_launch_rounds.json", {
+  $comment:
+    "First 40 real NVDA/USD rounds on Robinhood Chain (sim/data/feeds/NVDA.csv). Rounds 1-24 are the launch-week incident: answers scaled 1e18 while decimals() = 8.",
+  rounds: rows.map((r) => {
+    const [, answer, , updatedAt] = r.split(",");
+    return {answer: BigInt(answer), updatedAt: BigInt(updatedAt)};
+  }),
+});
+
+console.log(`wrote ${bufferCases.length} buffer, ${priceCases.length} price, ${receiptCases.length} receipt, ${fullCases.length} fullbuffer, ${healthCases.length} health vectors to ${outDir}`);

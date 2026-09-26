@@ -1,0 +1,497 @@
+[
+  {
+    "type": "function",
+    "name": "MARKET_HOURS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "STOCK_TOKEN",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "WRAPPER",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "buffer",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "bufferAt",
+    "inputs": [
+      {
+        "name": "t",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "lastGoodUpdatedAt",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "guardReasons",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "guardTripped",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "params",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct IStocklineOracle.Params",
+        "components": [
+          {
+            "name": "zWad",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "sigmaWad",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "bMinWad",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "bMaxWad",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "rampIn",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "stockHeartbeat",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "usdgHeartbeat",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "staleGrace",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "sequencerGrace",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "bandLowWad",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "bandHighWad",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "maxQuietMultiplierStepWad",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "poke",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "price",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "priceAt",
+    "inputs": [
+      {
+        "name": "t",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "stockAnswer",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "answer",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "updatedAt",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "usdgAnswer",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "answer",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "updatedAt",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "BlocklistSet",
+    "inputs": [
+      {
+        "name": "registry",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "BufferFloorSet",
+    "inputs": [
+      {
+        "name": "floorWad",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "GuardChanged",
+    "inputs": [
+      {
+        "name": "reason",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "tripped",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MultiplierObserved",
+    "inputs": [
+      {
+        "name": "previous",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "current",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "accepted",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ParamsSet",
+    "inputs": [
+      {
+        "name": "params",
+        "type": "tuple",
+        "indexed": false,
+        "internalType": "struct IStocklineOracle.Params",
+        "components": [
+          {
+            "name": "zWad",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "sigmaWad",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "bMinWad",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "bMaxWad",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "rampIn",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "stockHeartbeat",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "usdgHeartbeat",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "staleGrace",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "sequencerGrace",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "bandLowWad",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "bandHighWad",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "maxQuietMultiplierStepWad",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ReferenceUpdated",
+    "inputs": [
+      {
+        "name": "feed",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "answer",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "updatedAt",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RoleSet",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SequencerFeedSet",
+    "inputs": [
+      {
+        "name": "feed",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "BadParams",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "BadReason",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FloorNotRaised",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InsaneAnswer",
+    "inputs": [
+      {
+        "name": "feed",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "SigmaUpdateTooSoon",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "Unauthorized",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroAddress",
+    "inputs": []
+  }
+]

@@ -77,7 +77,7 @@ Launch values (D8, from the GO-NO-GO memo; the sim replaces them): `z = 2.5`, `B
 | Stock | σ_annual (5y) | Weekend (48h) b_full | 3-day weekend (72h) b_full | Event buffer (D5) |
 |---|---|---|---|---|
 | SPY | 17% | 3.1% | 3.9% | none |
-| AAPL | 28% | 5.2% | 6.4% | ≥ 8% |
+| AAPL | 28% | 5.2% | 6.3% | ≥ 8% |
 | NVDA | 52% | 9.6% | 11.8% | ≥ 10% |
 
 **Ramp in.** A step change at the Friday 20:00 ET freeze would liquidate every position near the limit at once. The buffer

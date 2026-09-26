@@ -1,0 +1,165 @@
+{
+ "$comment": "First 40 real NVDA/USD rounds on Robinhood Chain (sim/data/feeds/NVDA.csv). Rounds 1-24 are the launch-week incident: answers scaled 1e18 while decimals() = 8.",
+ "rounds": [
+  {
+   "answer": 2082200000000000000,
+   "updatedAt": 1782086443
+  },
+  {
+   "answer": 2092699999900000000,
+   "updatedAt": 1782090344
+  },
+  {
+   "answer": 2104187000000000000,
+   "updatedAt": 1782126385
+  },
+  {
+   "answer": 2115000000000000000,
+   "updatedAt": 1782135027
+  },
+  {
+   "answer": 2131650000000000000,
+   "updatedAt": 1782135267
+  },
+  {
+   "answer": 2120199999900000000,
+   "updatedAt": 1782138238
+  },
+  {
+   "answer": 2106449999900000000,
+   "updatedAt": 1782138688
+  },
+  {
+   "answer": 2095356500000000000,
+   "updatedAt": 1782139288
+  },
+  {
+   "answer": 2106750000000000000,
+   "updatedAt": 1782142710
+  },
+  {
+   "answer": 2094800000000000000,
+   "updatedAt": 1782144030
+  },
+  {
+   "answer": 2083949999900000000,
+   "updatedAt": 1782155133
+  },
+  {
+   "answer": 2072099999900000000,
+   "updatedAt": 1782179321
+  },
+  {
+   "answer": 2061000000000000000,
+   "updatedAt": 1782184212
+  },
+  {
+   "answer": 2050650000000000000,
+   "updatedAt": 1782191505
+  },
+  {
+   "answer": 2039400000000000000,
+   "updatedAt": 1782195105
+  },
+  {
+   "answer": 2028500000000000000,
+   "updatedAt": 1782198196
+  },
+  {
+   "answer": 2018340500000000000,
+   "updatedAt": 1782203028
+  },
+  {
+   "answer": 2028473500000000000,
+   "updatedAt": 1782206869
+  },
+  {
+   "answer": 2039966000000000000,
+   "updatedAt": 1782214792
+  },
+  {
+   "answer": 2029391000000000000,
+   "updatedAt": 1782218093
+  },
+  {
+   "answer": 2017479500000000000,
+   "updatedAt": 1782221303
+  },
+  {
+   "answer": 2007201000000000000,
+   "updatedAt": 1782221543
+  },
+  {
+   "answer": 2018458499900000000,
+   "updatedAt": 1782221754
+  },
+  {
+   "answer": 2030652000000000000,
+   "updatedAt": 1782222509
+  },
+  {
+   "answer": 20344000000,
+   "updatedAt": 1782222749
+  },
+  {
+   "answer": 20227580000,
+   "updatedAt": 1782226547
+  },
+  {
+   "answer": 20095499999,
+   "updatedAt": 1782227237
+  },
+  {
+   "answer": 20201000000,
+   "updatedAt": 1782230028
+  },
+  {
+   "answer": 20097000000,
+   "updatedAt": 1782240158
+  },
+  {
+   "answer": 19976810000,
+   "updatedAt": 1782306480
+  },
+  {
+   "answer": 20087720000,
+   "updatedAt": 1782307895
+  },
+  {
+   "answer": 19975500000,
+   "updatedAt": 1782308946
+  },
+  {
+   "answer": 20076500000,
+   "updatedAt": 1782309156
+  },
+  {
+   "answer": 19959225000,
+   "updatedAt": 1782310116
+  },
+  {
+   "answer": 20068714999,
+   "updatedAt": 1782312322
+  },
+  {
+   "answer": 19967750000,
+   "updatedAt": 1782319229
+  },
+  {
+   "answer": 19865000000,
+   "updatedAt": 1782321407
+  },
+  {
+   "answer": 19750500000,
+   "updatedAt": 1782322427
+  },
+  {
+   "answer": 19862525000,
+   "updatedAt": 1782325519
+  },
+  {
+   "answer": 19761095000,
+   "updatedAt": 1782326899
+  }
+ ]
+}

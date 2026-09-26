@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "abis": "node scripts/export-abis.mjs",
-    "gen:sessions": "tsx scripts/genSessions.ts"
+    "gen:sessions": "tsx scripts/genSessions.ts",
+    "gen:vectors": "tsx scripts/genVectors.ts"
   },
   "devDependencies": {
     "@noble/hashes": "1.8.0",
