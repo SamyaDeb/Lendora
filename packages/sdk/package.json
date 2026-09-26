@@ -8,17 +8,20 @@
   "exports": {
     ".": "./dist/index.js",
     "./addresses.json": "./addresses.json",
-    "./external-addresses.json": "./external-addresses.json"
+    "./external-addresses.json": "./external-addresses.json",
+    "./data/*": "./data/*"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "abis": "node scripts/export-abis.mjs"
+    "abis": "node scripts/export-abis.mjs",
+    "gen:sessions": "tsx scripts/genSessions.ts"
   },
   "devDependencies": {
     "@noble/hashes": "1.8.0",
     "@types/node": "^22.20.4",
+    "tsx": "^4.23.15",
     "typescript": "~5.9.3",
     "vitest": "^3.2.7"
   }

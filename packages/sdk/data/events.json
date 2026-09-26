@@ -1,0 +1,25 @@
+{
+  "$comment": "Scheduled events for MarketHours event windows (D5, OR-R14). endTs = releaseTimeET on `date` (the earliest a Chainlink round can carry the result); startTs = endTs - holdHours; the oracle ramps the buffer in over 4h before startTs and releases it on the first good round with updatedAt >= endTs. Only NVDA and AAPL get event buffers (SPY none). Keep `confirmed` false until the company's IR page announces the date; the P2 runway alert (10-risk) fires 30 days out. Sources opened 2026-09-27.",
+  "events": [
+    {
+      "ticker": "AAPL",
+      "date": "2026-10-29",
+      "timing": "AMC",
+      "releaseTimeET": "16:30",
+      "holdHours": 1,
+      "bufferWad": "80000000000000000",
+      "confirmed": false,
+      "source": "Consensus calendar (TipRanks, macobserver.com 'Apple's Q4 FY2026 earnings date: not yet announced'); Apple historically releases at 16:30 ET (apple.com/newsroom 2026-07-30 Q3 release)"
+    },
+    {
+      "ticker": "NVDA",
+      "date": "2026-11-17",
+      "timing": "AMC",
+      "releaseTimeET": "16:20",
+      "holdHours": 1,
+      "bufferWad": "100000000000000000",
+      "confirmed": false,
+      "source": "Consensus calendar (wallstreethorizon.com/nvidia-earnings-calendar); NVIDIA historically releases ~16:20 ET with a 17:00 ET call (nvidianews.nvidia.com Q3 FY2026 release)"
+    }
+  ]
+}

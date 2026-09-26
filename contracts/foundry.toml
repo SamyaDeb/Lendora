@@ -8,7 +8,12 @@ evm_version = "cancun"             # Robinhood Chain runs cancun opcodes (A4, ve
 optimizer = true
 optimizer_runs = 200
 bytecode_hash = "none"
-fs_permissions = [{access = "read", path = "./out"}]
+fs_permissions = [
+    {access = "read", path = "./out"},
+    {access = "read", path = "./test/vectors"},
+    {access = "read", path = "../packages/sdk/data"},
+    {access = "read-write", path = "../packages/sdk/addresses.json"},
+]
 remappings = [
     "forge-std/=lib/forge-std/src/",
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",

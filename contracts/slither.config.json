@@ -3,5 +3,10 @@
   "exclude_dependencies": true,
   "exclude_informational": false,
   "exclude_low": false,
-  "fail_on": "medium"
+  "fail_on": "medium",
+  "_triage": {
+    "comment": "False positives triaged here (JSON has no comments). Each entry is also marked inline with slither-disable-next-line.",
+    "uninitialized-state: MarketHours._events": "Written through the `EventWindow[] storage list = _events[stock]` pointer (list.push/pop) in replaceEventsFrom; slither does not track writes via storage pointers. Covered by test_OR_R14_eventsViews.",
+    "timestamp: MarketHours.replace*From": "Intentional: only entries that have not started (openTs/startTs > block.timestamp) may be rewritten. Low."
+  }
 }
