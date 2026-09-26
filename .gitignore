@@ -16,3 +16,7 @@ __pycache__/
 .env.*
 !.env.example
 .DS_Store
+
+# Phase 0 sim caches (large; refetch with sim/phase0 scripts)
+sim/data/raw/
+sim/data/*.log
