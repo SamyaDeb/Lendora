@@ -1,0 +1,39 @@
+name: fork-tests
+
+# Phase 0 fork validation against Robinhood Chain (docs/phase0/02-fork-validation.md). Manual only: it needs an RPC
+# secret, and the pinned block needs an archive endpoint once it is older than the public node's state window.
+on:
+  workflow_dispatch:
+    inputs:
+      fork_block:
+        description: "Block to fork at (empty = pinned FORK_BLOCK, 0 = latest)"
+        required: false
+        default: ""
+
+jobs:
+  fork:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout submodules
+        working-directory: .
+        run: |
+          git submodule update --init --depth 1 contracts/lib/forge-std contracts/lib/openzeppelin-contracts \
+            contracts/lib/morpho-blue contracts/lib/metamorpho-v1.1
+          git -C contracts/lib/metamorpho-v1.1 submodule update --init --depth 1 lib/openzeppelin-contracts lib/morpho-blue
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+      - name: forge build
+        run: forge build
+      - name: forge test (fork)
+        env:
+          ROBINHOOD_RPC_URL: ${{ secrets.ROBINHOOD_RPC_URL }}
+          PHASE0_FORK_BLOCK: ${{ inputs.fork_block }}
+        run: |
+          if [ -z "$ROBINHOOD_RPC_URL" ]; then echo "ROBINHOOD_RPC_URL secret is not set"; exit 1; fi
+          if [ -z "$PHASE0_FORK_BLOCK" ]; then unset PHASE0_FORK_BLOCK; fi
+          forge test --mp "test/fork/**" -vv

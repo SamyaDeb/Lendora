@@ -1,0 +1,145 @@
+# forge test --mp "test/fork/**" -vv, ROBINHOOD_RPC_URL=public RPC, PHASE0_FORK_BLOCK=0 (resolved to 73213529), 2026-09-26
+Compiling 8 files with Solc 0.8.26
+Solc 0.8.26 finished in 2.32s
+Compiler run successful!
+
+Ran 1 test for test/fork/phase0/EvmVersion.fork.t.sol:EvmVersionForkTest
+[PASS] test_phase0_evm_cancunOpcodes() (gas: 147268)
+Logs:
+  fork block: 73213529
+  fork timestamp: 1790438837
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 3.78s (1.40s CPU time)
+
+Ran 1 test for test/fork/phase0/UsdgPermit.fork.t.sol:UsdgPermitForkTest
+[PASS] test_phase0_usdg_decimalsAndPermit() (gas: 103729)
+Logs:
+  fork block: 73213529
+  fork timestamp: 1790438837
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 11.81s (9.44s CPU time)
+
+Ran 3 tests for test/fork/phase0/Erc8056.fork.t.sol:Erc8056ForkTest
+[PASS] test_phase0_erc8056_immediateUpdateIsAStep() (gas: 42788)
+Logs:
+  fork block: 73213529
+  fork timestamp: 1790438837
+
+[PASS] test_phase0_erc8056_readFields() (gas: 2713087)
+Logs:
+  fork block: 73213529
+  fork timestamp: 1790438837
+  token: 0x117cc2133c37B721F49dE2A7a74833232B3B4C0C
+    uiMultiplier: 1.001717991187472003
+    newUIMultiplier: 1.001717991187472003
+    effectiveAt: 1789690233
+  token: 0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC
+    uiMultiplier: 1.000775159164630595
+    newUIMultiplier: 1.000775159164630595
+    effectiveAt: 1788998430
+  token: 0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9
+    uiMultiplier: 1.000566080061092436
+    newUIMultiplier: 1.000566080061092436
+    effectiveAt: 1786720366
+
+[PASS] test_phase0_erc8056_scheduledUpdateTakesEffectWithoutPoke() (gas: 926570)
+Logs:
+  fork block: 73213529
+  fork timestamp: 1790438837
+
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 14.91s (14.28s CPU time)
+
+Ran 6 tests for test/fork/phase0/StockTokenAdmin.fork.t.sol:StockTokenAdminForkTest
+[PASS] test_phase0_admin_adminBurnFromWrapper_breaksLMR7() (gas: 142247)
+Logs:
+  fork block: 73213529
+  fork timestamp: 1790438837
+
+[PASS] test_phase0_admin_blocklistMorpho_doesNotTouchWrappedMarkets() (gas: 96813)
+Logs:
+  fork block: 73213529
+  fork timestamp: 1790438837
+
+[PASS] test_phase0_admin_blocklistRecipient() (gas: 75072)
+Logs:
+  fork block: 73213529
+  fork timestamp: 1790438837
+
+[PASS] test_phase0_admin_blocklistWrapper() (gas: 181473)
+Logs:
+  fork block: 73213529
+  fork timestamp: 1790438837
+
+[PASS] test_phase0_admin_globalPause() (gas: 72353)
+Logs:
+  fork block: 73213529
+  fork timestamp: 1790438837
+
+[PASS] test_phase0_admin_tokenPause() (gas: 123157)
+Logs:
+  fork block: 73213529
+  fork timestamp: 1790438837
+
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 14.91s (17.37s CPU time)
+
+Ran 2 tests for test/fork/phase0/ChainlinkFeeds.fork.t.sol:ChainlinkFeedsForkTest
+[PASS] test_phase0_chainlink_latestRoundData() (gas: 202727)
+Logs:
+  fork block: 73213529
+  fork timestamp: 1790438837
+  feed: RHSPY / USD
+    answer: 772.32802713
+    age (s): 86657
+    round (phase-encoded): 18446744073709551762
+    oraclePaused(): false
+    uiMultiplier: 1.001717991187472003
+  feed: RHNVDA / USD
+    answer: 225.66018707
+    age (s): 72672
+    round (phase-encoded): 18446744073709552722
+    oraclePaused(): false
+    uiMultiplier: 1.000775159164630595
+  feed: Robinhood AAPL / USD
+    answer: 341.45318048
+    age (s): 73072
+    round (phase-encoded): 18446744073709552287
+    oraclePaused(): false
+    uiMultiplier: 1.000566080061092436
+  feed: USDG / USD
+    answer: 0.99992581
+    age (s): 1766
+    round (phase-encoded): 18446744073709551730
+
+[PASS] test_phase0_chainlink_noSequencerUptimeFeed() (gas: 5692)
+Logs:
+  fork block: 73213529
+  fork timestamp: 1790438837
+
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 18.77s (18.90s CPU time)
+
+Ran 2 tests for test/fork/phase0/MorphoMarket.fork.t.sol:MorphoMarketForkTest
+[PASS] test_phase0_morpho_idleMarketAndMetaMorphoV11() (gas: 11239682)
+Logs:
+  fork block: 73213529
+  fork timestamp: 1790438837
+
+[PASS] test_phase0_morpho_lifecycle_LMR11() (gas: 1194156)
+Logs:
+  fork block: 73213529
+  fork timestamp: 1790438837
+  NVDA/USD at fork: 225.66018707
+  borrow after 30d (wNVDA): 20.009907151125000180
+  repaid wNVDA: 10.004953575562500090
+  seized USDG: 2910.057609
+
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 24.71s (12.03s CPU time)
+
+Ran 1 test for test/fork/phase0/StockTokenTransfer.fork.t.sol:StockTokenTransferForkTest
+[PASS] test_phase0_stockTokens_transferExactToEoaWrapperAndMorpho() (gas: 4485630)
+Logs:
+  fork block: 73213529
+  fork timestamp: 1790438837
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 31.73s (29.36s CPU time)
+
+Ran 7 test suites in 31.75s (120.63s CPU time): 16 tests passed, 0 failed, 0 skipped (16 total tests)
