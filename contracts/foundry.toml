@@ -8,6 +8,7 @@ evm_version = "cancun"             # [VERIFY] Robinhood Chain EVM version, see d
 optimizer = true
 optimizer_runs = 200
 bytecode_hash = "none"
+fs_permissions = [{access = "read", path = "./out"}]
 remappings = [
     "forge-std/=lib/forge-std/src/",
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",

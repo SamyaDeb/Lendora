@@ -28,7 +28,7 @@ isolates Morpho from both. [VERIFY] exact ERC-8056 semantics and transfer rules 
 | LM-R4 | Decimals equal the underlying token's decimals. Name `Wrapped Stockline NVDA`, symbol `wNVDA`. |
 | LM-R5 | No admin functions, no pause, no upgradeability. Anyone can unwrap at any time, including liquidators. |
 | LM-R6 | If the underlying token has an allowlist, the wrapper must be allowlisted, and `unwrap` must revert with a clear error when the recipient is not allowed to hold the stock. |
-| LM-R7 | Invariant: `underlying.balanceOf(wrapper) == wrapper.totalSupply()` (raw units) at all times. Tested by forge invariant test. |
+| LM-R7 | Invariant: `underlying.balanceOf(wrapper) >= wrapper.totalSupply()` (raw units) at all times. Equality holds unless someone transfers the Stock Token to the wrapper directly without `wrap`; such tokens back no wrapper units and cannot be recovered (no admin, LM-R5). Tested by forge invariant test, including the exact form `balance == totalSupply + directTransfers`. |
 
 Interface:
 

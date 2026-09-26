@@ -7,6 +7,7 @@ import {IMorpho, MarketParams, Id} from "morpho-blue/src/interfaces/IMorpho.sol"
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
 import {IMetaMorphoV1_1} from "metamorpho/src/interfaces/IMetaMorphoV1_1.sol";
 import {MetaMorphoV1_1Factory} from "metamorpho/src/MetaMorphoV1_1Factory.sol";
+import {MorphoDeployer} from "../utils/MorphoDeployer.sol";
 
 /// @notice Scaffold check: unmodified Morpho Blue and MetaMorpho v1.1 compile and deploy side by side with our
 /// toolchain, and an idle market (no collateral, oracle, IRM or LLTV) can back a vault.
@@ -15,8 +16,7 @@ contract MorphoStackSmokeTest is Test {
 
     function test_scaffold_deploysMorphoBlueAndMetaMorpho() public {
         address owner = makeAddr("owner");
-        // Morpho Blue is pinned to 0.8.19; deploy from its compiled artifact rather than importing it.
-        IMorpho morpho = IMorpho(deployCode("Morpho.sol:Morpho", abi.encode(owner)));
+        IMorpho morpho = MorphoDeployer.deploy(owner);
         ERC20Mock asset = new ERC20Mock();
 
         vm.startPrank(owner);
