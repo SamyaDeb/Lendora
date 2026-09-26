@@ -16,7 +16,7 @@ All values are per stock and all include only Stockline markets. Every response 
 | `utilization` | `totalBorrowAssets / totalSupplyAssets` of the stock-loan market |
 | `utilizationVault` | `borrowed / supplied` (includes idle reserve) |
 | `borrowApr` / `supplyApy` | From the IRM's current rate. Supply APY is net of the vault performance fee. |
-| `siPctFloat` | `borrowed / token circulating supply` of the Stock Token on Robinhood Chain [VERIFY supply source] |
+| `siPctFloat` | `borrowed / token circulating supply` of the Stock Token on Robinhood Chain (`totalSupply()` of the Stock Token contract, raw units, or `totalSupplyUI()` in shares (verified Phase 0, 2026-09-26)) |
 | `daysToCover` | `borrowed / 30d average daily DEX volume` of the Stock Token |
 | `borrowers` | Count of addresses with `borrowShares > 0` |
 | `newShorts24h` / `covered24h` | Sum of borrow and repay amounts in the last 24h |
@@ -28,7 +28,7 @@ All values are per stock and all include only Stockline markets. Every response 
 |---|---|
 | SI-R1 | Ponder indexes Morpho Blue (`CreateMarket`, `Supply`, `Withdraw`, `Borrow`, `Repay`, `SupplyCollateral`, `WithdrawCollateral`, `Liquidate`, `AccrueInterest`) filtered to Stockline market IDs, plus MetaMorpho vault events, router events, oracle `GuardChanged` and wrapper multiplier changes. |
 | SI-R2 | It stores per-position state (user, market, borrowShares, collateral) and per-market snapshots every block where state changed, plus 1-minute, 1-hour and 1-day rollups. |
-| SI-R3 | Reorg-safe: data is marked `confirmed` after N blocks (N from chain finality [VERIFY]). The API exposes the confirmation state. |
+| SI-R3 | Reorg-safe: data is marked `confirmed` after N blocks (N from chain finality: the `safe` tag trails head by ~11.5 min / ~6.9k blocks and `finalized` by ~18 min / ~11k blocks; blocks are ~0.1 s (verified Phase 0, 2026-09-26)). The API exposes the confirmation state. |
 | SI-R4 | Head lag ≤ 3 blocks at p95. Backfill from Stockline deployment block completes in < 1 hour. |
 | SI-R5 | A daily reconciliation job compares indexed totals with onchain `market()` reads and pages if they differ by more than 1 wei-equivalent after interest accrual. |
 

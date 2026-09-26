@@ -27,8 +27,10 @@ the liquidity controls in [03 §4](03-lending-markets.md).
 | CL-R6 | Invariant: backing balance of `clUSDG` ≥ `totalSupply` (in backing units). |
 
 **Yield on collateral (short rebate).** With a vault-share backing, the share price rises while it sits in Morpho as
-collateral, so the borrower's health improves over time and they keep the yield on unwrap. [VERIFY] which USDG yield
-vaults exist on Robinhood Chain and whether their share price can ever fall. If it can, the oracle must use a
+collateral, so the borrower's health improves over time and they keep the yield on unwrap. USDG yield options on Robinhood Chain (verified Phase 0, 2026-09-26): Maple
+`syrupUSDG` (`0x40858070814a57FdF33a613ae84fE0a8b4a874f7`, not ERC-4626 on this chain; priced by the Chainlink
+`syrupUSDG / USDG Exchange Rate` feed). USDG itself pays opt-in rewards without changing
+balances. [VERIFY] whether the syrupUSDG rate can ever fall. If it can, the oracle must use a
 manipulation-resistant rate and the LLTV must be lower.
 
 ## 3. Receipt as collateral (G5, `rSTOCK` → USDG)

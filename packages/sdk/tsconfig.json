@@ -10,5 +10,5 @@
     "resolveJsonModule": true,
     "skipLibCheck": true
   },
-  "include": ["src", "test", "addresses.json"]
+  "include": ["src", "test", "addresses.json", "external-addresses.json"]
 }

@@ -40,7 +40,7 @@ price() = V_coll / chainlink(USDG/USD)   scaled
 | OR-R1 | `price()` implements the formulas above with full-precision `mulDiv`. It is tested against a reference implementation in `packages/sdk` with fuzzed inputs; results match within 1 wei relative rounding. |
 | OR-R2 | `price()` never reverts on a stale or zero Chainlink answer. It uses the last good answer and trips the guard (section 4). A zero or negative answer is ignored and the last good answer is used. |
 | OR-R3 | A multiplier change is picked up in the same block. The multiplier is bounded per update (for example 0.1× to 10×) and an out-of-range jump trips the guard. |
-| OR-R4 | USDG/USD is floored at 1.00 for collateral only if Phase 0 confirms no feed exists; otherwise the feed is used. [VERIFY] |
+| OR-R4 | USDG/USD is floored at 1.00 for collateral only if Phase 0 confirms no feed exists; otherwise the feed is used. A USDG/USD feed exists: `0x61B7e5650328764B076A108EFF5fa7282a1B9aD2`, 8 decimals, 0.5% / 24h (verified Phase 0, 2026-09-26), so the feed is used. |
 | OR-R5 | Oracle params (feeds, `B_MAX`, `z`, `σ`, ramp) are set at construction or by the owner through the 48h timelock. The guardian can only *raise* the buffer or trip the guard. |
 
 ## 2. MarketHours
@@ -53,7 +53,7 @@ onchain DST math.
 | OR-R10 | `MarketHours` stores an ordered list of sessions `{openTs, closeTs}` in UTC. `isOpen(t)`, `currentOrNextSession(t)` and `closureLength(t)` are views. |
 | OR-R11 | Sessions are pushed in batches at least 14 days ahead by the owner through the timelock. A script generates them from the NYSE calendar (holidays, 13:00 ET early closes, DST). |
 | OR-R12 | Failsafe: if `t` is past the last stored session, the market is treated as **closed** with `closureLength = MAX_CLOSURE` (96h), and an alert fires. |
-| OR-R13 | [VERIFY] If Chainlink publishes 24/5 prices for Stock Tokens, weeknight closures use a smaller or zero buffer (config `overnightMode`). |
+| OR-R13 | Chainlink Stock Token feeds are 24/5 (Sunday ~20:00 ET to Friday ~20:00 ET, including overnight) (verified Phase 0, 2026-09-26). If Chainlink publishes 24/5 prices for Stock Tokens, weeknight closures use a smaller or zero buffer (config `overnightMode`). |
 
 ## 3. Weekend buffer
 
@@ -98,7 +98,7 @@ A tripped guard pauses **new borrowing** by pulling free liquidity (see [03 §4]
 | ID | Requirement |
 |---|---|
 | OR-R30 | `guardTripped()` is a public view. `trip(reason)` / `clear()` are callable by the guard keeper and the guardian. Every change emits `GuardChanged(reason, tripped)`. |
-| OR-R31 | The guard keeper reads DEX pools listed in config. [VERIFY] which DEXs hold Stock Token liquidity. It computes a TWAP and trips within 1 block of threshold breach. |
+| OR-R31 | The guard keeper reads DEX pools listed in config. Stock Token liquidity sits mainly in Uniswap v3 0.05% pools against USDG and WETH (plus v4 pools and RFQ) (verified Phase 0, 2026-09-26); pool addresses in `packages/sdk/external-addresses.json`. It computes a TWAP and trips within 1 block of threshold breach. |
 | OR-R32 | The staleness guard is also checked onchain in a permissionless `poke()`, so anyone can trip it without trusting the keeper. |
 | OR-R33 | While the guard is tripped, the app disables Borrow/Open short and shows the reason. Repay, add collateral and close short stay enabled. |
 

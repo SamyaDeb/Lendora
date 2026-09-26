@@ -7,7 +7,8 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js",
-    "./addresses.json": "./addresses.json"
+    "./addresses.json": "./addresses.json",
+    "./external-addresses.json": "./external-addresses.json"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -16,6 +17,7 @@
     "abis": "node scripts/export-abis.mjs"
   },
   "devDependencies": {
+    "@noble/hashes": "1.8.0",
     "@types/node": "^22.20.4",
     "typescript": "~5.9.3",
     "vitest": "^3.2.7"

@@ -4,8 +4,8 @@ pragma solidity 0.8.26;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
-/// @notice Test USDG: plain ERC-20 with EIP-2612 permit and open mint. 6 decimals like Paxos USDG on other chains;
-/// [VERIFY] A7: decimals and permit support of USDG on Robinhood Chain.
+/// @notice Test USDG: plain ERC-20 with EIP-2612 permit and open mint. Real USDG on Robinhood Chain has 6 decimals and
+/// EIP-2612 `permit` (A7, verified Phase 0 on a fork: test/fork/phase0/UsdgPermit.fork.t.sol).
 contract MockUSDG is ERC20, ERC20Permit {
     uint8 internal immutable _decimals;
 

@@ -32,7 +32,7 @@ app. Morpho Blue and MetaMorpho are used unmodified.
 
 | Contract | Purpose | Upgradeable | Spec |
 |---|---|---|---|
-| Morpho Blue | Lending engine (existing deployment) | No | [VERIFY] deployed on Robinhood Chain |
+| Morpho Blue | Lending engine (existing deployment) | No | Deployed at `0x9D53d5E3bd5E8d4Cbfa6DB1ca238AEA02E651010` (verified Phase 0, 2026-09-26) |
 | MetaMorpho `rNVDA` etc. | Lender vault per stock, ERC-4626; share = receipt token | No (params timelocked) | [03](03-lending-markets.md) |
 | `StockWrapper` | Wraps a Stock Token into a fixed-balance ERC-20 Morpho can hold | No | [03](03-lending-markets.md) |
 | `CollateralToken` (`clUSDG`) | Gated borrower collateral; wraps USDG or a USDG vault share | No | [05](05-collateral-router.md) |

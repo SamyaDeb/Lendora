@@ -18,7 +18,9 @@ Out: collateral wrapper and router (see [05](05-collateral-router.md)), oracle i
 
 Morpho Blue assumes a standard ERC-20: no rebasing, no fee-on-transfer, no balance changes outside transfers. Stock Tokens
 carry an ERC-8056 multiplier for corporate actions (splits, dividends in kind), and may carry transfer restrictions. The wrapper
-isolates Morpho from both. [VERIFY] exact ERC-8056 semantics and transfer rules in Phase 0.
+isolates Morpho from both. Stock Tokens are plain 18-decimal ERC-20s; `uiMultiplier()` returns the effective multiplier
+without a poke; there is no allowlist, but the issuer can blocklist addresses, pause transfers and force-burn balances (verified Phase 0, 2026-09-26).
+See [`../phase0/01-chain-facts.md`](../phase0/01-chain-facts.md) §3.
 
 | ID | Requirement |
 |---|---|
@@ -54,8 +56,8 @@ worth more stock. Borrowers owe the same wrapped units, so they economically pay
 | `loanToken` | `wNVDA` | |
 | `collateralToken` | `clUSDG` | Gated wrapper, see [05](05-collateral-router.md) |
 | `oracle` | `StocklineOracle(NVDA)` | Returns price of 1 `clUSDG` in `wNVDA`, see [04](04-oracle.md) |
-| `irm` | AdaptiveCurveIRM | Only IRMs enabled by Morpho governance are allowed. [VERIFY] which IRMs exist on Robinhood Chain |
-| `lltv` | 77% (0.77e18) | Must be a Morpho-enabled LLTV. Liquidation incentive ≈ 7.4% at 77% |
+| `irm` | AdaptiveCurveIRM | Only IRMs enabled by Morpho governance are allowed. AdaptiveCurveIRM `0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1` and `irm = address(0)` are enabled (verified Phase 0, 2026-09-26) |
+| `lltv` | 77% (0.77e18) | Must be a Morpho-enabled LLTV. Enabled: 0, 38.5%, 62.5%, 77%, 86%, 91.5%, 94.5%, 96.5%, 98% (verified Phase 0, 2026-09-26). Liquidation incentive 7.41% at 77% (LIF = 1/(1 − 0.3·0.23) = 1.07411) |
 
 | ID | Requirement |
 |---|---|

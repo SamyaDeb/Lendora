@@ -59,7 +59,7 @@ Runbooks for each P0/P1 live in `/docs/runbooks/` and are drilled on testnet bef
 | CP-R2 | Web: edge geo-block on IP country, and a VPN/datacenter IP heuristic for borrow flows. |
 | CP-R3 | Contracts: borrow and openShort need an EIP-712 attestation from the compliance signer (RT-R2), issued after an IP country check, a sanctions screen of the wallet (for example Chainalysis or TRM API) and terms acceptance. Validity 24h. |
 | CP-R4 | Exits never require an attestation: repay, close, withdraw, unwrap. Users must always be able to leave. |
-| CP-R5 | If Stock Tokens have issuer-level KYC or allowlists, Stockline relies on them and documents the dependency. [VERIFY] |
+| CP-R5 | If Stock Tokens have issuer-level KYC or allowlists, Stockline relies on them and documents the dependency. There is no holder allowlist or KYC; the issuer has a blocklist, token and global pauses, and a forced burn (verified Phase 0, 2026-09-26). |
 | CP-R6 | Legal opinions before mainnet on: whether stock lending of Stock Tokens is securities lending in target jurisdictions; whether `rSTOCK` or vault shares are securities; marketing restrictions. |
 | CP-R7 | No yield or return promises in UI or marketing copy. APYs are labeled "variable, historical/current". |
 
