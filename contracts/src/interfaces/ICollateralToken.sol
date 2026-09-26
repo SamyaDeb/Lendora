@@ -12,6 +12,7 @@ interface ICollateralToken is IERC20Metadata {
     error ZeroAddress();
     error ZeroAmount();
     error NotRouter();
+    error NotDeployer();
     error RouterAlreadySet();
     error TransferNotAllowed(address from, address to);
     error UnexpectedTransferAmount(uint256 expected, uint256 received);
