@@ -56,6 +56,8 @@ interface or a constructor parameter. Items marked *public docs* come from Robin
 | A4 | EVM target `cancun` for Robinhood Chain. | `contracts/foundry.toml` | Lower `evm_version` and rebuild. |
 | A5 | Morpho Blue on Robinhood Chain has `irm = address(0)` and `lltv = 0` enabled, which the idle market (LM-R21) needs. | Deploy scripts (task 7) | Ask Morpho governance to enable them, or run the idle reserve outside Morpho. |
 | A6 | LM-R20 uses MetaMorpho v1.1 (`morpho-org/metamorpho-v1.1`, pinned at `3b17547`, no release tags). Morpho Vaults V2 now exists; the PRD says "v1.1 or current". | `contracts/lib/metamorpho-v1.1` | Decide before task 7 whether V2 is "current". V2 changes the allocator design (adapters, no idle market). |
+| A7 | USDG on Robinhood Chain has 6 decimals and supports EIP-2612 `permit`, like Paxos USDG elsewhere. | `test/mocks/MockUSDG.sol` (decimals are a constructor arg) | Decimals only change test setup (Morpho's price scaling handles any value). No `permit` means the router uses Permit2 only. |
+| A8 | Router swaps and guard-keeper prices go through one allowlisted aggregator target called with opaque `swapData`. The real venue is unknown. | `test/mocks/MockSwapAggregator.sol` | Only the mock and the keeper's price source change; RT-R3 already forbids trusting return values (the mock can lie to test that). |
 
 ### PRD issues found against public docs (need a decision before task 5)
 

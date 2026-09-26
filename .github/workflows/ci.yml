@@ -20,14 +20,14 @@ jobs:
         working-directory: contracts
     steps:
       - uses: actions/checkout@v4
-      # Only the submodules the build needs. MetaMorpho's nested morpho-blue is remapped to our top-level copy
-      # (see foundry.toml), so it is intentionally not checked out.
+      # Only the submodules the build needs. solc compiles MetaMorpho against our top-level morpho-blue via a
+      # remapping (see foundry.toml); the nested copy is checked out only so forge's linter can resolve paths.
       - name: Checkout submodules
         working-directory: .
         run: |
           git submodule update --init --depth 1 contracts/lib/forge-std contracts/lib/openzeppelin-contracts \
             contracts/lib/morpho-blue contracts/lib/metamorpho-v1.1
-          git -C contracts/lib/metamorpho-v1.1 submodule update --init --depth 1 lib/openzeppelin-contracts
+          git -C contracts/lib/metamorpho-v1.1 submodule update --init --depth 1 lib/openzeppelin-contracts lib/morpho-blue
       - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: stable
@@ -46,7 +46,7 @@ jobs:
         run: |
           git submodule update --init --depth 1 contracts/lib/forge-std contracts/lib/openzeppelin-contracts \
             contracts/lib/morpho-blue contracts/lib/metamorpho-v1.1
-          git -C contracts/lib/metamorpho-v1.1 submodule update --init --depth 1 lib/openzeppelin-contracts
+          git -C contracts/lib/metamorpho-v1.1 submodule update --init --depth 1 lib/openzeppelin-contracts lib/morpho-blue
       - uses: crytic/slither-action@v0.4.1
         with:
           target: contracts

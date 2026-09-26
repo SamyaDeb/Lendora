@@ -19,7 +19,7 @@ Start with [`docs/LITEPAPER.md`](docs/LITEPAPER.md) and the PRD in [`docs/prd/`]
 ```sh
 git submodule update --init contracts/lib/forge-std contracts/lib/openzeppelin-contracts \
   contracts/lib/morpho-blue contracts/lib/metamorpho-v1.1
-git -C contracts/lib/metamorpho-v1.1 submodule update --init lib/openzeppelin-contracts
+git -C contracts/lib/metamorpho-v1.1 submodule update --init lib/openzeppelin-contracts lib/morpho-blue
 cd contracts && forge build && forge test
 ```
 
@@ -33,7 +33,8 @@ Dependencies (never modified):
 | `forge-std` | `v1.9.7` |
 
 MetaMorpho imports Morpho Blue by relative path into its own nested submodule. `foundry.toml` remaps that path to our
-top-level `morpho-blue` (`v1.0.0`) so there is exactly one set of Morpho types. The two copies differ only in comments,
+top-level `morpho-blue` (`v1.0.0`) so there is exactly one set of Morpho types (the nested copy is checked out only
+so forge's linter can resolve paths; solc never compiles it). The two copies differ only in comments,
 license headers and formatting. MetaMorpho keeps its own nested OpenZeppelin, the version it was audited with.
 
 ## SDK
