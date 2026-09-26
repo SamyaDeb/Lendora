@@ -37,6 +37,8 @@ export interface ExternalChain {
   };
   uniswap: Record<string, Address>;
   uniswapV3Pools: Record<string, Address>;
+  /** ERC-4626 USDG vaults usable as `clUSDG` backing (CL-R1). */
+  usdgYieldVaults: Record<string, Address>;
   lighter: {lighter: Address};
   chainlinkDataStreamsVerifierProxy: Address;
 }

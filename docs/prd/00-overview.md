@@ -10,7 +10,8 @@ Stock Tokens can be bought, held and borrowed *against*, but they cannot be borr
 
 - **Idle holdings.** Fewer than 1 in 20 holders transact monthly, and their tokens earn nothing.
 - **No shorting.** When a token trades above its real stock, only buyers can act, so prices drift high (Miller, 1977).
-- **Broken weekends.** Minting and burning pause from Saturday to Monday, and oracles freeze at Friday's close.
+- **Broken weekends.** Minting and burning pause from Saturday to Monday, and Chainlink stock feeds freeze from Friday ~20:00 ET (end of post-market)
+  to Sunday 20:00 ET (verified Phase 0, 2026-09-26).
   Premiums of about 12% have been documented.
 - **Missing yield.** Stablecoins on the chain have few places to earn beyond basic lending.
 

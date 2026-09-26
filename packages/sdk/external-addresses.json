@@ -393,6 +393,9 @@
     "lighter": {
       "lighter": "0x94bAB9693Ba2f6358507eFfcbd372b0660AFfF9d"
     },
-    "chainlinkDataStreamsVerifierProxy": "0xcE73c8ad08CBDEaCa6078BF0627C8fe0a9a536E7"
+    "chainlinkDataStreamsVerifierProxy": "0xcE73c8ad08CBDEaCa6078BF0627C8fe0a9a536E7",
+    "usdgYieldVaults": {
+      "steakhouseUSDG_VaultV2": "0xBeEff033F34C046626B8D0A041844C5d1A5409dd"
+    }
   }
 }
