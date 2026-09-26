@@ -55,6 +55,9 @@ def b_full(sigma: float, hours: float, z: float = Z) -> float:
 
 def load_feed(sym: str) -> pd.DataFrame:
     f = pd.read_csv(DATA / "feeds" / f"{sym}.csv").sort_values("updated_at").reset_index(drop=True)
+    # Launch incident: the first rounds (to 2026-06-23 ~09:50 ET) carry 18-decimal answers while decimals() is 8.
+    # They are excluded here and reported in section 0.
+    f = f[f["answer"] < 1e16].reset_index(drop=True)
     f["price"] = f["answer"] / 1e8
     f["t"] = pd.to_datetime(f["updated_at"], unit="s", utc=True).dt.tz_convert(ET)
     return f
@@ -241,6 +244,19 @@ def main() -> None:
       "(America/New_York) unless marked UTC. Onchain history runs from the feeds' first round (2026-06-21 20:00 ET) "
       "to 2026-09-26, so onchain statistics cover about 14 weekends; tails come from 10 years of reference prices.*\n")
 
+    w("## 0. Feed data incident at launch\n")
+    w("| Stock | Rounds with answers scaled 1e18 (decimals() = 8) | Last bad round (UTC) | First correct round (UTC) |")
+    w("|---|---|---|---|")
+    for s in STOCKS:
+        raw = pd.read_csv(DATA / "feeds" / f"{s}.csv").sort_values("updated_at")
+        bad = raw[raw["answer"] >= 1e16]
+        good = raw[raw["answer"] < 1e16]
+        fmt = lambda x: pd.Timestamp(int(x), unit="s", tz="UTC").strftime("%Y-%m-%d %H:%M")  # noqa: E731
+        w(f"| {s} | {len(bad)} (aggregator rounds 1–{len(bad)}) | {fmt(bad['updated_at'].max()) if len(bad) else '–'} | {fmt(good['updated_at'].min())} |")
+    w("\nFor about 1.5 days after launch every stock feed published prices 10^10 too high (e.g. SPY round 1 = "
+      "7424400000000000000 at 8 decimals). A consumer without a sanity bound would have mispriced by that factor. The "
+      "rounds are excluded from everything below. USDG/USD, syrupUSDG/USDG and ETH/USD show no such rounds.\n")
+
     res = {}
     for s in STOCKS:
         f = load_feed(s)
@@ -344,8 +360,11 @@ def main() -> None:
         have_prem = True
         c, o = d[d["closed"]], d[~d["closed"]]
         e3, e12 = episodes(d, 0.03), episodes(d, 0.12)
-        w(f"| {s} | {', '.join(sorted(d['quote'].unique()))} | {len(c)} / {len(o)} | {pct(c['prem'].median())} / {pct(c['prem'].quantile(.9))} / {pct(c['prem'].quantile(.99))} / {pct(c['prem'].max())} | {pct(c['prem'].min())} | {pct(o['prem'].abs().median())} / {pct(o['prem'].abs().quantile(.99))} | {len(e3)} / {len(e12)} |")
+        w(f"| {s} | {', '.join(sorted(d['quote'].unique()))}, from {d['t'].min():%Y-%m-%d} | {len(c)} / {len(o)} | {pct(c['prem'].median())} / {pct(c['prem'].quantile(.9))} / {pct(c['prem'].quantile(.99))} / {pct(c['prem'].max())} | {pct(c['prem'].min())} | {pct(o['prem'].abs().median())} / {pct(o['prem'].abs().quantile(.99))} | {len(e3)} / {len(e12)} |")
     if have_prem:
+        w("\n**The litepaper's \"~12%\" weekend premium is not observed on Robinhood Chain** for SPY, NVDA or AAPL in these "
+          "samples: no weekend exceeded 3%. The claim may come from other venues or other tokens; hourly sampling can miss "
+          "spikes shorter than an hour, and 8–10 weekends of DEX data per stock is a short history.")
         w("\nLargest weekend episodes (by peak abs premium, USDG pool where available):\n")
         w("| Stock | Weekend | Peak premium | Peak at (ET) | Hours above 3% | First / last hour above 3% (ET) |")
         w("|---|---|---|---|---|---|")
@@ -441,6 +460,9 @@ def main() -> None:
             out[X] = per
         nweeks = c["week"].nunique()
         w(f"| {s} | {nweeks} | ${out[0.01].mean():,.0f} / ${out[0.01].max():,.0f} | ${out[0.02].mean():,.0f} / ${out[0.02].max():,.0f} | ${out[0.01].mean()*52:,.0f} |")
+    w("\nThese are notional amounts sold short, not revenue. A weekend arb holds the borrow ~2 days, so at 10% APR the "
+      "annualized interest is about notional × 0.10 × 2/365 (for NVDA at X = 1%: a few thousand USD a year). Weekend "
+      "premium arbitrage alone does not justify the product.")
     w("\nThis is demand from weekend premium arbitrage only; hedging demand from perp makers (Lighter SPY open interest "
       "≈ $51M) is a different and likely larger source that the interviews (WS-F) should size.\n")
 
