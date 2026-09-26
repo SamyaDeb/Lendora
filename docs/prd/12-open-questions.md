@@ -41,3 +41,38 @@ is "no".
 - [ ] Opinion on `rSTOCK`, `clUSDG` and vault shares.
 - [ ] Terms of use, risk disclosure, privacy policy.
 - [ ] Issuer relationship: does the Stock Token issuer permit lending use? Is there any contractual restriction?
+
+## Phase 1 engineering assumptions (added during build)
+
+Phase 1 started before Phase 0 finished. Code is built against mocks, and each assumption below is isolated behind an
+interface or a constructor parameter. Items marked *public docs* come from Robinhood Chain's developer docs
+(docs.robinhood.com/chain, read 2026-09-26) and still need an onchain check on a fork.
+
+| # | Assumption | Where it lives | If wrong |
+|---|---|---|---|
+| A1 | Stock Tokens implement ERC-8056 as published: `uiMultiplier()` (1e18 = 1.0) returns the *effective* multiplier, and scheduled changes are exposed via `newUIMultiplier()` / `effectiveAt()`. *Public docs* confirm the function names. | `src/interfaces/external/IScaledUIAmount.sol`, `StockWrapper.multiplier()` | If `uiMultiplier()` lags until someone pokes, the wrapper and SDK must compute the effective value from `newUIMultiplier`/`effectiveAt`. |
+| A2 | Stock Tokens are 18-decimal, non-rebasing, no fee-on-transfer; raw balances never change outside transfers (*public docs*). | `StockWrapper.wrap` reverts if the received amount ≠ `rawAmount` | If fee-on-transfer or rebasing, LM-R1/LM-R7 do not hold and the wrapper design changes. |
+| A3 | No issuer allowlist or blocklist on Stock Tokens (*public docs* mention none). LM-R6 is still implemented through an optional, immutable `IHolderAllowlist` adapter (`address(0)` = none). | `src/interfaces/IHolderAllowlist.sol` | If the issuer has an allowlist with a different interface, deploy an adapter; the wrapper does not change. |
+| A4 | EVM target `cancun` for Robinhood Chain. | `contracts/foundry.toml` | Lower `evm_version` and rebuild. |
+| A5 | Morpho Blue on Robinhood Chain has `irm = address(0)` and `lltv = 0` enabled, which the idle market (LM-R21) needs. | Deploy scripts (task 7) | Ask Morpho governance to enable them, or run the idle reserve outside Morpho. |
+| A6 | LM-R20 uses MetaMorpho v1.1 (`morpho-org/metamorpho-v1.1`, pinned at `3b17547`, no release tags). Morpho Vaults V2 now exists; the PRD says "v1.1 or current". | `contracts/lib/metamorpho-v1.1` | Decide before task 7 whether V2 is "current". V2 changes the allocator design (adapters, no idle market). |
+
+### PRD issues found against public docs (need a decision before task 5)
+
+- **OR-R1 double-counts the multiplier.** Robinhood's docs say the Chainlink Stock Token feed "returns the price of one
+  token, which is the underlying share price times the multiplier… don't apply the multiplier yourself". The PRD computes
+  `P_wrapped = P_stock * m`, which applies it twice. Since one `wNVDA` = one raw token (LM-R1), the fix is
+  `P_wrapped = chainlink(NVDA/USD)`. The multiplier then matters only for display (`underlyingEquivalent`) and as a sanity
+  guard (OR-R3). *Proposed edit:* change OR-R1's first two lines to `P_wrapped = chainlink(NVDA/USD) // USD per raw token,
+  already multiplier-adjusted` and restate OR-R3 as a guard-only check.
+- **Feeds are 24/5.** The docs say "Stock feeds update 24/5, following market hours", which answers OR-R13 (yes). Weeknight
+  closures likely need little or no buffer, so `overnightMode` should default on.
+- **Sequencer uptime is missing.** Robinhood Chain is an L2 and the docs say to check the sequencer before trusting a
+  price. The PRD has no sequencer check. *Proposed:* new OR-R6 — the staleness guard also trips while the sequencer is down
+  and for a grace period after it comes back; `price()` still never reverts.
+- **Oracle pause flag.** The docs mention an advisory pause flag during corporate actions. Its interface is unknown. It
+  should probably feed the guard, like the multiplier-jump guard.
+- **Morpho's own oracle assumption.** Morpho Blue's current `IMorpho` docs state that the oracle price "should not be
+  able to change instantly such that the new price is less than the old price multiplied by LLTV·LIF". At 77% LLTV that is
+  about a 17% instant drop. OR-R3's 0.1×–10× multiplier bound and any step change in the buffer must stay inside this. The
+  ramp-in already does; confirm again in task 5.

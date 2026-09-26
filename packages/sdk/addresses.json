@@ -1,0 +1,4 @@
+{
+  "$comment": "Deployed addresses and Morpho market Ids per chain id. Written by contracts/script deploy scripts (LM-R10). Do not edit by hand.",
+  "chains": {}
+}

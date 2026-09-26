@@ -1,0 +1,18 @@
+# Foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/*/31337/
+contracts/lcov.info
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+# Python
+__pycache__/
+.venv/
+.ipynb_checkpoints/
+# Env / OS
+.env
+.env.*
+!.env.example
+.DS_Store

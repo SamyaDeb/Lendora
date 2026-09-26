@@ -1,0 +1,67 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+      # Only the submodules the build needs. MetaMorpho's nested morpho-blue is remapped to our top-level copy
+      # (see foundry.toml), so it is intentionally not checked out.
+      - name: Checkout submodules
+        working-directory: .
+        run: |
+          git submodule update --init --depth 1 contracts/lib/forge-std contracts/lib/openzeppelin-contracts \
+            contracts/lib/morpho-blue contracts/lib/metamorpho-v1.1
+          git -C contracts/lib/metamorpho-v1.1 submodule update --init --depth 1 lib/openzeppelin-contracts
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+      - name: forge fmt --check
+        run: forge fmt --check
+      - name: forge build
+        run: forge build --sizes
+      - name: forge test
+        run: forge test -vvv
+
+  slither:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout submodules
+        run: |
+          git submodule update --init --depth 1 contracts/lib/forge-std contracts/lib/openzeppelin-contracts \
+            contracts/lib/morpho-blue contracts/lib/metamorpho-v1.1
+          git -C contracts/lib/metamorpho-v1.1 submodule update --init --depth 1 lib/openzeppelin-contracts
+      - uses: crytic/slither-action@v0.4.1
+        with:
+          target: contracts
+          slither-config: contracts/slither.config.json
+          fail-on: medium
+
+  sdk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r typecheck
+      - run: pnpm -r test
