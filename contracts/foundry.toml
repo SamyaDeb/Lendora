@@ -12,6 +12,7 @@ fs_permissions = [
     {access = "read", path = "./out"},
     {access = "read", path = "./test/vectors"},
     {access = "read", path = "../packages/sdk/data"},
+    {access = "read", path = "../packages/sdk/external-addresses.json"},
     {access = "read-write", path = "../packages/sdk/addresses.json"},
 ]
 remappings = [
@@ -21,6 +22,24 @@ remappings = [
     "metamorpho/=lib/metamorpho-v1.1/",
     "lib/metamorpho-v1.1/lib/morpho-blue/=lib/morpho-blue/",
 ]
+
+# Morpho Vault V2 (lib/vault-v2 @ 2025-12-04, 425f6b1) is compiled exactly as Morpho deployed it on chain 4663
+# (Sourcify: solc 0.8.28, via-IR, 100 000 runs, cancun, bytecode_hash none), so a vault built from this source has
+# the live runtime code (LM-R20; test/fork/phase1/VaultV2CodeHash.fork.t.sol). Never modified.
+[[profile.default.compilation_restrictions]]
+paths = "lib/vault-v2/src/**"
+via_ir = true
+optimizer_runs = 100000
+
+[[profile.default.compilation_restrictions]]
+paths = "test/utils/vaultv2/**"
+via_ir = true
+optimizer_runs = 100000
+
+[[profile.default.additional_compiler_profiles]]
+name = "vaultv2"
+via_ir = true
+optimizer_runs = 100000
 
 [profile.default.fuzz]
 runs = 1000

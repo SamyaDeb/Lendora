@@ -20,3 +20,5 @@ __pycache__/
 # Phase 0 sim caches (large; refetch with sim/phase0 scripts)
 sim/data/raw/
 sim/data/*.log
+contracts/broadcast/*/4663/
+contracts/broadcast/*/46630/

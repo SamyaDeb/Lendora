@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.26;
 
-import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IStocklineOracle} from "../interfaces/IStocklineOracle.sol";
 import {IMarketHours} from "../interfaces/IMarketHours.sol";
 import {IStockWrapper} from "../interfaces/IStockWrapper.sol";
@@ -20,7 +20,7 @@ import {OracleMath} from "../libraries/OracleMath.sol";
 /// if nobody has poked; `poke()` records references and latches and emits `GuardChanged` for every change.
 /// @dev The multiplier never enters any price (D1). Owner = timelock (OR-R5); the guardian can only raise the buffer
 /// floor or trip; the keeper can trip/clear the reasons it detects offchain.
-abstract contract StocklineOracleBase is IStocklineOracle, Ownable2Step {
+abstract contract StocklineOracleBase is IStocklineOracle, Ownable {
     // ------------------------------------------------------------------ Guard reasons (bitmask)
 
     uint256 public constant MANUAL = 1 << 0;

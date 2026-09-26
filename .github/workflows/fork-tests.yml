@@ -1,6 +1,6 @@
 name: fork-tests
 
-# Phase 0 fork validation against Robinhood Chain (docs/phase0/02-fork-validation.md). Manual only: it needs an RPC
+# Phase 0 and Phase 1 fork tests against Robinhood Chain (Phase 1 forks at latest unless PHASE1_FORK_BLOCK is set) (docs/phase0/02-fork-validation.md). Manual only: it needs an RPC
 # secret, and the pinned block needs an archive endpoint once it is older than the public node's state window.
 on:
   workflow_dispatch:
@@ -22,8 +22,10 @@ jobs:
         working-directory: .
         run: |
           git submodule update --init --depth 1 contracts/lib/forge-std contracts/lib/openzeppelin-contracts \
-            contracts/lib/morpho-blue contracts/lib/metamorpho-v1.1
+            contracts/lib/morpho-blue contracts/lib/metamorpho-v1.1 contracts/lib/vault-v2
           git -C contracts/lib/metamorpho-v1.1 submodule update --init --depth 1 lib/openzeppelin-contracts lib/morpho-blue
+          git -C contracts/lib/vault-v2 submodule update --init --depth 1 lib/morpho-blue lib/morpho-blue-irm
+          git -C contracts/lib/vault-v2/lib/morpho-blue-irm submodule update --init --depth 1 lib/morpho-blue
       - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: stable

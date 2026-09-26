@@ -10,3 +10,6 @@
 [submodule "contracts/lib/metamorpho-v1.1"]
 	path = contracts/lib/metamorpho-v1.1
 	url = https://github.com/morpho-org/metamorpho-v1.1
+[submodule "contracts/lib/vault-v2"]
+	path = contracts/lib/vault-v2
+	url = https://github.com/morpho-org/vault-v2

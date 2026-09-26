@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.26;
 
-import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IMarketHours} from "./interfaces/IMarketHours.sol";
 
 /// @title MarketHours
@@ -13,7 +13,7 @@ import {IMarketHours} from "./interfaces/IMarketHours.sol";
 /// @dev All times are UTC seconds. DST, holidays and early closes are resolved offchain by
 /// `packages/sdk/scripts/genSessions.ts`; nothing here does calendar math (OR-R11). The owner is the timelock. Only
 /// future entries can be rewritten; any resulting buffer change is bounded by the oracle's `B_MAX` (OR-R8).
-contract MarketHours is IMarketHours, Ownable2Step {
+contract MarketHours is IMarketHours, Ownable {
     /// @notice Closure length assumed when the next session is unknown (OR-R12).
     uint256 public constant MAX_CLOSURE = 96 hours;
     /// @notice Largest event buffer that can be stored (matches the oracle's hard `B_MAX` cap, OR-R8).

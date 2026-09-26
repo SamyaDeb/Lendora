@@ -26,8 +26,10 @@ jobs:
         working-directory: .
         run: |
           git submodule update --init --depth 1 contracts/lib/forge-std contracts/lib/openzeppelin-contracts \
-            contracts/lib/morpho-blue contracts/lib/metamorpho-v1.1
+            contracts/lib/morpho-blue contracts/lib/metamorpho-v1.1 contracts/lib/vault-v2
           git -C contracts/lib/metamorpho-v1.1 submodule update --init --depth 1 lib/openzeppelin-contracts lib/morpho-blue
+          git -C contracts/lib/vault-v2 submodule update --init --depth 1 lib/morpho-blue lib/morpho-blue-irm
+          git -C contracts/lib/vault-v2/lib/morpho-blue-irm submodule update --init --depth 1 lib/morpho-blue
       - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: stable
@@ -45,8 +47,10 @@ jobs:
       - name: Checkout submodules
         run: |
           git submodule update --init --depth 1 contracts/lib/forge-std contracts/lib/openzeppelin-contracts \
-            contracts/lib/morpho-blue contracts/lib/metamorpho-v1.1
+            contracts/lib/morpho-blue contracts/lib/metamorpho-v1.1 contracts/lib/vault-v2
           git -C contracts/lib/metamorpho-v1.1 submodule update --init --depth 1 lib/openzeppelin-contracts lib/morpho-blue
+          git -C contracts/lib/vault-v2 submodule update --init --depth 1 lib/morpho-blue lib/morpho-blue-irm
+          git -C contracts/lib/vault-v2/lib/morpho-blue-irm submodule update --init --depth 1 lib/morpho-blue
       - uses: crytic/slither-action@v0.4.1
         with:
           target: contracts
