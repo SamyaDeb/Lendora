@@ -18,6 +18,11 @@ describe("APP-R3 revert reasons in plain language", () => {
     expect(explainError(new Wrapped(encodeErrorResult({abi: stocklineRouterAbi, errorName: "BadAttestation"})))).toMatch(/compliance attestation/);
   });
 
+  it("RT-R8: NoDebtPosition explains that adding collateral is a rescue top-up", () => {
+    const e = new Wrapped(encodeErrorResult({abi: stocklineRouterAbi, errorName: "NoDebtPosition", args: ["0x0000000000000000000000000000000000000001"]}));
+    expect(explainError(e)).toMatch(/only for positions with an open borrow.*open a borrow or short/);
+  });
+
   it("maps Morpho's string errors and wallet rejections", () => {
     const err = new Wrapped(`0x08c379a0${encodeAbiParameters([{type: "string"}], ["insufficient collateral"]).slice(2)}` as `0x${string}`);
     expect(explainError(err)).toMatch(/Not enough collateral/);

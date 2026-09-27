@@ -131,15 +131,19 @@ contract StocklineRouterTest is LocalStockline {
     }
 
     function test_RT_R1_guardTrippedBlocksBorrow() public {
+        IStocklineRouter.Attestation memory att = _attest(alice);
+        vm.prank(alice);
+        router.borrow(nvdaToken, 5000e6, 5e18, alice, att, block.timestamp);
         vm.prank(guardian);
         ds[NVDA].oracle.trip(1); // MANUAL
-        IStocklineRouter.Attestation memory att = _attest(alice);
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(IStocklineRouter.GuardTripped.selector, 1));
         router.borrow(nvdaToken, 5000e6, 10e18, alice, att, block.timestamp);
-        // Exits still work while tripped (OR-R33): add collateral, and later repay/close.
+        // Exits still work while tripped (OR-R33, CP-R4): rescue top-up (RT-R8) and repay.
         vm.prank(alice);
         router.addCollateral(nvdaToken, 1000e6, alice, block.timestamp);
+        vm.prank(alice);
+        router.repay(nvdaToken, 0, type(uint256).max, alice, block.timestamp);
     }
 
     function test_RT_R1_healthFactorAtTPlus24h() public {
@@ -367,15 +371,100 @@ contract StocklineRouterTest is LocalStockline {
         router.withdrawCollateral(nvdaToken, type(uint256).max, alice, block.timestamp);
     }
 
+    /// RT-R8: anyone may top up a borrower's position (rescue), but only one that has debt.
     function test_RT_addCollateralForAnother() public {
+        IStocklineRouter.Attestation memory att = _attest(alice);
+        vm.prank(alice);
+        router.borrow(nvdaToken, 5000e6, 10e18, alice, att, block.timestamp);
         uint256 gas = gasleft();
         vm.prank(bob);
         router.addCollateral(nvdaToken, 1000e6, alice, block.timestamp);
         emit log_named_uint("gas addCollateral", gas - gasleft());
-        assertEq(_pos(alice).collateral, 1000e6);
+        assertEq(_pos(alice).collateral, 6000e6);
+        _assertRouterEmpty();
         vm.prank(bob);
         vm.expectRevert(IStocklineRouter.ZeroAmount.selector);
         router.addCollateral(nvdaToken, 0, alice, block.timestamp);
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(IStocklineRouter.NoDebtPosition.selector, bob));
+        router.addCollateral(nvdaToken, 1000e6, bob, block.timestamp);
+    }
+
+    // ================================================================== Rescue top-up only (RT-R8, 05 §1)
+
+    /// RT-R8 regression for the 2026-09-27 review PoC: an address that was never attested used `addCollateral` to mint
+    /// clUSDG (2,000x the global cap) and then borrowed directly on Morpho, beyond its per-address cap.
+    function test_RT_R8_unattestedUserCannotCreateCollateral() public {
+        address eve = makeAddr("eve");
+        _onboard(eve, 0, 2_000_000e6);
+        vm.prank(address(core.timelock));
+        router.setGlobalCap(1000e6);
+        uint256 supplyBefore = IERC20(address(core.clUSDG)).totalSupply();
+
+        vm.prank(eve);
+        vm.expectRevert(abi.encodeWithSelector(IStocklineRouter.NoDebtPosition.selector, eve));
+        router.addCollateral(nvdaToken, 2_000_000e6, eve, block.timestamp);
+        // A third party cannot seed collateral for a debt-free address either.
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSelector(IStocklineRouter.NoDebtPosition.selector, eve));
+        router.addCollateral(nvdaToken, 1000e6, eve, block.timestamp);
+
+        assertEq(IERC20(address(core.clUSDG)).totalSupply(), supplyBefore, "no clUSDG minted");
+        assertEq(_pos(eve).collateral, 0);
+        // Without collateral the direct Morpho borrow of the PoC fails.
+        vm.prank(eve);
+        vm.expectRevert(bytes("insufficient collateral"));
+        morpho.borrow(ds[NVDA].market, 100e18, 0, eve, eve);
+    }
+
+    /// RT-R8, CP-R4: the rescue top-up is never blocked. Guard tripped, global cap below supply, attestation expired;
+    /// the borrower and a third party can both add collateral to the position.
+    function test_RT_R8_rescueTopUpWorksWithoutAttestationGuardTrippedAndCapHit() public {
+        IStocklineRouter.Attestation memory att = _attest(alice);
+        vm.prank(alice);
+        router.borrow(nvdaToken, 3500e6, 10e18, alice, att, block.timestamp);
+
+        vm.prank(guardian);
+        ds[NVDA].oracle.trip(1); // MANUAL
+        vm.prank(address(core.timelock));
+        router.setGlobalCap(1e6);
+        vm.warp(att.expiry + 1 days);
+        assertGt(IERC20(address(core.clUSDG)).totalSupply(), router.globalCap(), "cap hit");
+        assertTrue(ds[NVDA].oracle.guardTripped(), "guard tripped");
+
+        vm.prank(alice);
+        router.addCollateral(nvdaToken, 1000e6, alice, block.timestamp);
+        vm.prank(bob);
+        router.addCollateral(nvdaToken, 2000e6, alice, block.timestamp);
+        assertEq(_pos(alice).collateral, 6500e6);
+        _assertRouterEmpty();
+    }
+
+    /// RT-R8 accepted residual (05 §1): Morpho Blue is permissionless, so a borrower who was attested once can top up
+    /// through the rescue path and borrow more directly on Morpho, outside the router's per-address cap. Detection is
+    /// the DIRECT_BORROW alert (MON-R10); hard limits are the vault caps, idle reserve and allocator pulls (03 §4).
+    function test_RT_R8_residualDirectBorrowDocumented() public {
+        IStocklineRouter.Attestation memory att = _attest(alice);
+        vm.prank(alice);
+        router.borrow(nvdaToken, 5000e6, 1e18, alice, att, block.timestamp);
+        vm.prank(alice);
+        router.addCollateral(nvdaToken, 200_000e6, alice, block.timestamp);
+        uint256 before = _pos(alice).borrowShares;
+        vm.prank(alice);
+        morpho.borrow(ds[NVDA].market, 100e18, 0, alice, alice);
+        assertGt(
+            _pos(alice).borrowShares, before, "05 section 1 residual (a): direct Morpho borrow after a rescue top-up"
+        );
+    }
+
+    /// RT-R8 decision: there is no collateral-only entry. `borrow` with `borrowAmount == 0` reverts (Morpho rejects a
+    /// zero borrow), so new collateral always comes with a debt position that passed RT-R1 and RT-R2.
+    function test_RT_R8_noCollateralOnlyEntry() public {
+        IStocklineRouter.Attestation memory att = _attest(alice);
+        vm.prank(alice);
+        vm.expectRevert(bytes("inconsistent input"));
+        router.borrow(nvdaToken, 5000e6, 0, alice, att, block.timestamp);
+        assertEq(_pos(alice).collateral, 0);
     }
 
     /// Exits keep working after a market is delisted; entries do not.

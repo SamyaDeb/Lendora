@@ -906,6 +906,17 @@
   },
   {
     "type": "error",
+    "name": "NoDebtPosition",
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "NotListed",
     "inputs": [
       {

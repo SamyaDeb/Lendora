@@ -109,6 +109,8 @@ test.describe.serial("Stockline app on anvil", () => {
     await page.getByTestId("repay-AAPL").click();
     await expect(page.getByTestId("position-AAPL").getByTestId("steps").locator('li[data-status="done"]').last()).toBeVisible({timeout: 60_000});
     await expect.poll(async () => (await position("AAPL")).borrowShares, {timeout: 30_000}).toBe(0n);
+    // RT-R8: without debt, "Add collateral" is gone (rescue top-up only); withdrawing stays available.
+    await expect(page.getByTestId("add-AAPL")).toHaveCount(0, {timeout: 30_000});
     await page.getByTestId("withdraw-collateral-AAPL").click();
     await expect.poll(async () => (await position("AAPL")).collateral, {timeout: 60_000}).toBe(0n);
   });

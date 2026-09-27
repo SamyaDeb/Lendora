@@ -33,6 +33,8 @@ function fromName(name: string, args: readonly unknown[] = []): string {
       return "The transaction deadline passed. Retry.";
     case "NotListed":
       return "This market is not open for new positions.";
+    case "NoDebtPosition":
+      return "Adding collateral is only for positions with an open borrow (it protects them from liquidation). To post new collateral, open a borrow or short.";
     case "SwapTargetNotAllowed":
       return "That swap route is not allowlisted.";
     case "EnforcedPause":

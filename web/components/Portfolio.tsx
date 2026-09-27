@@ -160,14 +160,17 @@ function PositionCard({symbol, restricted}: {symbol: string; restricted: boolean
                 Withdraw collateral
               </button>
             )}
-            <div className="flex items-end gap-2">
-              <div className="w-40">
-                <AmountInput label="Add collateral" value={add} onChange={setAdd} decimals={6} unit="USDG" testId={`add-amount-${symbol}`} />
+            {/* RT-R8: "Add collateral" is a rescue top-up for a position with debt; new collateral enters with a borrow. */}
+            {u.borrowShares > 0n && (
+              <div className="flex items-end gap-2">
+                <div className="w-40">
+                  <AmountInput label="Add collateral" value={add} onChange={setAdd} decimals={6} unit="USDG" testId={`add-amount-${symbol}`} />
+                </div>
+                <button className="btn btn-ghost" disabled={steps.busy || addAmt === 0n} onClick={async () => (await steps.run(addCollateral)) && setAdd("")} data-testid={`add-${symbol}`}>
+                  Add
+                </button>
               </div>
-              <button className="btn btn-ghost" disabled={steps.busy || addAmt === 0n} onClick={async () => (await steps.run(addCollateral)) && setAdd("")} data-testid={`add-${symbol}`}>
-                Add
-              </button>
-            </div>
+            )}
           </div>
         </div>
       )}

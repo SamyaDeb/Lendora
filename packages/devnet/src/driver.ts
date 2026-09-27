@@ -297,6 +297,7 @@ export class ChainDriver {
     return r;
   }
 
+  /** US-B5 rescue top-up (RT-R8): only for a position with debt; the router reverts `NoDebtPosition` otherwise. */
   async addCollateral(ticker: string, user: `0x${string}`, amount: bigint): Promise<TransactionReceipt> {
     await this.borrowerSetup(user, amount);
     const r = await this.a.send(user, this.d.router!, this.call(stocklineRouterAbi, "addCollateral", [this.stock(ticker).stockToken, amount, user, await this.deadline()]));

@@ -10,6 +10,8 @@ import {
     IVaultV2FactoryMin,
     IMorphoMarketV1AdapterV2Min
 } from "../../../src/interfaces/external/IMorphoVaultV2.sol";
+import {Vm} from "forge-std/Vm.sol";
+import {IStocklineRouter} from "../../../src/interfaces/IStocklineRouter.sol";
 import {ForkConfig} from "../../../script/ForkConfig.sol";
 import {Phase1ForkBase} from "./Phase1ForkBase.sol";
 
@@ -26,6 +28,7 @@ contract DeployForkTest is Phase1ForkBase, ForkConfig {
     StockDeployment internal nvdaD;
     StockDeployment[] internal allD;
     StockConfig[] internal stocksCfg;
+    Vm.Wallet internal attester;
 
     function setUp() public override {
         super.setUp();
@@ -44,6 +47,24 @@ contract DeployForkTest is Phase1ForkBase, ForkConfig {
         }
         core = _finalize(c, core);
         vm.stopPrank();
+        attester = vm.createWallet("attester");
+        vm.prank(address(core.timelock));
+        core.router.setAttestationSigner(attester.addr);
+    }
+
+    function _freshRound(address feed) internal {
+        (uint80 id, int256 answer,,, uint80 answeredIn) = AggregatorLike(feed).latestRoundData();
+        vm.mockCall(
+            feed,
+            abi.encodeCall(AggregatorLike.latestRoundData, ()),
+            abi.encode(id, answer, block.timestamp, block.timestamp, answeredIn)
+        );
+    }
+
+    function _attest(address user) internal view returns (IStocklineRouter.Attestation memory a) {
+        a.expiry = block.timestamp + 1 days;
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attester.privateKey, core.router.attestationDigest(user, a.expiry));
+        a.signature = abi.encodePacked(r, s, v);
     }
 
     function test_LM_R10_R20_deploymentWiring() public view {
@@ -145,15 +166,22 @@ contract DeployForkTest is Phase1ForkBase, ForkConfig {
         vm.prank(c.allocator);
         v.allocate(sd.adapter, abi.encode(sd.market), 90e18);
 
-        // Borrower: USDG → clUSDG collateral through the router (addCollateral needs no attestation), then borrow
-        // directly on Morpho (permissionless; the router's entry checks are soft gates, 05 §1).
+        // Borrower: USDG → clUSDG collateral through the attested router entry with a dust borrow (RT-R8: collateral
+        // only enters with debt), then the loan directly on Morpho (permissionless; 05 §1 residual).
         (uint256 p,) = sd.oracle.stockAnswer();
         uint256 collateral = p * 10 * 2 / 100; // 2x the debt value, USDG 6 dp
         _fundUsdg(borrower, collateral);
+        IStocklineRouter.Attestation memory att = _attest(borrower);
+        // Earlier markets' flows warp 7 days, so the live feeds look stale to the RT-R1 guard; re-serve their latest
+        // rounds as fresh for the one attested entry (the guard itself is covered in test/router and Lifecycle).
+        _freshRound(c.usdgFeed);
+        _freshRound(stocksCfg[i].feed);
         vm.startPrank(borrower);
         IERC20(USDG).approve(address(core.router), collateral);
-        core.router.addCollateral(stockToken, collateral, borrower, block.timestamp);
+        IMorpho(MORPHO).setAuthorization(address(core.router), true);
+        core.router.borrow(stockToken, collateral, 1e9, borrower, att, block.timestamp);
         vm.stopPrank();
+        vm.clearMockedCalls();
         vm.prank(borrower);
         IMorpho(MORPHO).borrow(sd.market, 10e18, 0, borrower, borrower);
         assertEq(IERC20(address(sd.wrapper)).balanceOf(borrower), 10e18);
@@ -192,4 +220,8 @@ contract DeployForkTest is Phase1ForkBase, ForkConfig {
         Position memory pos = IMorpho(MORPHO).position(sd.market.id(), who);
         return (pos.supplyShares, pos.borrowShares, pos.collateral);
     }
+}
+
+interface AggregatorLike {
+    function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80);
 }

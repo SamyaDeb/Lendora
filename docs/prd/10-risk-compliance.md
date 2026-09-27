@@ -48,6 +48,7 @@ follows the Saturday 2% depth ($146k); re-measure on a weekday (BLOCKED on an ar
 | Issuer `adminBurn` of the wrapper's backing | Cannot be prevented onchain (no pause/blocklist check). `backingShortfall()` P0 alert (LM-R8); per-market kill plan; issuer policy question (06 B2) | BD / Legal |
 | Paxos freezes or wipes USDG at `clUSDG` or Morpho | Cannot be prevented; documented by fork test; disclosed; diversify backing later (CL-R7) | Legal |
 | Sequencer outage | Optional uptime feed (OR-R6), keeper L2 gap detection pulls liquidity; liquidations after an outage cannot be delayed (disclosed) | Eng |
+| Soft-gate residual (05 §1): Morpho borrowing is permissionless, so a once-attested borrower (rescue top-up), a debt-free `clUSDG` holder in Morpho, or a liquidator holding seized `clUSDG` can borrow directly on Morpho without a fresh attestation and beyond the per-address cap | Hard limit = vault caps, idle reserve and allocator pulls (03 §4); new collateral only via attested entries (RT-R8); `DIRECT_BORROW` alert (MON-R10) and the geo/sanctions review on the offending address; disclosed as an audit known issue | Eng / Compliance |
 | Smart contract bug | Minimal custom code, Morpho unmodified, 2 audits, invariant tests, bug bounty, caps | Eng |
 | Keeper failure | Health endpoints, paging, redundant instances, guardian manual actions | Eng |
 | Regulatory (securities lending of tokenized equities) | Legal opinion per launch jurisdiction, geo-restrictions, no token | Legal |

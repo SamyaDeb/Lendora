@@ -76,6 +76,8 @@ interface IStocklineRouter {
     error SwapTargetNotAllowed(address target);
     error InsufficientOutput(uint256 out, uint256 minOut);
     error BadMarket();
+    /// @notice RT-R8: `addCollateral` is a rescue top-up; `user` has no debt in the market.
+    error NoDebtPosition(address user);
 
     function lend(address stock, uint256 amount, uint256 minShares, address receiver, uint256 deadline)
         external
@@ -104,6 +106,8 @@ interface IStocklineRouter {
     function closeShort(address stock, uint256 usdgIn, Swap calldata swap, address receiver, uint256 deadline)
         external
         returns (uint256 collateralOut);
+    /// @notice RT-R8: rescue top-up for a position with debt (reverts `NoDebtPosition` otherwise). No attestation,
+    /// guard or cap check; new collateral enters only through the attested `borrow` / `openShort`.
     function addCollateral(address stock, uint256 amount, address onBehalf, uint256 deadline) external;
     function repay(address stock, uint256 assets, uint256 shares, address onBehalf, uint256 deadline)
         external

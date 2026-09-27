@@ -19,6 +19,7 @@ contract StocklineLiquidatorTest is LocalStockline {
     using MarketParamsLib for MarketParams;
 
     uint256 internal constant I = 1; // NVDA
+    uint256 internal constant DUST = 1e9; // router entry borrow that opens the position (RT-R8)
     address internal lender = makeAddr("lender");
     address internal alice = makeAddr("alice");
     address internal recipient = makeAddr("recipient");
@@ -44,12 +45,14 @@ contract StocklineLiquidatorTest is LocalStockline {
         m.dex.setRate(address(m.usdg), nvda, uint256(1e8) * 1e36 / (up * 1e6));
     }
 
-    /// @dev alice: collateral via the router, borrow directly on Morpho (a position NOT opened through the router).
+    /// @dev alice: collateral with a dust borrow through the attested router entry (RT-R8: no debt-free collateral),
+    /// then the rest borrowed directly on Morpho (a position sized outside the router's checks, 05 §1 residual).
     function _openDirect(uint256 collateral, uint256 debt) internal {
+        IStocklineRouter.Attestation memory att = _attest(alice);
         vm.prank(alice);
-        core.router.addCollateral(nvda, collateral, alice, block.timestamp);
+        core.router.borrow(nvda, collateral, DUST, alice, att, block.timestamp);
         vm.prank(alice);
-        morpho.borrow(ds[I].market, debt, 0, alice, alice);
+        morpho.borrow(ds[I].market, debt - DUST, 0, alice, alice);
     }
 
     function _buy(uint256 usdgIn, uint256 minOut) internal view returns (StocklineLiquidator.Swap memory) {

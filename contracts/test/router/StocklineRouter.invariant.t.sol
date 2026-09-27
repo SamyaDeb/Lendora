@@ -154,8 +154,10 @@ contract RouterHandler is Test {
         calls++;
     }
 
+    /// RT-R8: `addCollateral` is a rescue top-up, so it is only exercised for users with debt.
     function addCollateral(uint256 who, uint256 amount) external {
         address u = _u(who);
+        if (morpho.position(mp.id(), u).borrowShares == 0) return;
         vm.prank(u);
         try router.addCollateral(address(stock), bound(amount, 1, 5000e6), u, block.timestamp) {
             ok++;

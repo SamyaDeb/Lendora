@@ -1,7 +1,8 @@
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
-import {encodeFunctionData, maxUint256, parseAbi} from "viem";
+import {encodeFunctionData, parseAbi} from "viem";
 import {anvil as anvilChain} from "viem/chains";
-import {erc20Abi, mockAggregatorAbi, morphoAbi, stocklineRouterAbi} from "@stockline/sdk";
+import {erc20Abi, mockAggregatorAbi, morphoAbi} from "@stockline/sdk";
+import {ChainDriver} from "@stockline/devnet";
 import {startAnvil, type Anvil} from "./anvil.js";
 import {call, DEPLOYER, freshRounds, lend, WED} from "./helpers.js";
 import {Allocator} from "../src/allocator/allocator.js";
@@ -51,12 +52,12 @@ describe("fallback liquidator bot on anvil with the task-7 deployment", () => {
     await lend(a, "NVDA", lender, 500n * E18);
     await a.test.impersonateAccount({address: a.d.roles.allocator});
     await new Allocator(a.client, rpcUnlockedSender(a.client, a.url, anvilChain, a.d.roles.allocator), a.d, undefined, undefined, () => {}).tick();
-    // A position opened directly on Morpho (collateral through the router, borrow without it).
+    // A position sized directly on Morpho: collateral through the attested router entry with a dust borrow (RT-R8:
+    // collateral only enters with debt), then the loan without the router (05 §1 residual).
     const nvda = a.d.stocks.NVDA;
-    await a.send(DEPLOYER, a.d.usdg, call(parseAbi(["function mint(address,uint256)"]), "mint", [borrower, 3_500_000_000n]));
-    await a.send(borrower, a.d.usdg, encodeFunctionData({abi: erc20Abi, functionName: "approve", args: [a.d.router!, maxUint256]}));
-    await a.send(borrower, a.d.router!, encodeFunctionData({abi: stocklineRouterAbi, functionName: "addCollateral", args: [nvda.stockToken, 3_500_000_000n, borrower, WED + 3600n]}));
-    await a.send(borrower, a.d.morpho, encodeFunctionData({abi: morphoAbi, functionName: "borrow", args: [marketParams(a.d, nvda), 10n * E18, 0n, borrower, borrower]}));
+    const dust = 10n ** 9n;
+    await new ChainDriver(a, {log: () => {}}).borrow("NVDA", borrower, 3_500_000_000n, dust);
+    await a.send(borrower, a.d.morpho, encodeFunctionData({abi: morphoAbi, functionName: "borrow", args: [marketParams(a.d, nvda), 10n * E18 - dust, 0n, borrower, borrower]}));
   });
   afterAll(() => a?.stop());
 

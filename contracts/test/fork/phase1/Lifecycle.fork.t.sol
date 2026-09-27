@@ -380,6 +380,15 @@ contract LifecycleForkTest is Phase1ForkBase, ForkConfig {
     /// liquidity even directly on Morpho → the liquidation of an unhealthy position still succeeds.
     function test_phase1_exit_staleFeedPullsLiquidityButLiquidationWorks() public {
         _openShort(10e18, 155);
+        // `other` opens a position while the market is healthy (RT-R8: collateral only enters with a debt position).
+        address other = makeAddr("other");
+        _fundUsdg(other, 11_000e6);
+        IStocklineRouter.Attestation memory att = _attest(other);
+        vm.startPrank(other);
+        IERC20(USDG).approve(address(core.router), type(uint256).max);
+        IMorpho(MORPHO).setAuthorization(address(core.router), true);
+        core.router.borrow(NVDA, 10_000e6, 1e9, other, att, block.timestamp);
+        vm.stopPrank();
         _round(block.timestamp + 1 hours, p0 * 125 / 100); // position becomes liquidatable
         uint256 supplyBefore = _supplyAssets();
         _warp(block.timestamp + 1 days + 11 minutes); // Thursday: open session, no round for > heartbeat + 10 min
@@ -393,13 +402,15 @@ contract LifecycleForkTest is Phase1ForkBase, ForkConfig {
         IVaultV2Min(d.vault).deallocate(d.adapter, abi.encode(d.market), free);
 
         // A borrower with collateral already in Morpho cannot borrow: no liquidity left (the router refuses earlier).
-        address other = makeAddr("other");
-        _fundUsdg(other, 10_000e6);
         vm.startPrank(other);
-        IERC20(USDG).approve(address(core.router), type(uint256).max);
-        core.router.addCollateral(NVDA, 10_000e6, other, block.timestamp);
+        core.router.addCollateral(NVDA, 1000e6, other, block.timestamp); // rescue top-up still works (RT-R8)
         vm.expectRevert(); // Morpho: insufficient liquidity
         IMorpho(MORPHO).borrow(d.market, 2e18, 0, other, other);
+        vm.stopPrank();
+        deal(NVDA, other, 1e18, true);
+        vm.startPrank(other);
+        IERC20(NVDA).approve(address(core.router), type(uint256).max);
+        core.router.repay(NVDA, 0, type(uint256).max, other, block.timestamp);
         vm.stopPrank();
 
         _liquidateAll(trader);

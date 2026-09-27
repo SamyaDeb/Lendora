@@ -21,24 +21,23 @@ import {
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
 import {SharesMathLib} from "morpho-blue/src/libraries/SharesMathLib.sol";
 import {MorphoBalancesLib} from "morpho-blue/src/libraries/periphery/MorphoBalancesLib.sol";
-import {IStocklineRouter} from "./interfaces/IStocklineRouter.sol";
-import {IStockWrapper} from "./interfaces/IStockWrapper.sol";
-import {ICollateralToken} from "./interfaces/ICollateralToken.sol";
-import {IStocklineOracle} from "./interfaces/IStocklineOracle.sol";
-import {IVaultV2Min, IMorphoMarketV1AdapterV2Min} from "./interfaces/external/IMorphoVaultV2.sol";
-import {OracleMath} from "./libraries/OracleMath.sol";
+import {IStocklineRouter} from "../../../src/interfaces/IStocklineRouter.sol";
+import {IStockWrapper} from "../../../src/interfaces/IStockWrapper.sol";
+import {ICollateralToken} from "../../../src/interfaces/ICollateralToken.sol";
+import {IStocklineOracle} from "../../../src/interfaces/IStocklineOracle.sol";
+import {IVaultV2Min, IMorphoMarketV1AdapterV2Min} from "../../../src/interfaces/external/IMorphoVaultV2.sol";
+import {OracleMath} from "../../../src/libraries/OracleMath.sol";
 
-/// @title StocklineRouter
+/// @title StocklineRouterPhase2 (test-only snapshot of the router at 2fbd732, before RT-R8)
 /// @notice One-transaction user flows over Morpho Blue, Vault V2, the wrappers and `clUSDG`
 /// (docs/prd/05-collateral-router.md §4). Entries (`borrow`, `openShort`) enforce RT-R1 (guard, HF ≥ 1.10 at t + 24h
 /// with closure and event buffers, per-address and global caps) and RT-R2 (EIP-712 attestation). Exits (`repay`,
-/// `closeShort`, `withdrawCollateral`, `withdrawLend`) and the rescue top-up `addCollateral` (positions with debt
-/// only, RT-R8) never need an attestation or a guard check.
+/// `closeShort`, `withdrawCollateral`, `withdrawLend`) and `addCollateral` never need an attestation or a guard check.
 /// @dev UUPS behind the timelock (RT-R7); holds configuration only, never user balances between calls (RT-R5); every
 /// entry point takes a `deadline` and is reentrancy-guarded (RT-R6). Swaps go only through allowlisted targets, with
 /// balance-delta checks; return data is never read (RT-R3). Users authorize the router on Morpho once
 /// (`setAuthorization`, or `morphoAuthorizeWithSig` in a `multicall`) and approve tokens with `selfPermit`.
-contract StocklineRouter is
+contract StocklineRouterPhase2 is
     IStocklineRouter,
     Initializable,
     UUPSUpgradeable,
@@ -239,10 +238,8 @@ contract StocklineRouter is
         emit ShortClosed(msg.sender, stock, repaid, usdgIn, collateralOut);
     }
 
-    /// @notice Rescue top-up (US-B5, RT-R8): USDG → clUSDG → supply as collateral for `onBehalf`, who must already
-    /// have
-    /// debt in the market. Risk-reducing, so no attestation, guard or cap check (CP-R4). New collateral without debt
-    /// has no router path: it enters only through the attested, cap-checked `borrow` / `openShort` (05 §1).
+    /// @notice USDG → clUSDG → supply as collateral for `onBehalf` (US-B5). Risk-reducing: no attestation, no
+    /// guard.
     function addCollateral(address stock, uint256 amount, address onBehalf, uint256 deadline)
         external
         nonReentrant
@@ -250,8 +247,6 @@ contract StocklineRouter is
     {
         Market storage m = _configured(stock);
         if (amount == 0) revert ZeroAmount();
-        // RT-R8: without this, an unattested address could mint clUSDG past the global cap and borrow on Morpho.
-        if (MORPHO.position(m.params.id(), onBehalf).borrowShares == 0) revert NoDebtPosition(onBehalf);
         USDG.safeTransferFrom(msg.sender, address(this), amount);
         _addCollateral(m, amount, onBehalf);
         emit CollateralAdded(msg.sender, onBehalf, stock, amount);

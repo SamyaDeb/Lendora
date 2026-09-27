@@ -24,6 +24,11 @@ describe("chain driver seed week on anvil (Phase 2 task 0)", () => {
     }
   });
 
+  it("RT-R8: a debt-free address cannot add collateral (rescue top-up only), with a decoded revert", async () => {
+    const fresh = "0x00000000000000000000000000000000000fee01" as const;
+    await expect(drv.addCollateral("NVDA", fresh, 1_000n * 10n ** 6n)).rejects.toThrow(/NoDebtPosition/);
+  });
+
   it("crosses a weekend: the buffer ramps in before the Friday close and is released by the Monday round", async () => {
     const t = r.times;
     expect(await drv.isOpen(t.rampStart + 3600n)).toBe(true);

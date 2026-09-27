@@ -9,11 +9,27 @@ every user flow into one transaction.
 Morpho Blue markets are permissionless. Anyone holding the collateral token can borrow directly. If collateral were plain
 USDG, Stockline could not enforce per-user limits or pause new positions. With `clUSDG`:
 
-- New collateral enters only through the router, which checks guard state, caps and attestation.
+- New collateral enters only through the router's attested entries (`borrow`, `openShort`), which check guard state,
+  caps and attestation. The only other mint path, `addCollateral`, is a rescue top-up for a position that already has
+  debt (RT-R8).
 - Exit is always permissionless: anyone holding `clUSDG` can unwrap to the backing asset, so liquidators are never blocked.
 
-This is a soft gate: an existing borrower can still borrow more against collateral already posted. Hard limits come from
-the liquidity controls in [03 §4](03-lending-markets.md).
+**This is a soft gate, and the residual cannot be closed onchain** because Morpho Blue borrowing is permissionless
+(anyone with collateral in the market can call `Morpho.borrow` directly):
+
+- (a) A borrower who was attested once can top up through the rescue path and then borrow more directly on Morpho,
+  beyond the router's per-address cap and without a fresh attestation.
+- (b) Anyone holding `clUSDG` in Morpho with zero debt (for example after `repay` without withdrawing collateral) can
+  borrow again directly on Morpho without a fresh attestation.
+- (c) A liquidator that seized `clUSDG` may supply it to Morpho (a transfer to Morpho is allowed, CL-R3) and borrow
+  against it without an attestation.
+
+The hard limits are the vault caps, the idle reserve and the allocator's liquidity pulls ([03 §4](03-lending-markets.md)):
+no path can borrow more than the liquidity the allocator has placed in the market. Mitigation is detection (the
+`DIRECT_BORROW` alert, MON-R10 in [10](10-risk-compliance.md)) plus the per-address cap on every router entry. Before the
+remediation of 2026-09-27, `addCollateral` needed no debt, so a never-attested address could mint `clUSDG` without any
+cap and borrow directly (review finding, fixed by RT-R8; regression test
+[`test_RT_R8_unattestedUserCannotCreateCollateral`](../../contracts/test/router/StocklineRouter.t.sol)).
 
 ## 2. CollateralToken (`clUSDG`)
 
@@ -67,7 +83,8 @@ router's `multicall` (USDG, Stock Tokens and `rSTOCK` all support EIP-2612; veri
 | `borrow(stock, collateralIn, borrowAmt)` | pull USDG → mint `clUSDG` → `supplyCollateral` onBehalf user → `borrow` onBehalf user → unwrap → Stock Token to user | US-B1 |
 | `openShort(stock, collateralIn, borrowAmt, minUsdgOut, swapData)` | as `borrow`, then swap Stock Token → USDG via an allowlisted target (Uniswap UniversalRouter first, A8); USDG to user (or add to collateral if `compound=true`) | US-B2 |
 | `closeShort(stock, maxUsdgIn, swapData)` | pull USDG → swap to Stock Token → wrap → `repay` all shares → `withdrawCollateral` → unwrap `clUSDG` → USDG to user | US-B4 |
-| `addCollateral`, `repay`, `withdrawCollateral` | single-step helpers | US-B5 |
+| `addCollateral` | rescue top-up for a position with debt (RT-R8) | US-B5 |
+| `repay`, `withdrawCollateral` | single-step helpers | US-B5 |
 
 | ID | Requirement |
 |---|---|
@@ -78,6 +95,7 @@ router's `multicall` (USDG, Stock Tokens and `rSTOCK` all support EIP-2612; veri
 | RT-R5 | The router holds no balances after any call. An invariant test asserts the router's token balances are 0 after every fuzzed flow. |
 | RT-R6 | All user-facing functions take a `deadline`. Reentrancy is guarded. Events are emitted for the indexer (`ShortOpened`, `ShortClosed`, `Lent`, `Withdrawn`, `Borrowed`, `Repaid`, `CollateralAdded`, `CollateralWithdrawn`). |
 | RT-R7 | Router upgrades go through the 48h timelock. The Morpho authorization UI tells users that the router can act on their Morpho positions, and how to revoke. |
+| RT-R8 | *(new, remediation 2026-09-27)* `addCollateral` is a rescue top-up for positions with debt: it reverts `NoDebtPosition(onBehalf)` unless `onBehalf` has `borrowShares > 0` in that market. It needs no attestation, guard or cap check (risk-reducing, CP-R4) and anyone may top up anyone's position. All other collateral enters through attested entries (`borrow`, `openShort`); there is no collateral-only entry (`borrow` with `borrowAmount = 0` reverts in Morpho). Tests: `test_RT_R8_*` in [`StocklineRouter.t.sol`](../../contracts/test/router/StocklineRouter.t.sol), upgrade [`StocklineRouterUpgrade.t.sol`](../../contracts/test/router/StocklineRouterUpgrade.t.sol). |
 
 ## Acceptance criteria
 
