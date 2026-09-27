@@ -1,7 +1,7 @@
 # Stockline Node services (indexer, api, compliance, keepers): one image, the service chosen at runtime.
 #   docker build -f infra/Dockerfile -t stockline-svc .
 #   docker run -e SERVICE=api … stockline-svc
-# SERVICE: indexer | api | compliance | allocator | guard | liquidator | alerts | feed-mirror | reconcile
+# SERVICE: indexer | api | compliance | allocator | guard | liquidator | alerts | feed-mirror | monitor | reconcile
 FROM node:22-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
 WORKDIR /app

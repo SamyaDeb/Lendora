@@ -76,6 +76,8 @@ Timelocks are 24h on testnet (02 roles): parameter changes, including the attest
 ## 3. Weekend watch (each of the 2 clean weekends)
 
 A weekend is **clean** when every box below is ticked and no P0/P1 alert fired (docs/prd/10 §Monitoring).
+The monitor records it: `curl $MONITOR_URL/weekends` shows each closure's milestones per market and a `clean`
+verdict; attach that JSON to the weekend's log entry. Open incidents: `curl $MONITOR_URL/incidents`.
 
 **Friday (before 16:00 ET)**
 

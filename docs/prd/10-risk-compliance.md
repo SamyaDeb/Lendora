@@ -56,19 +56,33 @@ follows the Saturday 2% depth ($146k); re-measure on a weekday (BLOCKED on an ar
 
 ## Monitoring and paging
 
-| Alert | Condition | Severity |
-|---|---|---|
-| Bad debt | Any `Liquidate` with `badDebtAssets > 0` | P0 |
-| Missed liquidation | Position HF < 1.0 for > 2 blocks | P0 |
-| Wrapper backing shortfall | `backingShortfall() > 0` on any `StockWrapper` (LM-R8) | P0 |
-| Oracle stale while open | `now − max(updatedAt, sessionOpen) > heartbeat + 10 min` | P1 |
-| Feed rejected by sanity band | `GuardChanged(SANITY or USDG_FEED, true)` | P1 |
-| Guard tripped | Any `GuardChanged(tripped=true)` | P1 |
-| Sequencer / L2 block gap | Uptime feed down, or consecutive L2 blocks > N minutes apart | P1 |
-| Keeper down | No allocator run for 5 min | P1 |
-| Utilization high | > 95% for 1h | P2 |
-| MarketHours runway | < 7 days of sessions stored, or an earnings date within 30 days not yet pushed | P2 |
-| Indexer lag | > 20 blocks | P2 |
+Implemented by the ops monitor `keepers/src/monitor/` (remediation task 3): read-only, restart-safe (incidents, duration
+watches, event cursor and the weekend log live in Postgres), deduped by `(rule, subject)` with re-notification (P0
+15 min, P1 1h, P2 6h) and a resolve notification. Pagers: PagerDuty Events v2, Opsgenie, Telegram, signed webhook.
+Tests: [`keepers/test/monitor.test.ts`](../../keepers/test/monitor.test.ts) (each rule fires once and resolves once on
+anvil from real chain conditions).
+
+| ID | Rule | Condition | Sev | Runbook |
+|---|---|---|---|---|
+| MON-R1 | `BAD_DEBT` | Morpho `Liquidate` with `badDebtAssets > 0` on a Stockline market | P0 | [bad-debt](../runbooks/bad-debt.md) |
+| MON-R2 | `MISSED_LIQUIDATION` | Any position HF < 1.0 for > 2 blocks (SDK `healthFactorAt`, positions from the indexer) | P0 | [missed-liquidation](../runbooks/missed-liquidation.md) |
+| MON-R3 | `BACKING_SHORTFALL` | `backingShortfall() > 0` on any `StockWrapper` (LM-R8), every tick | P0 | [wrapper-backing-shortfall](../runbooks/wrapper-backing-shortfall.md) |
+| MON-R4 | `CLUSDG_BACKING` | USDG balance of `clUSDG` < `totalSupply` (CL-R6; Paxos freeze/wipe) | P0 | [usdg-freeze](../runbooks/usdg-freeze.md) |
+| MON-R5 | `ORACLE_STALE` | Open session and `now − max(updatedAt, sessionOpen) > heartbeat + 10 min` (raw feed) | P1 | [oracle-stale-or-rejected](../runbooks/oracle-stale-or-rejected.md) |
+| MON-R6 | `FEED_REJECTED` | `GuardChanged(SANITY or USDG_FEED, true)`, or those reasons live | P1 | [oracle-stale-or-rejected](../runbooks/oracle-stale-or-rejected.md) |
+| MON-R7 | `GUARD_TRIPPED` | Any `GuardChanged(tripped = true)` or reason live; resolves on clear (a trip and clear between ticks still pages) | P1 | [guard-tripped](../runbooks/guard-tripped.md) |
+| MON-R8 | `L2_GAP` | Consecutive block timestamps ≥ N min apart (the guard keeper's detector, shared) | P1 | [sequencer-l2-gap](../runbooks/sequencer-l2-gap.md) |
+| MON-R9 | `KEEPER_DOWN` | Allocator/guard/liquidator/alerts `/health` not 200 (the allocator's turns 503 after 5 min without a run, LM-R33) | P1 | [keeper-down](../runbooks/keeper-down.md) |
+| MON-R10 | `DIRECT_BORROW` | Morpho `Borrow` on a Stockline market whose `caller` is not the router (05 §1 residual, RT-R8) | P1 | [direct-borrow](../runbooks/direct-borrow.md) |
+| MON-R11 | `PULL_NOT_EFFECTIVE` | Guard tripped and vault free market liquidity > dust (the allocator's 1e15 minimum move) after 2 blocks (LM-R31) | P1 | [guard-tripped](../runbooks/guard-tripped.md) |
+| MON-R12 | `UTILIZATION_HIGH` | Vault-level utilization > 95% for 1h | P2 | – |
+| MON-R13 | `CALENDAR_RUNWAY` | < 7 days of sessions stored, or an earnings window within 30 days not pushed | P2 | [calendar-push](../runbooks/calendar-push.md) |
+| MON-R14 | `INDEXER_LAG` | Indexed head > 20 blocks behind, or an SI-R5 reconciliation diff (run inside the monitor) | P2 | [keeper-down](../runbooks/keeper-down.md) |
+
+**Weekend log.** For every closure ≥ 24h and every market the monitor records, once, the ramp-in start, full buffer,
+close, first fresh round and ramp-out, plus guard trips/clears from the ramp start to 24h after the reopen, and serves
+them at `GET /weekends` with a `clean` verdict (all milestones seen, no guard trip, no P0/P1 incident). This is the
+evidence for the Phase 2 exit "2 clean testnet weekends".
 
 Runbooks for each P0/P1 live in `/docs/runbooks/` and are drilled on testnet before mainnet.
 

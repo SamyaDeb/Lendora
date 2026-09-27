@@ -13,14 +13,16 @@
     "liquidator": "tsx src/liquidator/main.ts",
     "lint": "eslint .",
     "alerts": "tsx src/alerts/main.ts",
-    "feed-mirror": "tsx src/feedMirror/main.ts"
+    "feed-mirror": "tsx src/feedMirror/main.ts",
+    "monitor": "tsx src/monitor/main.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
     "@stockline/sdk": "workspace:*",
     "hono": "^4.13.9",
     "pg": "^8.23.0",
-    "viem": "^2.56.9"
+    "viem": "^2.56.9",
+    "@stockline/indexer": "workspace:*"
   },
   "devDependencies": {
     "@stockline/api": "workspace:*",
@@ -35,6 +37,7 @@
     "./signer": "./src/common/signer.ts",
     "./alerts": "./src/alerts/index.ts",
     "./health": "./src/common/health.ts",
-    "./feed-mirror": "./src/feedMirror/mirror.ts"
+    "./feed-mirror": "./src/feedMirror/mirror.ts",
+    "./monitor": "./src/monitor/index.ts"
   }
 }

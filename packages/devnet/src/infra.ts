@@ -47,11 +47,16 @@ export async function startPostgres(): Promise<Service> {
     if (r.status === 0) break;
     await new Promise((res) => setTimeout(res, 100));
   }
+  // The data dir (~50–150 MB) must not outlive the test run. It is removed when the server exits, and a detached
+  // watchdog stops the server and removes the dir once this process is gone (test runners kill their workers without
+  // an "exit" event; an unref'd timer never fired either, which leaked one dir per run).
+  const cleanup = () => rmSync(dir, {recursive: true, force: true});
+  proc.on("exit", cleanup);
+  spawn("sh", ["-c", `while kill -0 ${process.pid} 2>/dev/null; do sleep 2; done; kill -INT ${proc.pid} 2>/dev/null; sleep 3; kill -9 ${proc.pid} 2>/dev/null; rm -rf '${dir}'`], {detached: true, stdio: "ignore"}).unref();
   return {
     url: `postgres://stockline@127.0.0.1:${port}/stockline`,
     stop: () => {
       proc.kill("SIGINT");
-      setTimeout(() => rmSync(dir, {recursive: true, force: true}), 500).unref();
     },
   };
 }

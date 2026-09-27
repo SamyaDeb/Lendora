@@ -10,6 +10,7 @@ import {
 } from "@stockline/sdk";
 import type {TxSender} from "../common/signer.js";
 import type {Health} from "../common/health.js";
+import {L2GapDetector} from "../common/l2gap.js";
 
 /** Oracle reason bits (StocklineOracleBase). */
 export const REASON = {MANUAL: 1n, DEVIATION: 2n, L2_GAP: 4n} as const;
@@ -59,8 +60,7 @@ export interface GuardTick {
  */
 export class GuardKeeper {
   private underSince = new Map<string, bigint>();
-  private lastBlock?: {number: bigint; timestamp: bigint};
-  private lastGapAt?: bigint;
+  private readonly l2: L2GapDetector;
 
   constructor(
     private readonly client: PublicClient,
@@ -70,7 +70,9 @@ export class GuardKeeper {
     private readonly opts: GuardOptions = defaultGuardOptions,
     private readonly health?: Health,
     private readonly log: (m: string) => void = console.log,
-  ) {}
+  ) {
+    this.l2 = new L2GapDetector(client, opts.l2GapSec, opts.l2ClearAfterSec);
+  }
 
   /** DEX price (WAD USD) from the TWAP, and whether the stock is token0. */
   async dexPriceWad(ticker: string): Promise<bigint> {
@@ -115,7 +117,8 @@ export class GuardKeeper {
     // OR-R6 keeper side.
     const hasGap = (latched & REASON.L2_GAP) !== 0n;
     if (l2Gap && !hasGap) await this.sendOracle(ticker, "trip", [REASON.L2_GAP], actions);
-    if (!l2Gap && hasGap && this.lastGapAt !== undefined && now - this.lastGapAt >= this.opts.l2ClearAfterSec) {
+    const lastGapAt = this.l2.lastGap;
+    if (!l2Gap && hasGap && lastGapAt !== undefined && now - lastGapAt >= this.opts.l2ClearAfterSec) {
       await this.sendOracle(ticker, "clear", [REASON.L2_GAP], actions);
     }
 
@@ -141,24 +144,9 @@ export class GuardKeeper {
     return {ticker, deviationWad: dev, thresholdWad: threshold, actions};
   }
 
-  /** L2 block-timestamp gap since the last tick (scans at most `maxScan` blocks; otherwise checks the newest pair). */
+  /** L2 block-timestamp gap since the last tick (the shared OR-R6 detector, `common/l2gap.ts`). */
   async detectL2Gap(maxScan = 2000n): Promise<{gap: boolean; now: bigint; number: bigint}> {
-    const latest = await this.client.getBlock();
-    let gap = false;
-    const prev = this.lastBlock;
-    if (prev && latest.number > prev.number && latest.timestamp - prev.timestamp >= this.opts.l2GapSec) {
-      const from = latest.number - prev.number > maxScan ? latest.number - 1n : prev.number;
-      let last = from === prev.number ? prev.timestamp : (await this.client.getBlock({blockNumber: from})).timestamp;
-      for (let n = from + 1n; n <= latest.number; n++) {
-        const b = n === latest.number ? latest : await this.client.getBlock({blockNumber: n});
-        if (b.timestamp - last >= this.opts.l2GapSec) gap = true;
-        last = b.timestamp;
-      }
-    }
-    if (gap) this.lastGapAt = latest.timestamp;
-    this.lastBlock = {number: latest.number, timestamp: latest.timestamp};
-    const stillInGapWindow = this.lastGapAt !== undefined && latest.timestamp - this.lastGapAt < this.opts.l2ClearAfterSec;
-    return {gap: gap || stillInGapWindow, now: latest.timestamp, number: latest.number};
+    return this.l2.detect(maxScan);
   }
 
   async tick(): Promise<GuardTick[]> {

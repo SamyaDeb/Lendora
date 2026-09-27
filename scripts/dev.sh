@@ -137,8 +137,11 @@ start indexer indexer dev
 start api api dev
 DEV_DEFAULT_COUNTRY=DE PORT=42071 start compliance compliance dev
 start web web dev
-start allocator keepers allocator
-start guard keepers guard
+HEALTH_PORT=8787 start allocator keepers allocator
+HEALTH_PORT=8788 start guard keepers guard
 start alerts keepers alerts
-echo "[dev] up. web http://localhost:3000 · api http://localhost:42070/v1 · indexer http://localhost:42069 · Ctrl-C stops everything"
+# Ops monitor (MON-R1…R14): read-only; pages to the console locally. GET :42073/weekends, /incidents.
+PORT=42073 MONITOR_KEEPERS="allocator=http://127.0.0.1:8787/health,guard=http://127.0.0.1:8788/health,alerts=http://127.0.0.1:42072/health" \
+  start monitor keepers monitor
+echo "[dev] up. web http://localhost:3000 · api http://localhost:42070/v1 · indexer http://localhost:42069 · monitor http://localhost:42073/weekends · Ctrl-C stops everything"
 wait

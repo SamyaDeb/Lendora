@@ -8,7 +8,8 @@ import type {AlertSettings} from "@stockline/sdk";
  * come from env and are never logged.
  */
 export interface Alert {
-  kind: "hf_below" | "ramp_24h" | "ramp_4h";
+  /** APP-R8 user alerts, or "ops" when an operator page (MON-R*) reuses the Telegram/webhook transports. */
+  kind: "hf_below" | "ramp_24h" | "ramp_4h" | "ops";
   address: string;
   ticker: string;
   title: string;

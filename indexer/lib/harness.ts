@@ -37,13 +37,15 @@ export interface StartIndexerOptions {
   network?: string;
   env?: Record<string, string>;
   timeoutMs?: number;
+  /** Resume an indexer that was stopped: reuse its schema and views schema (Ponder crash recovery). */
+  resume?: {schema: string; viewsSchema: string};
 }
 
 export async function startIndexer(o: StartIndexerOptions): Promise<IndexerHandle> {
   const port = await freePort();
   const id = `${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`;
-  const schema = `idx_${id}`;
-  const viewsSchema = `v_${id}`;
+  const schema = o.resume?.schema ?? `idx_${id}`;
+  const viewsSchema = o.resume?.viewsSchema ?? `v_${id}`;
   let out = "";
   const t0 = Date.now();
   const proc: ChildProcess = spawn(

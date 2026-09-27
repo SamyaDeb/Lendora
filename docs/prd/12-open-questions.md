@@ -151,6 +151,14 @@ Added while building the indexer, API and app. Each is isolated in one SDK funct
 | A27 | On testnet one deployer key holds every role by default (owner via a 24h timelock, curator, guardian, allocator, keepers) and is a mock operator. Roles can be split by env (`STOCKLINE_*`). | `DeployTestnet.configForTestnet` | Split roles before inviting external testers if the owner prefers. |
 | A28 | Phase 1 test mocks gained an opt-in operator gate (`MockGate`, off by default; tests unchanged) so a public testnet cannot have its prices, pauses or mints rewritten by anyone. | `contracts/test/mocks/MockGate.sol` | – |
 
+### Remediation assumptions (A29+, 2026-09-28)
+
+| # | Assumption | Where it lives | If wrong |
+|---|---|---|---|
+| A29 | The indexer derives `vault_idle` from Vault V2 events, so a plain `wSTOCK` transfer into a vault (a donation) moves the onchain idle balance without being indexed. SI-R5 reconciliation reports it and the monitor keeps an `INDEXER_LAG:reconcile` (P2) incident open until fixed (found by the task 3 monitor test with a real donation). Idle feeds display values only (`supplyApy`, `utilizationVault`), never safety math. | `indexer/src/index.ts`, `keepers/test/monitor.test.ts` | Derive idle from wrapper `Transfer` events to/from the vault (or read `balanceOf` at snapshot time). |
+| A30 | The monitor treats event rules (`BAD_DEBT`, `DIRECT_BORROW`) as resolved 24h / 1h after they page; the provider keeps the history and the runbook drives follow-up. `DIRECT_BORROW` dedupes per (market, borrower). | `keepers/src/monitor/rules.ts` | Resolve only by operator ack. |
+| A31 | `PULL_NOT_EFFECTIVE` ignores free liquidity up to 1e15 raw units (the allocator's minimum move), and utilization is vault-level (07 `utilizationVault`), since market-level utilization is routinely ~100% of what the vault allocates. | `keepers/src/monitor/monitor.ts` | Change the two options. |
+
 ### Open questions from Phase 2 (need your call; nothing is blocked)
 
 1. **Go for testnet**: the deployment, keepers and services wait for your go, a deployer key (`TESTNET_DEPLOYER_KEY` or a remote signer) and, ideally, an archive testnet RPC (the public one is not archive, A24).
