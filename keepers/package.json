@@ -1,0 +1,25 @@
+{
+  "name": "@stockline/keepers",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "pretypecheck": "pnpm --filter @stockline/sdk build",
+    "typecheck": "tsc --noEmit",
+    "pretest": "pnpm --filter @stockline/sdk build",
+    "test": "vitest run",
+    "allocator": "tsx src/allocator/main.ts",
+    "guard": "tsx src/guard/main.ts",
+    "liquidator": "tsx src/liquidator/main.ts"
+  },
+  "dependencies": {
+    "@stockline/sdk": "workspace:*",
+    "viem": "^2.56.9"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "tsx": "^4.21.0",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.7"
+  }
+}

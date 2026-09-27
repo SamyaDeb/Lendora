@@ -7,3 +7,6 @@ export * from "./calendar/nyse.js";
 export * from "./calendar/sessions.js";
 export * from "./calendar/events.js";
 export * from "./math/oracle.js";
+export * from "./math/allocator.js";
+export * from "./uniswap.js";
+export * from "./abis.js";

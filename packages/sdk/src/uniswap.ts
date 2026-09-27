@@ -1,0 +1,32 @@
+/** Minimal Uniswap v3 pool ABI and TWAP math for the guard keeper (OR-R31). */
+export const uniswapV3PoolAbi = [
+  {type: "function", name: "token0", stateMutability: "view", inputs: [], outputs: [{type: "address"}]},
+  {type: "function", name: "token1", stateMutability: "view", inputs: [], outputs: [{type: "address"}]},
+  {
+    type: "function",
+    name: "observe",
+    stateMutability: "view",
+    inputs: [{name: "secondsAgos", type: "uint32[]"}],
+    outputs: [
+      {name: "tickCumulatives", type: "int56[]"},
+      {name: "secondsPerLiquidityCumulativeX128s", type: "uint160[]"},
+    ],
+  },
+] as const;
+
+/** Arithmetic-mean tick over `window` seconds from two cumulatives, rounded toward −∞ (Uniswap OracleLibrary). */
+export function twapTick(cumNow: bigint, cumPast: bigint, window: number): number {
+  const delta = cumNow - cumPast;
+  let tick = delta / BigInt(window);
+  if (delta < 0n && delta % BigInt(window) !== 0n) tick -= 1n;
+  return Number(tick);
+}
+
+/**
+ * USD price of the stock (float) from a pool tick. `stockIsToken0`: price = 1.0001^tick · 10^(dec0 − dec1) in token1
+ * per token0. Used for deviation checks only (never onchain).
+ */
+export function priceFromTick(tick: number, stockIsToken0: boolean, stockDecimals: number, quoteDecimals: number): number {
+  const raw = Math.pow(1.0001, tick);
+  return stockIsToken0 ? raw * 10 ** (stockDecimals - quoteDecimals) : (1 / raw) * 10 ** (stockDecimals - quoteDecimals);
+}
