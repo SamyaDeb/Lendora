@@ -50,6 +50,12 @@ market at cap, vault withdrawal limited by liquidity, restricted region, unsuppo
 
 ## Acceptance criteria
 
-- [ ] All flows in [05 §4](05-collateral-router.md) completed from the UI on testnet by 20 external testers.
-- [ ] Preview numbers match the onchain result after execution within 0.1% (automated e2e test with Playwright on an anvil fork).
-- [ ] Lighthouse performance ≥ 85 on `/` and `/short-interest`.
+- [ ] All flows in [05 §4](05-collateral-router.md) completed from the UI on testnet by 20 external testers. **Pending
+  testers** (and the testnet go). Engineering done: every flow driven through the UI by Playwright on anvil
+  ([`flows.spec.ts`](../../web/e2e/flows.spec.ts)); tester kit in [`runbooks/testnet.md`](../runbooks/testnet.md).
+- [x] Preview numbers match the onchain result after execution within 0.1% (automated e2e test with Playwright on anvil):
+  preview HF equals `healthFactorAt` exactly, debt within 1 wei ([`flows.spec.ts`](../../web/e2e/flows.spec.ts)
+  "06 acceptance"). Run on plain anvil with the DeployLocal state rather than an anvil fork (A16: testnet has no Stock
+  Token markets to fork; the same contracts run on the fork suite).
+- [x] Lighthouse performance ≥ 85 on `/` and `/short-interest`: 96 and 91 (accessibility 100)
+  ([`lighthouse/results.md`](../../web/lighthouse/results.md)).

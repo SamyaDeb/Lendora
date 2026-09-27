@@ -37,8 +37,8 @@ contract DeployTestnet is Script, StocklineDeploy, LocalMocks {
         uint256 startBlock = block.number;
         vm.startBroadcast(deployer);
         Mocks memory m = _deployLocalMocks(deployer);
-        CoreConfig memory c = testnetConfig(deployer, m);
-        StockConfig[] memory stocks = testnetStocks(m);
+        CoreConfig memory c = configForTestnet(deployer, m);
+        StockConfig[] memory stocks = stocksForTestnet(m);
         Core memory core = _deployCore(c, stocks);
         StockDeployment[] memory ds = new StockDeployment[](stocks.length);
         for (uint256 i; i < stocks.length; i++) {
@@ -54,7 +54,7 @@ contract DeployTestnet is Script, StocklineDeploy, LocalMocks {
         _writeAddresses("46630", c, core, stocks, ds, "mocks", _mocksJson(m));
     }
 
-    function testnetConfig(address deployer, Mocks memory m) public view returns (CoreConfig memory c) {
+    function configForTestnet(address deployer, Mocks memory m) public view returns (CoreConfig memory c) {
         c = CoreConfig({
             deployer: deployer,
             morpho: m.morpho,
@@ -82,7 +82,7 @@ contract DeployTestnet is Script, StocklineDeploy, LocalMocks {
     }
 
     /// @notice Launch set and D8 parameters, on the mock tokens and feeds.
-    function testnetStocks(Mocks memory m) public pure returns (StockConfig[] memory s) {
+    function stocksForTestnet(Mocks memory m) public pure returns (StockConfig[] memory s) {
         s = new StockConfig[](3);
         s[0] = StockConfig("SPY", address(m.tokens[0]), address(m.feeds[0]), 0.17e18, 1_000_000, 75_000);
         s[1] = StockConfig("NVDA", address(m.tokens[1]), address(m.feeds[1]), 0.52e18, 1_000_000, 250_000);

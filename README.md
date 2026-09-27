@@ -7,10 +7,13 @@ Start with [`docs/LITEPAPER.md`](docs/LITEPAPER.md) and the PRD in [`docs/prd/`]
 |---|---|---|
 | `contracts/` | Foundry project: wrapper, oracles, `MarketHours`, `clUSDG`, router, liquidator, deploy scripts (Vault V2) | Phase 1 done (2026-09-27); audit in Phase 3 |
 | `packages/sdk/` | Shared TS: addresses, typed ABIs, calendar generator, oracle/buffer/health/allocator math, test vectors | Phase 1 done |
-| `keepers/` | Allocator, guard and fallback-liquidator keepers (dry run by default); fee converter and alerts later | Phase 1 done (tasks 9–11) |
-| `indexer/` | Ponder indexer for short interest | Phase 2 |
-| `api/` | Public REST + WebSocket API | Phase 2 |
-| `web/` | Next.js app | Phase 2 |
+| `keepers/` | Allocator, guard, fallback-liquidator, alerts (APP-R8) and testnet feed-mirror keepers (dry run by default); fee converter later | Phase 1 done; alerts and feed mirror Phase 2 |
+| `indexer/` | Ponder indexer for short interest (SI-R1…R5) | Phase 2 done (2026-09-27) |
+| `api/` | Public REST + WebSocket API, OpenAPI 3.1 (SI-R10…R14) | Phase 2 done |
+| `compliance/` | Compliance signer, geo/sanctions/terms checks (CP-R1…R4) | Phase 2 done (provider pending) |
+| `web/` | Next.js app (06) and short-interest dashboard (07 §4) | Phase 2 done |
+| `packages/devnet/` | Local chain, chain driver, seed week, smoke flows | Phase 2 |
+| `infra/` | Dockerfiles, Railway config, health checks | Phase 2 (not deployed) |
 | `sim/` | Python parameter simulations | Phase 1 (oracle params) |
 | `docs/` | Litepaper, PRD, runbooks | |
 
@@ -43,6 +46,15 @@ license headers and formatting. MetaMorpho keeps its own nested OpenZeppelin, th
 Vault V2 is compiled with Morpho's own settings (solc 0.8.28, via-IR, 100k runs, cancun) through a
 `compilation_restrictions` profile in `foundry.toml`, and keeps its own nested `morpho-blue` and `morpho-blue-irm`, so the
 bytecode equals the deployed one. Stockline code talks to it only through `src/interfaces/external/IMorphoVaultV2.sol`.
+
+## Local stack (Phase 2)
+
+```sh
+scripts/dev.sh --seed      # Postgres + Redis, anvil + DeployLocal, compliance signer, indexer, API, web, keepers
+docker compose up -d       # infra only (Postgres, Redis, anvil with the DeployLocal state)
+```
+
+Testnet: `docs/runbooks/testnet.md` (deployment waits for the owner's go).
 
 ## Keepers
 

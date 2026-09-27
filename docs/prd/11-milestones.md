@@ -63,6 +63,26 @@ except the `openShort` gas placeholder (≈ 650k measured vs 600k; open question
 6. Compliance signer and geo-block (CP-R1…R4).
 7. Testnet deployment, faucet for mock stocks and USDG, tester program.
 
+### Phase 2 status (2026-09-27)
+
+All engineering tasks are built, tested and committed; the testnet deployment is dry-run on an anvil fork of 46630 and
+**waits for the owner's go**. The exit criteria that need time or people (2 clean testnet weekends, 20 external
+testers) are pending; the tooling for them is in place.
+
+| Task | Status | Evidence |
+|---|---|---|
+| 0 · Baseline, dev stack, chain driver | Done; guard-keeper flake fixed (receipt polling) | `scripts/dev.sh`, `docker-compose.yml`, `packages/devnet` (seed week) |
+| 1 · Indexer SI-R1…R5 | Done | `indexer/test/indexer.test.ts`: 0 reconciliation diffs, backfill 33 s, head lag p95 1 block |
+| 2 · `ShortInterestLens` SI-R20…R21 | Done | `contracts/test/lens` (100% coverage), `test/fork/phase2/Lens.fork.t.sol` |
+| 3 · API SI-R10…R14, OpenAPI, typed client | Done | `api/test/api.test.ts` (API = lens), `api/loadtest/results.md` |
+| 4 · Compliance signer, geo-block CP-R1…R4 | Done (sanctions provider pending) | `compliance/test/compliance.test.ts` |
+| 5 · Web app APP-R1…R11 | Done | `web/e2e/flows.spec.ts` (10), `web/lighthouse/results.md` (96 / 91) |
+| 6 · Alerts APP-R8 | Done | `keepers/test/alerts.test.ts` (delivery ~0.5 s after the block) |
+| 7 · Testnet readiness | Done up to the go | `DeployTestnet.s.sol`, faucet, feed mirror, `infra/`, `runbooks/testnet.md`, `runbooks/testnet-dry-run.md` |
+| Exit · 06/07 acceptance | 5 of 7 met; 2 pending testnet (7-day reconcile, 20 testers) | [06](06-web-app.md), [07](07-short-interest.md) |
+| Exit · 2 clean testnet weekends | Pending (go + 2 weekends) | weekend watch in `runbooks/testnet.md` |
+| Exit · 20 external testers | Pending (owner recruits) | tester kit in `runbooks/testnet.md` |
+
 ## Definition of done (any requirement)
 
 - Code merged with tests. Contracts need ≥ 95% line coverage and fuzz/invariant tests where specified.
