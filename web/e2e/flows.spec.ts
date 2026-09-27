@@ -140,6 +140,16 @@ test.describe.serial("Stockline app on anvil", () => {
     await expect.poll(async () => client.readContract({address: d.stocks.NVDA.vault, abi: erc20Abi, functionName: "balanceOf", args: [E2E_ACCOUNT]}), {timeout: 60_000}).toBe(0n);
   });
 
+  test("APP-R8 alert settings are saved with a signed message", async () => {
+    await page.goto("/alerts");
+    await page.getByLabel("Alert when health factor is below").fill("1.4");
+    await page.getByLabel("Webhook URL (HTTPS)").fill("http://127.0.0.1:9/stockline");
+    await page.getByRole("button", {name: "Save alert settings"}).click();
+    await expect(page.getByText("Saved.")).toBeVisible();
+    await page.reload();
+    await expect(page.getByLabel("Alert when health factor is below")).toHaveValue("1.4");
+  });
+
   test("07 dashboard: leaderboard, chart and weekend panel", async () => {
     await page.goto("/short-interest");
     await expect(page.getByTestId("leaderboard").locator("tbody tr")).toHaveCount(3);

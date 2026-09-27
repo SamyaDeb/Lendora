@@ -1,25 +1,20 @@
 import {
-  CLUSDG_VALUE_PER_TOKEN,
   HF_MIN_OPEN_WAD,
   OPEN_HORIZON_SEC,
-  STOCK_LOAN_SCALE_EXP,
   WAD,
   adaptiveCurveBorrowRate,
   apy,
   aprWad,
   borrowRateAtUtilization,
-  bufferConfigFor,
   expectedMarketBalances,
   healthFactorAt,
   liquidationPriceAt,
   nextClosure,
   nextEvent,
-  toAssetsUp,
   utilization,
   utilizationPlus,
-  type StockMarketState,
 } from "@stockline/sdk";
-import type {MarketChainState} from "./chain";
+import {currentDebt, stockMarketState, type MarketChainState} from "./chain";
 
 /**
  * The Borrow/Short preview panel (06 §Preview panel), computed only with @stockline/sdk from chain state, so it
@@ -57,24 +52,7 @@ export interface Preview {
   multiplier: bigint;
 }
 
-export function stockMarketState(s: MarketChainState): StockMarketState {
-  return {
-    buffer: bufferConfigFor(s.ticker, s.params, s.bufferFloor),
-    stockAnswer: s.stockAnswer,
-    stockUpdatedAt: s.stockUpdatedAt,
-    usdgAnswer: s.usdgAnswer,
-    valuePerToken: CLUSDG_VALUE_PER_TOKEN,
-    scaleExp: STOCK_LOAN_SCALE_EXP,
-    lltv: s.lltv,
-  };
-}
-
-/** Debt of the user now, from accrued totals (Morpho `expectedBorrowAssets`). */
-export function currentDebt(s: MarketChainState): bigint {
-  if (!s.user || s.user.borrowShares === 0n) return 0n;
-  const m = expectedMarketBalances(s.market, s.rateAtTarget, s.now);
-  return toAssetsUp(s.user.borrowShares, m.totalBorrowAssets, m.totalBorrowShares);
-}
+export {stockMarketState, currentDebt};
 
 export function preview(s: MarketChainState, i: PreviewInput): Preview {
   const state = stockMarketState(s);

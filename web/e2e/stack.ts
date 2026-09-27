@@ -6,6 +6,10 @@ import {generatePrivateKey, privateKeyToAccount} from "viem/accounts";
 import {stocklineRouterAbi} from "@stockline/sdk";
 import {startStack, type Stack} from "@stockline/api/harness";
 import {startCompliance, type RunningCompliance} from "@stockline/compliance/server";
+import {serve} from "@hono/node-server";
+import pg from "pg";
+import {alertsApp, SettingsStore} from "@stockline/keepers/alerts";
+import {Health} from "@stockline/keepers/health";
 
 /**
  * The full local product for Playwright and Lighthouse: anvil (DeployLocal) + the devnet seed week + Ponder + Postgres
@@ -61,6 +65,13 @@ export async function startWebStack(o: {build?: boolean; log?: (m: string) => vo
   await stack.drv.mintUsdg(E2E_ACCOUNT, 1_000_000n * 10n ** 6n);
   await stack.anvil.test.setBalance({address: E2E_ACCOUNT, value: 10n ** 21n});
 
+  // Alerts settings API (APP-R8) on the same Postgres.
+  const alertsPool = new pg.Pool({connectionString: stack.pg.url, max: 3});
+  const alertsStore = new SettingsStore(alertsPool, `alerts_e2e_${Date.now()}`);
+  await alertsStore.migrate();
+  const alertsPort = await freePort();
+  const alertsServer = serve({fetch: alertsApp(alertsStore, stack.anvil.client, new Health(60_000), {allowHttpWebhooks: true}).fetch, port: alertsPort, hostname: "127.0.0.1"});
+
   const env = {
     ...process.env,
     NEXT_TELEMETRY_DISABLED: "1",
@@ -70,7 +81,7 @@ export async function startWebStack(o: {build?: boolean; log?: (m: string) => vo
     NEXT_PUBLIC_E2E: "1",
     NEXT_PUBLIC_E2E_ACCOUNT: E2E_ACCOUNT,
     COMPLIANCE_URL: compliance.url,
-    ALERTS_URL: process.env.ALERTS_URL ?? "http://127.0.0.1:1",
+    ALERTS_URL: `http://127.0.0.1:${alertsPort}`,
   };
   if (o.build !== false) {
     log("[e2e] next build");
@@ -96,6 +107,8 @@ export async function startWebStack(o: {build?: boolean; log?: (m: string) => vo
     baseUrl,
     async close() {
       web.kill();
+      alertsServer.close();
+      await alertsPool.end().catch(() => {});
       await compliance.close().catch(() => {});
       await stack.close();
     },

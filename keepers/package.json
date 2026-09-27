@@ -11,20 +11,28 @@
     "allocator": "tsx src/allocator/main.ts",
     "guard": "tsx src/guard/main.ts",
     "liquidator": "tsx src/liquidator/main.ts",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "alerts": "tsx src/alerts/main.ts"
   },
   "dependencies": {
+    "@hono/node-server": "^2.1.1",
     "@stockline/sdk": "workspace:*",
+    "hono": "^4.13.9",
+    "pg": "^8.23.0",
     "viem": "^2.56.9"
   },
   "devDependencies": {
+    "@stockline/api": "workspace:*",
     "@stockline/devnet": "workspace:*",
     "@types/node": "^22.20.4",
+    "@types/pg": "^8.23.1",
     "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "vitest": "^3.2.7"
   },
   "exports": {
-    "./signer": "./src/common/signer.ts"
+    "./signer": "./src/common/signer.ts",
+    "./alerts": "./src/alerts/index.ts",
+    "./health": "./src/common/health.ts"
   }
 }

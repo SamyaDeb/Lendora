@@ -22,3 +22,4 @@ export * as api from "./api/index.js";
 export * from "./compliance.js";
 export * from "./chains.js";
 export * from "./alerts.js";
+export * from "./reads.js";
