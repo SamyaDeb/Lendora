@@ -38,6 +38,7 @@
     "@types/pg": "^8.15.0",
     "@types/ws": "^8.18.1",
     "autocannon": "^8.0.0",
+    "openapi-typescript": "^7.13.0",
     "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "vitest": "^3.2.7"
