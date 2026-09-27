@@ -33,7 +33,7 @@ jobs:
           git -C contracts/lib/vault-v2/lib/morpho-blue-irm submodule update --init --depth 1 lib/morpho-blue
       - uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: stable
+          version: v1.5.1 # pinned: anvil's state-dump format must match packages/devnet/fixtures/anvil-state.hex
       - name: forge fmt --check
         run: forge fmt --check
       - name: forge build
@@ -91,7 +91,7 @@ jobs:
           cache: pnpm
       - uses: foundry-rs/foundry-toolchain@v1 # tests run anvil with the DeployLocal fixture
         with:
-          version: stable
+          version: v1.5.1 # pinned: anvil's state-dump format must match packages/devnet/fixtures/anvil-state.hex
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r typecheck
       - run: pnpm -r lint
@@ -124,7 +124,7 @@ jobs:
           cache: pnpm
       - uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: stable
+          version: v1.5.1 # pinned: anvil's state-dump format must match packages/devnet/fixtures/anvil-state.hex
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @stockline/sdk build
       - run: pnpm --filter @stockline/web exec playwright install --with-deps chromium

@@ -17,4 +17,8 @@ pnpm --filter @stockline/devnet drive live             # fresh rounds + allocato
 pnpm --filter @stockline/devnet state:dump             # regenerate the fixture from a running node
 ```
 
+**Foundry version.** The fixture is an `anvil_dumpState` from Foundry **1.5.1**; newer anvils may not decode it
+("Failed to decode state dump"). CI pins `v1.5.1`; when upgrading Foundry, regenerate the fixture with the new
+anvil (`state:dump`) in the same change.
+
 The whole stack: `scripts/dev.sh` (see its header) or `docker compose up -d` for Postgres, Redis and anvil.

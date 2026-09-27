@@ -219,8 +219,15 @@ export async function startAnvil(opts: StartOptions = {}): Promise<Anvil> {
   const url = `http://127.0.0.1:${port}`;
   const a = await connectAnvil(url, () => proc.kill());
   const state = opts.state ?? "fixture";
-  if (state === "fixture") await loadFixture(a);
-  else if (state === "deploy") deployLocal(url);
+  try {
+    if (state === "fixture") await loadFixture(a);
+    else if (state === "deploy") deployLocal(url);
+  } catch (e) {
+    // Never leave anvil running on a failed start: it keeps the test process alive (a CI job hung this way when a
+    // newer anvil could not decode the fixture). The fixture is written by the Foundry version pinned in CI.
+    proc.kill();
+    throw e;
+  }
   return a;
 }
 
