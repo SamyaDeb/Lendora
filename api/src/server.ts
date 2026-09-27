@@ -73,7 +73,7 @@ export async function startApi(config: ApiConfig): Promise<RunningApi> {
     db,
     stream,
     async close() {
-      publisher.stop();
+      await publisher.stop();
       stream.close();
       await new Promise<void>((r) => server.close(() => r()));
       await fanout.close();

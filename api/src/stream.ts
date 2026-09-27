@@ -61,7 +61,7 @@ export class RedisFanout implements Fanout {
     await this.pub.publish(this.channel, JSON.stringify(msg));
   }
   onMessage(h: (m: StreamMessage) => void) {
-    void this.sub.subscribe(this.channel);
+    this.sub.subscribe(this.channel).catch((e) => console.error(`[stream] subscribe: ${String(e)}`));
     this.sub.on("message", (_c, raw: string) => h(JSON.parse(raw) as StreamMessage));
   }
   /** Leader lease: 5 s, renewed by the holder on every poll. */
@@ -86,6 +86,7 @@ export class StreamPublisher {
   private cursor?: EventCursor;
   private timer?: NodeJS.Timeout;
   private running = false;
+  private inFlight?: Promise<void>;
 
   constructor(
     private readonly db: IndexerDb,
@@ -106,11 +107,16 @@ export class StreamPublisher {
         this.running = false;
       }
     };
-    this.timer = setInterval(loop, this.pollMs);
+    this.timer = setInterval(() => {
+      this.inFlight = loop();
+    }, this.pollMs);
   }
 
-  stop() {
+  /** Stops polling and waits for a poll in flight, so the caller can close Redis and Postgres after it. */
+  async stop() {
     if (this.timer) clearInterval(this.timer);
+    this.timer = undefined;
+    await this.inFlight;
   }
 
   async poll(): Promise<void> {
@@ -201,9 +207,10 @@ export class StreamServer {
       this.subs.set(ws, []);
       ws.on("close", () => {
         this.subs.delete(ws);
-        void this.deps.limiter.release(slot);
+        // Also runs while the server shuts down and Redis may already be closed; the slot key expires by itself.
+        this.deps.limiter.release(slot).catch(() => {});
       });
-      ws.on("message", (raw) => void this.onClientMessage(ws, raw.toString()));
+      ws.on("message", (raw) => this.onClientMessage(ws, raw.toString()).catch((e) => console.error(`[stream] message: ${String(e)}`)));
       ws.send(JSON.stringify({type: "welcome", channels: ["market", "events"], symbols: [...Object.keys(this.deps.d.stocks), "*"]}));
     });
   }
