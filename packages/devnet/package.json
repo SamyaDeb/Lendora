@@ -20,10 +20,12 @@
   },
   "dependencies": {
     "@stockline/sdk": "workspace:*",
+    "pg": "^8.23.0",
     "viem": "^2.56.9"
   },
   "devDependencies": {
     "@types/node": "^22.20.4",
+    "@types/pg": "^8.23.1",
     "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "vitest": "^3.2.7"
