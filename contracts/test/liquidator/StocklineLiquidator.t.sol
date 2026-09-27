@@ -145,6 +145,20 @@ contract StocklineLiquidatorTest is LocalStockline {
         _assertEmpty();
     }
 
+    /// LM-R12: a swap target that reverts makes the whole liquidation revert with the target's own error data (nothing
+    /// is left half-done: Morpho's liquidation is undone with it).
+    function test_LM_R12_revertingSwapBubblesUpAndUndoesTheLiquidation() public {
+        _openDirect(3500e6, 10e18);
+        _setPrice(320e8);
+        uint256 shares = morpho.position(ds[I].market.id(), alice).borrowShares;
+        StocklineLiquidator.Swap memory s = _buy(10.1e18 * 320 / 1e12, 10e18);
+        s.data = abi.encodeWithSignature("doesNotExist()"); // the target has no such function: the call reverts
+        vm.expectRevert();
+        liq.liquidate(_liquidation(0, shares, s, 0));
+        assertEq(morpho.position(ds[I].market.id(), alice).borrowShares, shares, "position untouched");
+        _assertEmpty();
+    }
+
     function test_guardsAndAuth() public {
         _openDirect(3500e6, 10e18);
         _setPrice(320e8);

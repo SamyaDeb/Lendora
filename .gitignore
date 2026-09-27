@@ -5,6 +5,8 @@ contracts/broadcast/*/31337/
 contracts/lcov.info
 # Node
 node_modules/
+# iCloud-excluded copy of node_modules (e.g. the untracked client/ page, ~349 MB)
+node_modules.nosync/
 dist/
 *.tsbuildinfo
 # Python
