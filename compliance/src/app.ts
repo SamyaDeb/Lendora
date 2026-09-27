@@ -24,7 +24,7 @@ export interface AppOptions {
   proxySecret?: string;
   /** Local anvil only: the country assumed when no geo header is present (never set on testnet/mainnet). */
   devDefaultCountry?: string;
-  /** Attestation requests per IP per minute. */
+  /** Attestation requests per minute, counted separately per client IP and per wallet (CP-R8). */
   attestRpm: number;
   allowedOrigins: string[];
 }
@@ -35,6 +35,16 @@ export function createComplianceApp(svc: ComplianceService, terms: Terms, o: App
   const app = new Hono<Env>();
   const geo = new HeaderGeoResolver();
   const hits = new Map<string, {n: number; reset: number}>();
+  /** Fixed one-minute window per key ("ip:…" or "wallet:…"); expired entries are dropped as the map grows. */
+  const overLimit = (key: string, now: number) => {
+    if (hits.size > 10_000) for (const [k, v] of hits) if (v.reset <= now) hits.delete(k);
+    const h = hits.get(key);
+    if (!h || h.reset <= now) {
+      hits.set(key, {n: 1, reset: now + 60});
+      return false;
+    }
+    return ++h.n > o.attestRpm;
+  };
   const trusted = (c: Context<Env>) => !o.proxySecret || c.req.header("x-stockline-proxy") === o.proxySecret;
   const geoOf = (c: Context<Env>) => {
     const g = trusted(c) ? geo.resolve((n) => c.req.header(n)) : {country: null, region: null};
@@ -80,11 +90,11 @@ export function createComplianceApp(svc: ComplianceService, terms: Terms, o: App
   app.post("/v1/compliance/attest", async (c) => {
     const ip = ipOf(c);
     const now = Math.floor(Date.now() / 1000);
-    const h = hits.get(ip);
-    if (!h || h.reset <= now) hits.set(ip, {n: 1, reset: now + 60});
-    else if (++h.n > o.attestRpm) return c.json({error: "too many attestation requests"}, 429);
+    if (overLimit(`ip:${ip}`, now)) return c.json({error: "too many attestation requests"}, 429);
     const body = z.object({address: addr}).safeParse(await c.req.json().catch(() => null));
     if (!body.success) return c.json({error: "expected {address}"}, 400);
+    // CP-R8: also per wallet, so rotating IPs (or a shared proxy IP) cannot farm attestations for one address.
+    if (overLimit(`wallet:${body.data.address.toLowerCase()}`, now)) return c.json({error: "too many attestation requests"}, 429);
     return c.json(await svc.attest(body.data.address as Address, geoOf(c), ip));
   });
 

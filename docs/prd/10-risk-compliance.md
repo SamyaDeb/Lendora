@@ -83,6 +83,7 @@ Runbooks for each P0/P1 live in `/docs/runbooks/` and are drilled on testnet bef
 | CP-R5 | If Stock Tokens have issuer-level KYC or allowlists, Stockline relies on them and documents the dependency. There is no holder allowlist or KYC; the issuer has a blocklist, token and global pauses, and a forced burn (verified Phase 0, 2026-09-26). |
 | CP-R6 | Legal opinions before mainnet on: whether stock lending of Stock Tokens is securities lending in target jurisdictions; whether `rSTOCK` or vault shares are securities; marketing restrictions. |
 | CP-R7 | No yield or return promises in UI or marketing copy. APYs are labeled "variable, historical/current". |
+| CP-R8 | *(new, remediation 2026-09-27)* Geo and client-IP headers are trusted only from the web app's server-side proxy. The compliance service refuses to start on any network except local anvil (31337) without `PROXY_SECRET` (≥ 32 chars), or with `TRUST_PROXY=true` and no secret, and on mainnet (4663) with the deny-list sanctions adapter. The web proxy forwards only the configured edge platform's geo/IP headers (`GEO_PLATFORM`), normalized, and drops every client-sent geo, `x-forwarded-for` and `x-stockline-proxy` header. `/attest` is rate-limited per IP and per wallet. Tests: `CP_R8_*` in [`compliance.test.ts`](../../compliance/test/compliance.test.ts) and [`complianceProxy.test.ts`](../../web/test/complianceProxy.test.ts). |
 
 ## Audits and security
 

@@ -60,9 +60,16 @@ TESTNET_GO=yes STOCKLINE_ATTESTATION_SIGNER=<compliance signer address> \
   forge script script/DeployTestnet.s.sol --rpc-url $ROBINHOOD_TESTNET_RPC_URL --broadcast --slow \
   --private-key $TESTNET_DEPLOYER_KEY
 # then: commit packages/sdk/addresses.json["46630"], verify contracts on the explorer, start the services,
-TESTNET_GO=yes SMOKE_KEY=$TESTNET_DEPLOYER_KEY pnpm --filter @stockline/devnet drive smoke \
+TESTNET_GO=yes SMOKE_KEY=$TESTNET_DEPLOYER_KEY PROXY_SECRET=$PROXY_SECRET pnpm --filter @stockline/devnet drive smoke \
   --rpc $ROBINHOOD_TESTNET_RPC_URL --compliance <COMPLIANCE_URL>
 ```
+
+**Compliance secret (CP-R8).** The compliance service refuses to start on 46630 without `PROXY_SECRET` (≥ 32 chars,
+`openssl rand -hex 32`), and trusts geo/IP headers only from requests carrying it. Set the same value on web, with
+`GEO_PLATFORM=vercel|cloudflare` for the edge in front of it. The smoke run above talks to compliance directly and
+therefore needs the secret in its environment (it sends `x-geo-country: DE` as the operator's declared location).
+Check after deploy: a request to `<COMPLIANCE_URL>/v1/compliance/attest` with `cf-ipcountry: DE` and no secret must
+answer `403 GEO_UNKNOWN`.
 
 Timelocks are 24h on testnet (02 roles): parameter changes, including the attestation signer, take a day.
 

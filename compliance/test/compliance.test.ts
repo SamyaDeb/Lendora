@@ -4,13 +4,36 @@ import {generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount} from "v
 import {attestationDomain, attestationTypes, erc20Abi, morphoAbi, stocklineRouterAbi, vaultV2Abi} from "@stockline/sdk";
 import {envKeyTypedDataSigner} from "@stockline/keepers/signer";
 import {ChainDriver, startAnvil, startPostgres, type Anvil, type Service} from "@stockline/devnet";
-import {startCompliance, type RunningCompliance} from "../src/server.js";
+import {assertStartupConfig, startCompliance, type RunningCompliance} from "../src/server.js";
 import type {SanctionsScreen} from "../src/checks.js";
 
 const E18 = 10n ** 18n;
 const E6 = 10n ** 6n;
 const WED = 1_790_784_000n;
 const ALLOWED = {"x-geo-country": "DE", "x-forwarded-for": "192.0.2.10"};
+const SECRET = "test-proxy-secret-0123456789abcdef"; // ≥ 32 chars (CP-R8)
+
+describe("CP-R8 startup refuses to trust geo headers without the proxy secret", () => {
+  it("CP_R8 testnet (46630) needs PROXY_SECRET >= 32 chars; TRUST_PROXY without it is refused", async () => {
+    await expect(startCompliance({STOCKLINE_NETWORK: "46630", DATABASE_URL: "postgres://unused"})).rejects.toThrow(/PROXY_SECRET/);
+    expect(() => assertStartupConfig({PROXY_SECRET: "short"}, "46630")).toThrow(/PROXY_SECRET/);
+    expect(() => assertStartupConfig({TRUST_PROXY: "true"}, "46630")).toThrow(/PROXY_SECRET/);
+    expect(() => assertStartupConfig({TRUST_PROXY: "true", PROXY_SECRET: SECRET}, "46630")).not.toThrow();
+    expect(() => assertStartupConfig({TRUST_PROXY: "true", PROXY_SECRET: SECRET}, "fork-4663")).not.toThrow();
+    expect(() => assertStartupConfig({}, "fork-4663")).toThrow(/PROXY_SECRET/);
+  });
+
+  it("CP_R8 local anvil (31337) may run without a secret, but a set secret must still be long enough", () => {
+    expect(() => assertStartupConfig({TRUST_PROXY: "true"}, "31337")).not.toThrow();
+    expect(() => assertStartupConfig({PROXY_SECRET: "s3cret"}, "31337")).toThrow(/at least 32/);
+  });
+
+  it("CP_R8 mainnet (4663) refuses the deny-list sanctions adapter (Q5)", () => {
+    expect(() => assertStartupConfig({PROXY_SECRET: SECRET}, "4663")).toThrow(/deny-list/);
+    expect(() => assertStartupConfig({PROXY_SECRET: SECRET, SANCTIONS_PROVIDER: "deny-list"}, "4663")).toThrow(/deny-list/);
+    expect(() => assertStartupConfig({PROXY_SECRET: SECRET, SANCTIONS_PROVIDER: "trm"}, "4663")).not.toThrow();
+  });
+});
 
 /** CP-R1…R4, RT-R2, APP-R10 against the deployed router on anvil. */
 describe("compliance signer on anvil (CP-R1…R4, RT-R2, APP-R10)", () => {
@@ -148,17 +171,39 @@ describe("compliance signer on anvil (CP-R1…R4, RT-R2, APP-R10)", () => {
 
   it("CP_R1 behind a proxy secret, geo headers from anyone else are ignored", async () => {
     const c3 = await startCompliance(
-      {DATABASE_URL: pg.url, RPC_URL: a.url, STOCKLINE_NETWORK: "31337", TRUST_PROXY: "true", PORT: "0", HOST: "127.0.0.1", COMPLIANCE_SIGNER_KEY: signerKey, COMPLIANCE_SCHEMA: `compliance_c_${Date.now()}`, PROXY_SECRET: "s3cret"},
+      {DATABASE_URL: pg.url, RPC_URL: a.url, STOCKLINE_NETWORK: "31337", TRUST_PROXY: "true", PORT: "0", HOST: "127.0.0.1", COMPLIANCE_SIGNER_KEY: signerKey, COMPLIANCE_SCHEMA: `compliance_c_${Date.now()}`, PROXY_SECRET: SECRET},
       {},
     );
     try {
       const u = privateKeyToAccount(generatePrivateKey());
       const spoofed = await fetch(`${c3.url}/v1/compliance/attest`, {method: "POST", headers: {"content-type": "application/json", ...ALLOWED}, body: JSON.stringify({address: u.address})});
       expect(((await spoofed.json()) as {code: string}).code).toBe("GEO_UNKNOWN");
-      const viaProxy = await fetch(`${c3.url}/v1/compliance/connection`, {headers: {"x-stockline-proxy": "s3cret", "x-vercel-ip-country": "US"}});
+      const viaProxy = await fetch(`${c3.url}/v1/compliance/connection`, {headers: {"x-stockline-proxy": SECRET, "x-vercel-ip-country": "US"}});
       expect(((await viaProxy.json()) as {restricted: boolean}).restricted).toBe(true);
     } finally {
       await c3.close();
+    }
+  });
+
+  it("CP_R8 /attest is rate-limited per IP and per wallet", async () => {
+    const c4 = await startCompliance(
+      {DATABASE_URL: pg.url, RPC_URL: a.url, STOCKLINE_NETWORK: "31337", TRUST_PROXY: "true", PORT: "0", HOST: "127.0.0.1", COMPLIANCE_SIGNER_KEY: signerKey, COMPLIANCE_SCHEMA: `compliance_d_${Date.now()}`, ATTEST_RPM: "2"},
+      {},
+    );
+    try {
+      const post = (address: string, ip: string) =>
+        fetch(`${c4.url}/v1/compliance/attest`, {method: "POST", headers: {"content-type": "application/json", "x-geo-country": "DE", "x-forwarded-for": ip}, body: JSON.stringify({address})});
+      const w = privateKeyToAccount(generatePrivateKey()).address;
+      // One wallet from rotating IPs: the third request in the minute is refused.
+      expect((await post(w, "192.0.2.101")).status).not.toBe(429);
+      expect((await post(w, "192.0.2.102")).status).not.toBe(429);
+      expect((await post(w, "192.0.2.103")).status).toBe(429);
+      // One IP for rotating wallets: likewise.
+      const ip = "192.0.2.110";
+      for (let i = 0; i < 2; i++) expect((await post(privateKeyToAccount(generatePrivateKey()).address, ip)).status).not.toBe(429);
+      expect((await post(privateKeyToAccount(generatePrivateKey()).address, ip)).status).toBe(429);
+    } finally {
+      await c4.close();
     }
   });
 

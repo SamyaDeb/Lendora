@@ -16,5 +16,15 @@ created or deployed from this repo without the owner's go.**
 
 `infra/railway/<service>.json` is Railway config-as-code for each service (Dockerfile path, health check, restart
 policy). Secrets (keys, API tokens, database URLs) are set in the platform's secret store, never in the repo.
-Geo headers: put the web app behind a platform that sets `x-vercel-ip-country` / `cf-ipcountry` (Vercel or
-Cloudflare) and share `PROXY_SECRET` between web and compliance.
+Geo headers (CP-R8): put the web app behind a platform that sets the visitor's country and IP (Vercel or Cloudflare),
+set `GEO_PLATFORM=vercel|cloudflare` on web, and share one `PROXY_SECRET` (≥ 32 random chars, e.g.
+`openssl rand -hex 32`) between web and compliance. The web proxy forwards only that platform's headers, normalized,
+and drops anything the browser sent; compliance trusts geo/IP headers only with the secret and **refuses to start
+without it** on every network except anvil (31337). Railway config-as-code (`infra/railway/*.json`) cannot hold
+environment variables, so the required ones per service are listed here and set in the platform's secret store:
+
+| Service | Required env (besides `DATABASE_URL` / `RPC_URL`) |
+|---|---|
+| compliance | `STOCKLINE_NETWORK`, `COMPLIANCE_SIGNER_KEY` (or remote signer), `PROXY_SECRET`, `TRUST_PROXY=true`, `ALLOWED_ORIGINS`, `SANCTIONS_PROVIDER` + `SANCTIONS_API_KEY` (mainnet refuses `deny-list`), `ATTEST_RPM` (per IP and per wallet) |
+| web | `COMPLIANCE_URL`, `PROXY_SECRET` (same value), `GEO_PLATFORM`, `API_URL_INTERNAL`, `ALERTS_URL`, `NEXT_PUBLIC_*` build args |
+| monitor | see the monitor row above and `keepers/.env.example` |

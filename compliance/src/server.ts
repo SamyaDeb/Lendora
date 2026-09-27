@@ -32,8 +32,31 @@ function signerFromEnv(env: NodeJS.ProcessEnv): TypedDataSigner {
   return envKeyTypedDataSigner("COMPLIANCE_SIGNER", env);
 }
 
+/** Minimum `PROXY_SECRET` length off anvil (CP-R8). */
+export const MIN_PROXY_SECRET = 32;
+
+/**
+ * CP-R8 startup rules, before anything else starts. Geo and client-IP headers are trusted only from the web proxy, so
+ * every network except local anvil (31337) needs `PROXY_SECRET` (≥ 32 chars, also when set on anvil), and
+ * `TRUST_PROXY=true` without it is refused. On mainnet (4663) the deny-list sanctions adapter is refused: a real provider must be configured (CP-R3,
+ * open decision Q5).
+ */
+export function assertStartupConfig(env: NodeJS.ProcessEnv, raw: string): void {
+  const local = raw === "31337";
+  const secret = env.PROXY_SECRET ?? "";
+  if (!local && secret.length < MIN_PROXY_SECRET) {
+    throw new Error(`PROXY_SECRET (>= ${MIN_PROXY_SECRET} chars) is required on network ${raw} (CP-R8): without it anyone could send geo headers`);
+  }
+  if (!local && env.TRUST_PROXY === "true" && !secret) throw new Error("TRUST_PROXY=true needs PROXY_SECRET (CP-R8)");
+  if (secret && secret.length < MIN_PROXY_SECRET) throw new Error(`PROXY_SECRET must be at least ${MIN_PROXY_SECRET} chars (CP-R8)`);
+  if (raw === "4663" && (env.SANCTIONS_PROVIDER ?? "deny-list") === "deny-list") {
+    throw new Error("mainnet (4663) refuses the deny-list sanctions adapter: set SANCTIONS_PROVIDER=chainalysis|trm (CP-R3, CP-R8)");
+  }
+}
+
 export async function startCompliance(env: NodeJS.ProcessEnv = process.env, o: ComplianceOverrides = {}): Promise<RunningCompliance> {
   const raw = env.STOCKLINE_NETWORK ?? env.DEPLOYMENT_KEY ?? "31337";
+  assertStartupConfig(env, raw);
   if (raw === "4663") throw new Error("Phase 2 signs no attestations for 4663");
   const key = parseDeploymentKey(raw);
   const d = getDeployment(key);

@@ -42,6 +42,7 @@ export async function startWebStack(o: {build?: boolean; log?: (m: string) => vo
   log("[e2e] stack: anvil + seed week + indexer + API");
   const stack = await startStack();
   const signerKey = generatePrivateKey();
+  const proxySecret = `e2e-${generatePrivateKey()}`; // CP-R8: web proxy → compliance, as in production
   log("[e2e] compliance signer");
   const compliance = await startCompliance(
     {
@@ -54,6 +55,7 @@ export async function startWebStack(o: {build?: boolean; log?: (m: string) => vo
       COMPLIANCE_SCHEMA: `compliance_e2e_${Date.now()}`,
       DEV_DEFAULT_COUNTRY: "DE",
       TRUST_PROXY: "true",
+      PROXY_SECRET: proxySecret,
     } as unknown as NodeJS.ProcessEnv,
     {},
   );
@@ -81,6 +83,8 @@ export async function startWebStack(o: {build?: boolean; log?: (m: string) => vo
     NEXT_PUBLIC_E2E: "1",
     NEXT_PUBLIC_E2E_ACCOUNT: E2E_ACCOUNT,
     COMPLIANCE_URL: compliance.url,
+    PROXY_SECRET: proxySecret,
+    GEO_PLATFORM: "vercel",
     ALERTS_URL: `http://127.0.0.1:${alertsPort}`,
   };
   if (o.build !== false) {
