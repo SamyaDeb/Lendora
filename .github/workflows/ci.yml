@@ -15,6 +15,7 @@ env:
 jobs:
   contracts:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: contracts
@@ -42,6 +43,7 @@ jobs:
 
   slither:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Checkout submodules
@@ -61,6 +63,7 @@ jobs:
     # SDK, devnet (chain driver), keepers and every Phase 2 service. Tests start anvil with the DeployLocal fixture
     # and use these Postgres/Redis services through DATABASE_URL / REDIS_URL (packages/devnet/src/infra.ts).
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16-alpine
@@ -99,6 +102,7 @@ jobs:
   web-e2e:
     # 06 acceptance on anvil: Playwright drives every router flow through the production build; Lighthouse ≥ 85.
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16-alpine

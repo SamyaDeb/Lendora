@@ -8,6 +8,8 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   timeout: 180_000,
+  // The whole run, global setup included (stack + next build): fail with logs rather than hang in CI.
+  globalTimeout: 20 * 60_000,
   expect: {timeout: 30_000},
   outputDir: "e2e/.results",
   reporter: [["list"], ["html", {outputFolder: "e2e/.report", open: "never"}]],

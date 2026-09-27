@@ -39,8 +39,10 @@ async function freePort(): Promise<number> {
 
 export async function startWebStack(o: {build?: boolean; log?: (m: string) => void} = {}): Promise<WebStack> {
   const log = o.log ?? console.log;
+  const t0 = Date.now();
   log("[e2e] stack: anvil + seed week + indexer + API");
   const stack = await startStack();
+  log(`[e2e] stack ready in ${Math.round((Date.now() - t0) / 1000)} s`);
   const signerKey = generatePrivateKey();
   const proxySecret = `e2e-${generatePrivateKey()}`; // CP-R8: web proxy → compliance, as in production
   log("[e2e] compliance signer");
