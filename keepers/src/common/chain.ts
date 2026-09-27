@@ -6,6 +6,7 @@ import type {DeploymentKey} from "@stockline/sdk";
 export const robinhoodChain = defineChain({
   id: 4663,
   name: "Robinhood Chain",
+  blockTime: 100, // ~0.1 s blocks (01-chain-facts §1): viem then polls receipts every 500 ms instead of 4 s
   nativeCurrency: {name: "Ether", symbol: "ETH", decimals: 18},
   rpcUrls: {default: {http: ["https://rpc.mainnet.chain.robinhood.com"]}},
 });

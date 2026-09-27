@@ -25,6 +25,6 @@ Every tick recomputes from chain state, so keepers are idempotent and restart-sa
 
 ## Tests
 
-`pnpm --filter @stockline/keepers test` starts anvil and loads `test/fixtures/anvil-state.hex`: the task 7 deployment
+`pnpm --filter @stockline/keepers test` starts anvil and loads `packages/devnet/fixtures/anvil-state.hex`: the task 7 deployment
 (`contracts/script/DeployLocal.s.sol`, mocks for everything Robinhood Chain provides), matching `addresses.json["31337"]`.
-Regenerate after redeploying: `cast rpc anvil_dumpState --rpc-url <anvil> | tr -d '"' > keepers/test/fixtures/anvil-state.hex`.
+Regenerate after redeploying: `pnpm --filter @stockline/devnet state:dump --rpc <anvil>`.

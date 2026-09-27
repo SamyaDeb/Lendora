@@ -17,7 +17,8 @@
     "test": "vitest run",
     "abis": "node scripts/export-abis.mjs",
     "gen:sessions": "tsx scripts/genSessions.ts",
-    "gen:vectors": "tsx scripts/genVectors.ts"
+    "gen:vectors": "tsx scripts/genVectors.ts",
+    "lint": "eslint ."
   },
   "devDependencies": {
     "@noble/hashes": "1.8.0",
@@ -25,5 +26,8 @@
     "tsx": "^4.23.15",
     "typescript": "~5.9.3",
     "vitest": "^3.2.7"
+  },
+  "dependencies": {
+    "viem": "^2.56.9"
   }
 }

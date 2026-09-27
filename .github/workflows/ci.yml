@@ -57,8 +57,28 @@ jobs:
           slither-config: contracts/slither.config.json
           fail-on: medium
 
-  sdk:
+  typescript:
+    # SDK, devnet (chain driver), keepers and every Phase 2 service. Tests start anvil with the DeployLocal fixture
+    # and use these Postgres/Redis services through DATABASE_URL / REDIS_URL (packages/devnet/src/infra.ts).
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: stockline
+          POSTGRES_DB: stockline
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U stockline" --health-interval 2s --health-timeout 3s --health-retries 30
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 2s --health-timeout 3s --health-retries 30
+    env:
+      DATABASE_URL: postgres://stockline@127.0.0.1:5432/stockline
+      REDIS_URL: redis://127.0.0.1:6379
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -66,9 +86,10 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - uses: foundry-rs/foundry-toolchain@v1 # keepers tests run anvil with the task-7 deployment fixture
+      - uses: foundry-rs/foundry-toolchain@v1 # tests run anvil with the DeployLocal fixture
         with:
           version: stable
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r typecheck
+      - run: pnpm -r lint
       - run: pnpm -r test

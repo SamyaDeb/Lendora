@@ -10,3 +10,5 @@ export * from "./math/oracle.js";
 export * from "./math/allocator.js";
 export * from "./uniswap.js";
 export * from "./abis.js";
+export * from "./morphoEvents.js";
+export * from "./encoding.js";

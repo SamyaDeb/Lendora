@@ -22,3 +22,6 @@ sim/data/raw/
 sim/data/*.log
 contracts/broadcast/*/4663/
 contracts/broadcast/*/46630/
+
+# Local dev stack state (scripts/dev.sh): generated compliance key, logs, native pg/redis data
+.dev/

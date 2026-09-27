@@ -75,12 +75,12 @@ describe("guard keeper on anvil with the task-7 deployment (OR-R31, OR-R32, OR-R
     await keeper.tick();
     await setTick(NVDA_TICK + 583); // +6%
     for (let t = SAT + 240n; t <= SAT + 1800n; t += 240n) await a.setTime(t);
-    let r = await nvda();
+    const r = await nvda();
     expect(r.thresholdWad! > 12n * 10n ** 16n).toBe(true);
     expect((await reasons("latchedReasons")) & REASON.DEVIATION).toBe(0n);
     await setTick(NVDA_TICK + 1398); // +15%
     for (let t = SAT + 2040n; t <= SAT + 3900n; t += 240n) await a.setTime(t);
-    r = await nvda();
+    await nvda(); // this keeper tick trips DEVIATION
     expect((await reasons("latchedReasons")) & REASON.DEVIATION).toBe(REASON.DEVIATION);
     await setTick(NVDA_TICK);
   });
