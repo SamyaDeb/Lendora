@@ -21,6 +21,9 @@ import {
     IMorphoMarketV1AdapterV2FactoryMin
 } from "../src/interfaces/external/IMorphoVaultV2.sol";
 import {CalendarJson} from "./lib/CalendarJson.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {StocklineRouter} from "../src/StocklineRouter.sol";
+import {IStocklineRouter} from "../src/interfaces/IStocklineRouter.sol";
 
 /// @title StocklineDeploy
 /// @notice Deployment logic shared by the scripts (anvil, fork) and the fork tests, so tests exercise exactly what the
@@ -65,6 +68,10 @@ abstract contract StocklineDeploy {
         address guardKeeper; // keeper EOA
         address feeSplitter; // placeholder until Phase 3
         uint256 timelockDelay; // 48h
+        address attestationSigner; // RT-R2 compliance signer
+        uint256 globalCollateralCap; // clUSDG raw units ($4M at launch, 10-risk)
+        address swapTarget; // RT-R3 first allowlisted target (UniversalRouter on 4663, A8)
+        IStocklineRouter.SwapMode swapMode;
     }
 
     struct StockConfig {
@@ -80,6 +87,8 @@ abstract contract StocklineDeploy {
         TimelockController timelock;
         MarketHours marketHours;
         CollateralToken clUSDG;
+        StocklineRouter router; // ERC1967 proxy
+        address routerImplementation;
     }
 
     struct StockDeployment {
@@ -108,6 +117,24 @@ abstract contract StocklineDeploy {
         core.marketHours.transferOwnership(address(core.timelock));
 
         core.clUSDG = new CollateralToken(c.usdg, c.morpho, "Stockline Collateral USDG", "clUSDG");
+
+        // RT-R7: UUPS proxy; the deployer lists markets, then `_finalize` hands it to the timelock.
+        core.routerImplementation = address(new StocklineRouter(c.morpho, address(core.clUSDG)));
+        core.router = StocklineRouter(
+            address(
+                new ERC1967Proxy(
+                    core.routerImplementation,
+                    abi.encodeCall(StocklineRouter.initialize, (c.deployer, c.attestationSigner, c.globalCollateralCap))
+                )
+            )
+        );
+        core.clUSDG.setRouter(address(core.router));
+        if (c.swapTarget != address(0)) core.router.setSwapTarget(c.swapTarget, c.swapMode);
+    }
+
+    /// @notice After every stock is listed: the router's owner becomes the timelock.
+    function _finalize(Core memory core) internal {
+        core.router.transferOwnership(address(core.timelock));
     }
 
     // ------------------------------------------------------------------ Per stock
@@ -173,6 +200,18 @@ abstract contract StocklineDeploy {
         (uint256 answer,) = d.oracle.stockAnswer();
         d.capAssets = s.launchCapUsd * 1e18 * 10 ** uint256(_feedDecimals(s.feed)) / answer;
         _configureVault(c, core, s, d);
+        core.router
+            .listMarket(
+                s.token,
+                IStocklineRouter.Market({
+                    wrapper: address(d.wrapper),
+                    vault: d.vault,
+                    adapter: d.adapter,
+                    params: d.market,
+                    perAddressCapUsd: s.perAddressCapUsd * 1e18,
+                    listed: true
+                })
+            );
     }
 
     function _configureVault(CoreConfig memory c, Core memory core, StockConfig memory s, StockDeployment memory d)
@@ -293,6 +332,8 @@ abstract contract StocklineDeploy {
         VM.serializeAddress(obj, "timelock", address(core.timelock));
         VM.serializeAddress(obj, "marketHours", address(core.marketHours));
         VM.serializeAddress(obj, "clUSDG", address(core.clUSDG));
+        VM.serializeAddress(obj, "router", address(core.router));
+        VM.serializeAddress(obj, "routerImplementation", core.routerImplementation);
         VM.serializeAddress(obj, "vaultV2Factory", c.vaultFactory);
         VM.serializeAddress(obj, "adapterFactory", c.adapterFactory);
         string memory roles = _rolesJson(string.concat(obj, "-roles"), c);

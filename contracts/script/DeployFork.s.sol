@@ -34,6 +34,7 @@ contract DeployFork is Script, ForkConfig {
         for (uint256 i; i < stocks.length; i++) {
             ds[i] = _deployStock(c, core, stocks[i]);
         }
+        _finalize(core);
         vm.stopBroadcast();
         _writeAddresses("fork-4663", c, core, stocks, ds, "forkBlock", vm.toString(block.number));
     }

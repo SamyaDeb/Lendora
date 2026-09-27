@@ -3,6 +3,7 @@ pragma solidity 0.8.26;
 
 import {Vm} from "forge-std/Vm.sol";
 import {StocklineDeploy} from "./StocklineDeploy.sol";
+import {IStocklineRouter} from "../src/interfaces/IStocklineRouter.sol";
 
 /// @notice Robinhood Chain (4663) configuration for fork runs, read from packages/sdk/external-addresses.json (the
 /// Phase 0 verified address book). Role holders are placeholders (labeled, keyless addresses) unless set by env.
@@ -35,7 +36,11 @@ abstract contract ForkConfig is StocklineDeploy {
             allocator: VM_.envOr("STOCKLINE_ALLOCATOR", _placeholder("allocator")),
             guardKeeper: VM_.envOr("STOCKLINE_GUARD_KEEPER", _placeholder("guardKeeper")),
             feeSplitter: VM_.envOr("STOCKLINE_FEE_SPLITTER", _placeholder("feeSplitter")),
-            timelockDelay: 48 hours
+            timelockDelay: 48 hours,
+            attestationSigner: VM_.envOr("STOCKLINE_ATTESTATION_SIGNER", _placeholder("attestationSigner")),
+            globalCollateralCap: 4_000_000e6,
+            swapTarget: _ext("uniswap.universalRouter"),
+            swapMode: IStocklineRouter.SwapMode.Transfer
         });
     }
 

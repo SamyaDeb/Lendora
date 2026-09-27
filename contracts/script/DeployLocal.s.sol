@@ -3,13 +3,14 @@ pragma solidity 0.8.26;
 
 import {Script} from "forge-std/Script.sol";
 import {StocklineDeploy} from "./StocklineDeploy.sol";
+import {IStocklineRouter} from "../src/interfaces/IStocklineRouter.sol";
 import {LocalMocks} from "./LocalMocks.sol";
 
 /// @notice Full Stockline deployment on a local anvil (chain 31337) against mocks of everything Robinhood Chain
 /// provides. Writes `packages/sdk/addresses.json` under "31337" (incl. a "mocks" section for keepers and tests).
 ///
 ///   anvil &
-///   forge script script/DeployLocal.s.sol --rpc-url http://127.0.0.1:8545 --broadcast --unlocked \
+///   forge script script/DeployLocal.s.sol --rpc-url http://127.0.0.1:8545 --broadcast --slow --unlocked \
 ///     --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 ///
 /// Roles default to anvil's well-known accounts (addresses only; no keys in this repo) and can be overridden by env.
@@ -46,7 +47,13 @@ contract DeployLocal is Script, StocklineDeploy, LocalMocks {
             allocator: vm.envOr("STOCKLINE_ALLOCATOR", address(0x70997970C51812dc3A010C7d01b50e0d17dc79C8)),
             guardKeeper: vm.envOr("STOCKLINE_GUARD_KEEPER", address(0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC)),
             feeSplitter: vm.envOr("STOCKLINE_FEE_SPLITTER", address(0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65)),
-            timelockDelay: 48 hours
+            timelockDelay: 48 hours,
+            attestationSigner: vm.envOr(
+                "STOCKLINE_ATTESTATION_SIGNER", address(0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc)
+            ),
+            globalCollateralCap: 4_000_000e6,
+            swapTarget: address(m.dex),
+            swapMode: IStocklineRouter.SwapMode.Approve
         });
     }
 
@@ -75,5 +82,6 @@ contract DeployLocal is Script, StocklineDeploy, LocalMocks {
         for (uint256 i; i < stocks.length; i++) {
             ds[i] = _deployStock(c, core, stocks[i]);
         }
+        _finalize(core);
     }
 }

@@ -40,8 +40,7 @@ contract DeployForkTest is Phase1ForkBase, ForkConfig {
             StockDeployment memory d = _deployStock(c, core, s[i]);
             if (i == 1) nvdaD = d;
         }
-        // The router arrives in task 8; a stand-in router address mints clUSDG for this test.
-        core.clUSDG.setRouter(makeAddr("routerStandIn"));
+        _finalize(core);
         vm.stopPrank();
     }
 
@@ -95,6 +94,11 @@ contract DeployForkTest is Phase1ForkBase, ForkConfig {
 
         // Oracles and calendar owned by the timelock.
         assertEq(nvdaD.oracle.owner(), address(core.timelock));
+        assertEq(core.router.owner(), address(core.timelock));
+        assertEq(
+            uint256(core.router.swapMode(_ext("uniswap.universalRouter"))), 2, "UniversalRouter, transfer mode (A8)"
+        );
+        assertTrue(core.router.market(NVDA).listed);
         assertEq(core.marketHours.owner(), address(core.timelock));
         assertEq(core.timelock.getMinDelay(), 48 hours);
         assertTrue(core.timelock.hasRole(core.timelock.PROPOSER_ROLE(), c.owner));
@@ -130,16 +134,14 @@ contract DeployForkTest is Phase1ForkBase, ForkConfig {
         vm.prank(c.allocator);
         v.allocate(nvdaD.adapter, abi.encode(nvdaD.market), 90e18);
 
-        // Borrower: USDG → clUSDG (stand-in router) → collateral → borrow 10 wNVDA.
+        // Borrower: USDG → clUSDG collateral through the router (addCollateral needs no attestation), then borrow
+        // directly on Morpho (permissionless; the router's entry checks are soft gates, 05 §1).
         (uint256 p,) = nvdaD.oracle.stockAnswer();
         uint256 collateral = p * 10 * 2 / 100; // 2x the debt value, USDG 6 dp
-        address routerStandIn = makeAddr("routerStandIn");
-        _fundUsdg(routerStandIn, collateral);
-        vm.startPrank(routerStandIn);
-        IERC20(USDG).approve(address(core.clUSDG), collateral);
-        core.clUSDG.mint(routerStandIn, collateral);
-        IERC20(address(core.clUSDG)).approve(MORPHO, collateral);
-        IMorpho(MORPHO).supplyCollateral(nvdaD.market, collateral, borrower, "");
+        _fundUsdg(borrower, collateral);
+        vm.startPrank(borrower);
+        IERC20(USDG).approve(address(core.router), collateral);
+        core.router.addCollateral(NVDA, collateral, borrower, block.timestamp);
         vm.stopPrank();
         vm.prank(borrower);
         IMorpho(MORPHO).borrow(nvdaD.market, 10e18, 0, borrower, borrower);

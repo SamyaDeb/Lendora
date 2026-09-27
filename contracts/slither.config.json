@@ -10,6 +10,7 @@
     "timestamp: MarketHours.replace*From": "Intentional: only entries that have not started (openTs/startTs > block.timestamp) may be rewritten. Low.",
     "incorrect-equality: StocklineOracleBase buffer helpers, liveReasons": "`x == 0` on calendar bounds (prevClose/prevReopen/nextClose/nextReopen, event startTs) is the documented 'unknown' sentinel from IMarketHours.closureWindows/eventWindows, not an ether/token balance equality. Covered by bufferAt vectors and OR-R12 tests.",
     "unused-return: StocklineOracleBase.liveReasons closureWindows": "Only reopen and nextClose are needed for STALE/CALENDAR; the other two tuple members are intentionally ignored.",
-    "low/informational (not suppressed)": "timestamp (calendar logic is timestamp-based by design), low-level-calls (fail-closed staticcalls, OR-R2), missing-zero-check on optional roles/feeds (address(0) disables them by design), naming of immutables/constants."
+    "low/informational (not suppressed)": "timestamp (calendar logic is timestamp-based by design), low-level-calls (fail-closed staticcalls, OR-R2), missing-zero-check on optional roles/feeds (address(0) disables them by design), naming of immutables/constants.",
+    "unused-return: StocklineRouter flows": "StockWrapper.wrap/unwrap and CollateralToken.unwrap return exactly their input or revert; Morpho borrow/repay are called in asset or share mode and the needed side is used; forceDeallocate's return is penalty shares (penalty 0, LM-R22); partially read tuples (stockAnswer, tryRecover, expectedMarketBalances) are intentional. RT-R5 invariant + unit tests cover balances."
   }
 }
