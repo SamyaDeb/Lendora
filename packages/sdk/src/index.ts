@@ -23,3 +23,4 @@ export * from "./compliance.js";
 export * from "./chains.js";
 export * from "./alerts.js";
 export * from "./reads.js";
+export * from "./timelock.js";

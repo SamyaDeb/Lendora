@@ -19,7 +19,8 @@
     "gen:sessions": "tsx scripts/genSessions.ts",
     "gen:vectors": "tsx scripts/genVectors.ts",
     "lint": "eslint .",
-    "gen:vectors:morpho": "tsx scripts/genMorphoVectors.ts"
+    "gen:vectors:morpho": "tsx scripts/genMorphoVectors.ts",
+    "timelock": "tsx scripts/timelockCalldata.ts"
   },
   "devDependencies": {
     "@noble/hashes": "1.8.0",
