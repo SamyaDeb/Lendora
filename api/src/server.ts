@@ -29,9 +29,11 @@ export async function startApi(config: ApiConfig): Promise<RunningApi> {
   let redis: Redis | undefined;
   let nonces;
   if (config.redisUrl) {
-    redis = new Redis(config.redisUrl, {maxRetriesPerRequest: 2});
+    // Every client gets an error listener: a Redis outage degrades limits and fan-out, it must not crash the API.
+    const mk = () => new Redis(config.redisUrl!, {maxRetriesPerRequest: 2}).on("error", (e) => console.error(`[api] redis: ${e.message}`));
+    redis = mk();
     limiter = new RedisLimiter(redis);
-    fanout = new RedisFanout(new Redis(config.redisUrl), new Redis(config.redisUrl));
+    fanout = new RedisFanout(mk(), mk());
     nonces = new RedisNonceStore(redis);
   } else {
     limiter = new MemoryLimiter();

@@ -130,6 +130,7 @@ start() { # name, pnpm filter, script
 start driver packages/devnet drive:live
 start indexer indexer dev
 start api api dev
+DEV_DEFAULT_COUNTRY=DE PORT=42071 start compliance compliance dev
 start web web dev
 start allocator keepers allocator
 start guard keepers guard

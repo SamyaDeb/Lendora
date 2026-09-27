@@ -1,0 +1,7 @@
+{
+  "$comment": "CP-R1: restricted jurisdictions are configuration, not code. Stock Tokens are not available in the US, Canada, UK, Switzerland or UAE (litepaper §8); plus comprehensively sanctioned OFAC jurisdictions and regions (ISO 3166-1 alpha-2 / 3166-2). Pending legal review (CP-R6, docs/phase0/06-legal-questions.md): counsel owns this list. Services may override with RESTRICTED_COUNTRIES / RESTRICTED_REGIONS.",
+  "version": "2026-09-27",
+  "restrictedCountries": ["US", "CA", "GB", "CH", "AE", "CU", "IR", "KP", "SY"],
+  "restrictedRegions": ["UA-43", "UA-40", "UA-14", "UA-09"],
+  "termsVersion": "2026-09-27.1"
+}

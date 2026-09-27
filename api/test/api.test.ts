@@ -215,9 +215,11 @@ describe("public API on the indexed seed week (SI-R10…R14)", () => {
 
   it("SI_R10 fan-out through Redis: two API instances, one publisher, both push to their clients", async () => {
     const redis = await (await import("@stockline/devnet")).startRedis();
+    const instances: Awaited<ReturnType<Stack["startApi"]>>[] = [];
     try {
       const a1 = await s.startApi({redisUrl: redis.url});
       const a2 = await s.startApi({redisUrl: redis.url});
+      instances.push(a1, a2);
       const got = [0, 0];
       const socks = [a1, a2].map((a, i) => {
         const w = new WebSocket(`${a.url.replace("http", "ws")}/v1/stream`, {headers: {"x-forwarded-for": `192.0.2.${i + 1}`}});
@@ -239,6 +241,7 @@ describe("public API on the indexed seed week (SI-R10…R14)", () => {
       expect(got[1]).toBe(got[0]); // same stream on both instances
       for (const w of socks) w.close();
     } finally {
+      for (const i of instances) await i.close(); // before Redis goes away
       redis.stop();
     }
   });

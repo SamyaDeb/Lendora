@@ -1,0 +1,21 @@
+{
+  "$comment": "CP-R2 datacenter/VPN heuristic for borrow flows (StaticRangeReputation). IPv4 CIDRs of hosting providers and commercial VPN exits. This static list is a starting point: refresh it from the providers' published ranges (e.g. ip-ranges.amazonaws.com/ip-ranges.json, gstatic.com/ipranges/cloud.json, Azure service tags) or swap the IpReputation implementation for a commercial feed. Override with DATACENTER_RANGES (comma-separated CIDRs).",
+  "version": "2026-09-27",
+  "ranges": [
+    "3.0.0.0/9",
+    "13.32.0.0/12",
+    "18.128.0.0/9",
+    "34.64.0.0/10",
+    "35.184.0.0/13",
+    "52.0.0.0/10",
+    "54.64.0.0/11",
+    "104.16.0.0/12",
+    "138.197.0.0/16",
+    "139.59.0.0/16",
+    "159.65.0.0/16",
+    "167.99.0.0/16",
+    "172.64.0.0/13",
+    "185.159.156.0/22",
+    "198.18.0.0/15"
+  ]
+}

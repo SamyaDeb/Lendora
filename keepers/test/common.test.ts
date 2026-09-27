@@ -60,3 +60,25 @@ describe("keeper plumbing", () => {
     expect(errors).toHaveLength(1);
   });
 });
+
+describe("typed-data signer (Phase 2 compliance, RT-R2)", () => {
+  it("reads the key from env or a key file and signs EIP-712 that verifies", async () => {
+    const {generatePrivateKey, privateKeyToAccount} = await import("viem/accounts");
+    const {verifyTypedData} = await import("viem");
+    const {envKeyTypedDataSigner} = await import("../src/common/signer.js");
+    const pk = generatePrivateKey();
+    const fromFile = envKeyTypedDataSigner("COMPLIANCE_SIGNER", {COMPLIANCE_SIGNER_KEY_FILE: "/secret"}, (p) => (p === "/secret" ? `${pk}\n` : ""));
+    const fromEnv = envKeyTypedDataSigner("COMPLIANCE_SIGNER", {COMPLIANCE_SIGNER_KEY: pk});
+    expect(fromFile.address).toBe(privateKeyToAccount(pk).address);
+    expect(fromEnv.address).toBe(fromFile.address);
+    const t = {
+      domain: {name: "StocklineRouter", version: "1", chainId: 31337, verifyingContract: "0x0000000000000000000000000000000000000001"},
+      types: {Attestation: [{name: "user", type: "address"}, {name: "expiry", type: "uint256"}]},
+      primaryType: "Attestation",
+      message: {user: "0x0000000000000000000000000000000000000002", expiry: 1n},
+    } as const;
+    const sig = await fromEnv.signTypedData(t);
+    expect(await verifyTypedData({...t, address: fromEnv.address, signature: sig})).toBe(true);
+    expect(() => envKeyTypedDataSigner("COMPLIANCE_SIGNER", {})).toThrow(/COMPLIANCE_SIGNER_KEY/);
+  });
+});

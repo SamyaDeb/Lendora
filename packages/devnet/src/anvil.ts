@@ -8,6 +8,8 @@ import {
   createWalletClient,
   decodeErrorResult,
   http,
+  toFunctionSelector,
+  type BaseError,
   type Hex,
   type PublicClient,
   type TestClient,
@@ -15,6 +17,7 @@ import {
   type WalletClient,
 } from "viem";
 import {anvil} from "viem/chains";
+import {formatAbiItem} from "viem/utils";
 import {
   collateralTokenAbi,
   getDeployment,
@@ -121,7 +124,10 @@ export async function revertReason(client: PublicClient, from: `0x${string}`, to
     await client.call({account: from, to, data});
     return "(no revert on replay)";
   } catch (e) {
-    const raw = (e as {data?: Hex; cause?: {data?: Hex}}).cause?.data ?? (e as {data?: Hex}).data;
+    const err = e as BaseError;
+    // The revert data can sit anywhere in viem's error chain.
+    const withData = typeof err.walk === "function" ? (err.walk((x) => typeof (x as {data?: unknown}).data === "string") as {data?: Hex} | null) : null;
+    const raw = withData?.data ?? (/(0x[0-9a-fA-F]{8,})/.exec(err.message ?? "")?.[1] as Hex | undefined);
     if (raw && raw.length >= 10) {
       for (const abi of decodeAbis) {
         try {
@@ -131,10 +137,21 @@ export async function revertReason(client: PublicClient, from: `0x${string}`, to
           /* try the next ABI */
         }
       }
+      const name = errorNames.get(raw.slice(0, 10).toLowerCase());
+      if (name) return `${name}(…)`;
     }
     return (e as Error).message.split("\n")[0];
   }
 }
+
+/** Error selector → name for every error in the decoding ABIs (for reverts viem only reports as a selector). */
+const errorNames = new Map<string, string>(
+  decodeAbis.flatMap((abi) =>
+    (abi as readonly {type: string; name?: string}[])
+      .filter((x) => x.type === "error")
+      .map((x) => [toFunctionSelector(formatAbiItem(x as never)).toLowerCase(), x.name!] as [string, string]),
+  ),
+);
 
 export interface StartOptions {
   port?: number;

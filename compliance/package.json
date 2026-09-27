@@ -1,30 +1,36 @@
 {
-  "name": "@stockline/keepers",
+  "name": "@stockline/compliance",
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./app": "./src/app.ts",
+    "./server": "./src/server.ts"
+  },
   "scripts": {
     "pretypecheck": "pnpm --filter @stockline/sdk build",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
     "pretest": "pnpm --filter @stockline/sdk build",
     "test": "vitest run",
-    "allocator": "tsx src/allocator/main.ts",
-    "guard": "tsx src/guard/main.ts",
-    "liquidator": "tsx src/liquidator/main.ts",
-    "lint": "eslint ."
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts"
   },
   "dependencies": {
+    "@hono/node-server": "^2.1.1",
+    "@stockline/keepers": "workspace:*",
     "@stockline/sdk": "workspace:*",
-    "viem": "^2.56.9"
+    "hono": "^4.13.9",
+    "pg": "^8.16.2",
+    "viem": "^2.56.9",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@stockline/devnet": "workspace:*",
     "@types/node": "^22.20.4",
+    "@types/pg": "^8.15.0",
     "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "vitest": "^3.2.7"
-  },
-  "exports": {
-    "./signer": "./src/common/signer.ts"
   }
 }

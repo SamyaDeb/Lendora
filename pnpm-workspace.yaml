@@ -3,4 +3,5 @@ packages:
   - "keepers"
   - "indexer"
   - "api"
+  - "compliance"
   - "web"
