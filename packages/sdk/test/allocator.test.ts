@@ -17,11 +17,21 @@ const base: AllocatorState = {
 
 describe("allocator plan (LM-R30, LM-R31, LM-R34)", () => {
   it("allocates everything above the 10% idle reserve, bounded by the relative cap", () => {
-    expect(planAllocation(base, P)).toEqual({kind: "allocate", assets: 900n * E18, reason: "idle above reserve"});
+    const margin = base.totalAssets / 1_000_000n; // ROOM_MARGIN_PPM_DIVISOR
+    expect(planAllocation(base, P)).toEqual({kind: "allocate", assets: 900n * E18 - margin, reason: "idle above reserve"});
   });
 
   it("respects the absolute cap", () => {
-    expect(planAllocation({...base, absoluteCap: 100n * E18}, P)).toMatchObject({kind: "allocate", assets: 100n * E18});
+    expect(planAllocation({...base, absoluteCap: 100n * E18}, P)).toMatchObject({kind: "allocate", assets: 100n * E18 - base.totalAssets / 1_000_000n});
+  });
+
+  it("LM-R23: room counts the adapter's accrued assets, not only the recorded allocation (RelativeCapExceeded fix)", () => {
+    // 800 allocated at the last allocate; 50 of interest accrued in the market since; vault assets 1050.
+    const s = {...base, totalAssets: 1050n * E18, idle: 200n * E18, allocation: 800n * E18, adapterAssets: 850n * E18, marketSupply: 850n * E18};
+    const plan = planAllocation(s, P);
+    expect(plan.kind).toBe("allocate");
+    const after = s.adapterAssets + (plan as {assets: bigint}).assets; // what Vault V2 records after allocate
+    expect(after).toBeLessThanOrEqual((s.totalAssets * 9n) / 10n);
   });
 
   it("restores the idle reserve after withdrawals, from free liquidity only", () => {

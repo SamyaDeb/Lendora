@@ -92,4 +92,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r typecheck
       - run: pnpm -r lint
+      - name: OpenAPI and the SDK's generated client are up to date
+        run: pnpm --filter @stockline/sdk build && pnpm --filter @stockline/api openapi && git diff --exit-code api/openapi.json packages/sdk/src/api/schema.ts
       - run: pnpm -r test

@@ -18,6 +18,7 @@ export default tseslint.config(
       "sim/**",
       "packages/sdk/src/abis.ts",
       "**/ponder-env.d.ts",
+      "packages/sdk/src/api/schema.ts",
     ],
   },
   js.configs.recommended,

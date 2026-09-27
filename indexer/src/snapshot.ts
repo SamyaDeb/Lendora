@@ -49,15 +49,16 @@ async function reads(context: Context, ticker: string, block: Block) {
   const blockNumber = block.number;
   try {
     if (!(await hasState(blockNumber))) throw new Error("state not available at this block");
-    const [answer, buffer, reasons, open, supply, multiplier] = await Promise.all([
+    const [answer, usdg, buffer, reasons, open, supply, multiplier] = await Promise.all([
       c.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "stockAnswer", blockNumber}),
+      c.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "usdgAnswer", blockNumber}),
       c.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "buffer", blockNumber}),
       c.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "guardReasons", blockNumber}),
       c.readContract({address: net.d.marketHours, abi: marketHoursAbi, functionName: "isOpen", args: [block.timestamp], blockNumber}),
       c.readContract({address: s.stockToken, abi: erc20Abi, functionName: "totalSupply", blockNumber}),
       c.readContract({address: s.wrapper, abi: stockWrapperAbi, functionName: "multiplier", blockNumber}),
     ]);
-    return {answer: answer[0], updatedAt: answer[1], buffer, reasons, open, supply, multiplier};
+    return {answer: answer[0], updatedAt: answer[1], usdg: usdg[0], buffer, reasons, open, supply, multiplier};
   } catch (e) {
     const prev = await context.db.find(latestSnapshot, {ticker});
     if (!prev) {
@@ -68,6 +69,7 @@ async function reads(context: Context, ticker: string, block: Block) {
     return {
       answer: prev.priceAnswer,
       updatedAt: prev.priceUpdatedAt,
+      usdg: prev.usdgAnswer,
       buffer: prev.bufferWad,
       reasons: prev.guardReasons,
       open: prev.marketOpen,
@@ -176,6 +178,7 @@ export async function writeSnapshot(context: Context, ticker: string, block: Blo
     priceAnswer: r.answer,
     priceUpdatedAt: r.updatedAt,
     priceUsd: f.priceUsd,
+    usdgAnswer: r.usdg,
     multiplier: r.multiplier,
     bufferWad: r.buffer,
     guardReasons: r.reasons,

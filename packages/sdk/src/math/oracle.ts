@@ -165,8 +165,12 @@ export function healthFactorAt(s: StockMarketState, pos: Position, t: bigint): b
  * `collateral·vpt·usdg·10^scaleExp·lltv / (1e36·1e18·borrowed·(1e18 + b))`, floored. Display only (not onchain).
  */
 export function liquidationPriceAt(s: StockMarketState, pos: Position, t: bigint): bigint {
+  return liquidationPrice(pos, bufferAt(s.buffer, t, s.stockUpdatedAt), s.valuePerToken, s.usdgAnswer, s.lltv, s.scaleExp);
+}
+
+/** Stock feed answer (raw feed decimals) above which `pos` is liquidatable with buffer `b` in force. 0 = no debt. */
+export function liquidationPrice(pos: Position, b: bigint, valuePerToken: bigint, usdgAnswer: bigint, lltv: bigint, scaleExp: bigint): bigint {
   if (pos.borrowed === 0n) return 0n;
-  const b = bufferAt(s.buffer, t, s.stockUpdatedAt);
-  const num = pos.collateral * s.valuePerToken * s.usdgAnswer * 10n ** s.scaleExp * s.lltv;
+  const num = pos.collateral * valuePerToken * usdgAnswer * 10n ** scaleExp * lltv;
   return num / (ORACLE_PRICE_SCALE * WAD * pos.borrowed * (WAD + b));
 }

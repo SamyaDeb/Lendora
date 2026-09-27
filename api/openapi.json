@@ -1,0 +1,2091 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Stockline short-interest API",
+    "version": "1.0.0",
+    "description": "Live short interest for Stockline markets on Robinhood Chain (docs/prd/07). Scope: Stockline markets only.\n\nEvery data response carries `asOfBlock`, `asOfTime` and `confirmed` (finalized) — SI-R13.\n\nLimits (SI-R10): free 60 req/min and 1 WebSocket connection per IP; keyed 600 req/min and 10 connections. Create a key with Sign-In with Ethereum at `POST /v1/auth/keys`.\n\nWebSocket `/v1/stream`: send `{\"channel\":\"market\",\"symbol\":\"NVDA\"}` or `{\"channel\":\"events\",\"symbol\":\"*\"}`; `\"op\":\"unsubscribe\"` to stop.\n\nChain id 46630. Data as is, no warranty; attribution requested (/v1/terms).",
+    "license": {
+      "name": "Data terms",
+      "url": "https://stockline.xyz/terms/data"
+    }
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "MarketsResponse": {
+        "type": "object",
+        "properties": {
+          "asOfBlock": {
+            "type": "string",
+            "pattern": "^-?\\d+$",
+            "description": "Block the data is as of (SI-R13)",
+            "example": "1000000000000000000"
+          },
+          "asOfTime": {
+            "type": "string",
+            "description": "ISO 8601 UTC",
+            "example": "2026-10-01T16:00:00.000Z"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "description": "asOfBlock ≤ the chain's finalized block (SI-R3)"
+          },
+          "safe": {
+            "type": "boolean",
+            "description": "asOfBlock ≤ the chain's safe block"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Market"
+            }
+          }
+        },
+        "required": [
+          "asOfBlock",
+          "asOfTime",
+          "confirmed",
+          "safe",
+          "scope",
+          "data"
+        ]
+      },
+      "Market": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "stockToken": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "example": "0x0000000000000000000000000000000000000000"
+          },
+          "marketId": {
+            "type": "string"
+          },
+          "blockNumber": {
+            "type": "string",
+            "pattern": "^-?\\d+$",
+            "description": "Integer as a decimal string (raw onchain units)",
+            "example": "1000000000000000000"
+          },
+          "time": {
+            "type": "string",
+            "description": "ISO 8601 UTC",
+            "example": "2026-10-01T16:00:00.000Z"
+          },
+          "supplied": {
+            "type": "string",
+            "description": "Market supply + rSTOCK idle, shares of stock after the multiplier",
+            "example": "1234.56"
+          },
+          "borrowed": {
+            "type": "string",
+            "description": "Short interest: market borrow, shares of stock after the multiplier",
+            "example": "1234.56"
+          },
+          "borrowedUsd": {
+            "type": "string",
+            "description": "totalBorrowAssets × P_wrapped (feed, no buffer)",
+            "example": "1234.56"
+          },
+          "utilization": {
+            "type": "string",
+            "description": "Stock-loan market utilization (0–1)",
+            "example": "1234.56"
+          },
+          "utilizationVault": {
+            "type": "string",
+            "description": "borrowed / supplied incl. the idle reserve (0–1)",
+            "example": "1234.56"
+          },
+          "borrowApr": {
+            "type": "string",
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "borrowApy": {
+            "type": "number"
+          },
+          "supplyApy": {
+            "type": "number",
+            "description": "Variable lender APY through rSTOCK, net of the vault performance fee"
+          },
+          "rateKind": {
+            "type": "string",
+            "enum": [
+              "variable"
+            ]
+          },
+          "siPctFloat": {
+            "type": "string",
+            "description": "borrowed / Stock Token totalSupply (0–1)",
+            "example": "1234.56"
+          },
+          "daysToCover": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "borrowers": {
+            "type": "integer"
+          },
+          "newShorts24h": {
+            "type": "string",
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "covered24h": {
+            "type": "string",
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "marketStatus": {
+            "type": "string",
+            "enum": [
+              "open",
+              "closed",
+              "ramping",
+              "guard_tripped"
+            ]
+          },
+          "price": {
+            "type": "object",
+            "properties": {
+              "usdPerShare": {
+                "type": "string",
+                "description": "Decimal string",
+                "example": "1234.56"
+              },
+              "usdPerToken": {
+                "type": "string",
+                "description": "Decimal string",
+                "example": "1234.56"
+              },
+              "feedUpdatedAt": {
+                "type": "string",
+                "description": "ISO 8601 UTC",
+                "example": "2026-10-01T16:00:00.000Z"
+              },
+              "multiplier": {
+                "type": "string",
+                "description": "Decimal string",
+                "example": "1234.56"
+              }
+            },
+            "required": [
+              "usdPerShare",
+              "usdPerToken",
+              "feedUpdatedAt",
+              "multiplier"
+            ]
+          },
+          "buffer": {
+            "type": "string",
+            "description": "Oracle buffer in force (0–0.2)",
+            "example": "1234.56"
+          },
+          "guard": {
+            "type": "object",
+            "properties": {
+              "tripped": {
+                "type": "boolean"
+              },
+              "reasons": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "tripped",
+              "reasons"
+            ]
+          },
+          "raw": {
+            "type": "object",
+            "properties": {
+              "suppliedShares": {
+                "type": "string",
+                "pattern": "^-?\\d+$",
+                "description": "Integer as a decimal string (raw onchain units)",
+                "example": "1000000000000000000"
+              },
+              "borrowedShares": {
+                "type": "string",
+                "pattern": "^-?\\d+$",
+                "description": "Integer as a decimal string (raw onchain units)",
+                "example": "1000000000000000000"
+              },
+              "utilizationWad": {
+                "type": "string",
+                "pattern": "^-?\\d+$",
+                "description": "Integer as a decimal string (raw onchain units)",
+                "example": "1000000000000000000"
+              },
+              "borrowRatePerSecWad": {
+                "type": "string",
+                "pattern": "^-?\\d+$",
+                "description": "Integer as a decimal string (raw onchain units)",
+                "example": "1000000000000000000"
+              },
+              "bufferWad": {
+                "type": "string",
+                "pattern": "^-?\\d+$",
+                "description": "Integer as a decimal string (raw onchain units)",
+                "example": "1000000000000000000"
+              },
+              "marketOpen": {
+                "type": "boolean"
+              },
+              "guardReasons": {
+                "type": "string",
+                "pattern": "^-?\\d+$",
+                "description": "Integer as a decimal string (raw onchain units)",
+                "example": "1000000000000000000"
+              },
+              "totalSupplyAssets": {
+                "type": "string",
+                "pattern": "^-?\\d+$",
+                "description": "Integer as a decimal string (raw onchain units)",
+                "example": "1000000000000000000"
+              },
+              "totalBorrowAssets": {
+                "type": "string",
+                "pattern": "^-?\\d+$",
+                "description": "Integer as a decimal string (raw onchain units)",
+                "example": "1000000000000000000"
+              },
+              "vaultIdle": {
+                "type": "string",
+                "pattern": "^-?\\d+$",
+                "description": "Integer as a decimal string (raw onchain units)",
+                "example": "1000000000000000000"
+              },
+              "stockAnswer": {
+                "type": "string",
+                "pattern": "^-?\\d+$",
+                "description": "Integer as a decimal string (raw onchain units)",
+                "example": "1000000000000000000"
+              },
+              "usdgAnswer": {
+                "type": "string",
+                "pattern": "^-?\\d+$",
+                "description": "Integer as a decimal string (raw onchain units)",
+                "example": "1000000000000000000"
+              },
+              "multiplier": {
+                "type": "string",
+                "pattern": "^-?\\d+$",
+                "description": "Integer as a decimal string (raw onchain units)",
+                "example": "1000000000000000000"
+              }
+            },
+            "required": [
+              "suppliedShares",
+              "borrowedShares",
+              "utilizationWad",
+              "borrowRatePerSecWad",
+              "bufferWad",
+              "marketOpen",
+              "guardReasons",
+              "totalSupplyAssets",
+              "totalBorrowAssets",
+              "vaultIdle",
+              "stockAnswer",
+              "usdgAnswer",
+              "multiplier"
+            ]
+          }
+        },
+        "required": [
+          "symbol",
+          "stockToken",
+          "marketId",
+          "blockNumber",
+          "time",
+          "supplied",
+          "borrowed",
+          "borrowedUsd",
+          "utilization",
+          "utilizationVault",
+          "borrowApr",
+          "borrowApy",
+          "supplyApy",
+          "rateKind",
+          "siPctFloat",
+          "daysToCover",
+          "borrowers",
+          "newShorts24h",
+          "covered24h",
+          "marketStatus",
+          "price",
+          "buffer",
+          "guard",
+          "raw"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "MarketDetailResponse": {
+        "type": "object",
+        "properties": {
+          "asOfBlock": {
+            "type": "string",
+            "pattern": "^-?\\d+$",
+            "description": "Block the data is as of (SI-R13)",
+            "example": "1000000000000000000"
+          },
+          "asOfTime": {
+            "type": "string",
+            "description": "ISO 8601 UTC",
+            "example": "2026-10-01T16:00:00.000Z"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "description": "asOfBlock ≤ the chain's finalized block (SI-R3)"
+          },
+          "safe": {
+            "type": "boolean",
+            "description": "asOfBlock ≤ the chain's safe block"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/MarketDetail"
+          }
+        },
+        "required": [
+          "asOfBlock",
+          "asOfTime",
+          "confirmed",
+          "safe",
+          "scope",
+          "data"
+        ]
+      },
+      "MarketDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Market"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "params": {
+                "type": "object",
+                "properties": {
+                  "lltv": {
+                    "type": "string",
+                    "description": "Decimal string",
+                    "example": "1234.56"
+                  },
+                  "uMax": {
+                    "type": "string",
+                    "description": "Decimal string",
+                    "example": "1234.56"
+                  },
+                  "hfMinOpen": {
+                    "type": "string",
+                    "description": "Decimal string",
+                    "example": "1234.56"
+                  },
+                  "supplyCapShares": {
+                    "type": "string",
+                    "description": "Vault V2 absolute cap, wSTOCK units",
+                    "example": "1234.56"
+                  },
+                  "supplyCapUsd": {
+                    "type": "string",
+                    "description": "Cap at the current feed price",
+                    "example": "1234.56"
+                  },
+                  "perAddressCapUsd": {
+                    "type": "number"
+                  },
+                  "oracle": {
+                    "type": "object",
+                    "properties": {
+                      "z": {
+                        "type": "string",
+                        "description": "Decimal string",
+                        "example": "1234.56"
+                      },
+                      "sigma": {
+                        "type": "string",
+                        "description": "Decimal string",
+                        "example": "1234.56"
+                      },
+                      "bMin": {
+                        "type": "string",
+                        "description": "Decimal string",
+                        "example": "1234.56"
+                      },
+                      "bMax": {
+                        "type": "string",
+                        "description": "Decimal string",
+                        "example": "1234.56"
+                      },
+                      "rampInSec": {
+                        "type": "number"
+                      },
+                      "heartbeatSec": {
+                        "type": "number"
+                      },
+                      "staleGraceSec": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "z",
+                      "sigma",
+                      "bMin",
+                      "bMax",
+                      "rampInSec",
+                      "heartbeatSec",
+                      "staleGraceSec"
+                    ]
+                  }
+                },
+                "required": [
+                  "lltv",
+                  "uMax",
+                  "hfMinOpen",
+                  "supplyCapShares",
+                  "supplyCapUsd",
+                  "perAddressCapUsd",
+                  "oracle"
+                ]
+              },
+              "schedule": {
+                "type": "object",
+                "properties": {
+                  "sessionOpen": {
+                    "type": "boolean"
+                  },
+                  "bufferNow": {
+                    "type": "string",
+                    "description": "Decimal string",
+                    "example": "1234.56"
+                  },
+                  "nextClose": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "ISO 8601 UTC",
+                    "example": "2026-10-01T16:00:00.000Z"
+                  },
+                  "rampStart": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "ISO 8601 UTC",
+                    "example": "2026-10-01T16:00:00.000Z"
+                  },
+                  "reopen": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "ISO 8601 UTC",
+                    "example": "2026-10-01T16:00:00.000Z"
+                  },
+                  "bufferAtClose": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Decimal string",
+                    "example": "1234.56"
+                  },
+                  "nextEvent": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "fullBy": {
+                        "type": "string",
+                        "description": "ISO 8601 UTC",
+                        "example": "2026-10-01T16:00:00.000Z"
+                      },
+                      "release": {
+                        "type": "string",
+                        "description": "ISO 8601 UTC",
+                        "example": "2026-10-01T16:00:00.000Z"
+                      },
+                      "buffer": {
+                        "type": "string",
+                        "description": "Decimal string",
+                        "example": "1234.56"
+                      }
+                    },
+                    "required": [
+                      "fullBy",
+                      "release",
+                      "buffer"
+                    ]
+                  }
+                },
+                "required": [
+                  "sessionOpen",
+                  "bufferNow",
+                  "nextClose",
+                  "rampStart",
+                  "reopen",
+                  "bufferAtClose",
+                  "nextEvent"
+                ]
+              },
+              "contracts": {
+                "type": "object",
+                "properties": {
+                  "stockToken": {
+                    "type": "string",
+                    "pattern": "^0x[0-9a-fA-F]{40}$",
+                    "example": "0x0000000000000000000000000000000000000000"
+                  },
+                  "wrapper": {
+                    "type": "string",
+                    "pattern": "^0x[0-9a-fA-F]{40}$",
+                    "example": "0x0000000000000000000000000000000000000000"
+                  },
+                  "oracle": {
+                    "type": "string",
+                    "pattern": "^0x[0-9a-fA-F]{40}$",
+                    "example": "0x0000000000000000000000000000000000000000"
+                  },
+                  "vault": {
+                    "type": "string",
+                    "pattern": "^0x[0-9a-fA-F]{40}$",
+                    "example": "0x0000000000000000000000000000000000000000"
+                  },
+                  "adapter": {
+                    "type": "string",
+                    "pattern": "^0x[0-9a-fA-F]{40}$",
+                    "example": "0x0000000000000000000000000000000000000000"
+                  },
+                  "morpho": {
+                    "type": "string",
+                    "pattern": "^0x[0-9a-fA-F]{40}$",
+                    "example": "0x0000000000000000000000000000000000000000"
+                  },
+                  "router": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^0x[0-9a-fA-F]{40}$",
+                    "example": "0x0000000000000000000000000000000000000000"
+                  },
+                  "lens": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^0x[0-9a-fA-F]{40}$",
+                    "example": "0x0000000000000000000000000000000000000000"
+                  },
+                  "marketHours": {
+                    "type": "string",
+                    "pattern": "^0x[0-9a-fA-F]{40}$",
+                    "example": "0x0000000000000000000000000000000000000000"
+                  }
+                },
+                "required": [
+                  "stockToken",
+                  "wrapper",
+                  "oracle",
+                  "vault",
+                  "adapter",
+                  "morpho",
+                  "router",
+                  "lens",
+                  "marketHours"
+                ]
+              }
+            },
+            "required": [
+              "params",
+              "schedule",
+              "contracts"
+            ]
+          }
+        ]
+      },
+      "HistoryResponse": {
+        "type": "object",
+        "properties": {
+          "asOfBlock": {
+            "type": "string",
+            "pattern": "^-?\\d+$",
+            "description": "Block the data is as of (SI-R13)",
+            "example": "1000000000000000000"
+          },
+          "asOfTime": {
+            "type": "string",
+            "description": "ISO 8601 UTC",
+            "example": "2026-10-01T16:00:00.000Z"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "description": "asOfBlock ≤ the chain's finalized block (SI-R3)"
+          },
+          "safe": {
+            "type": "boolean",
+            "description": "asOfBlock ≤ the chain's safe block"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "interval": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HistoryPoint"
+            }
+          }
+        },
+        "required": [
+          "asOfBlock",
+          "asOfTime",
+          "confirmed",
+          "safe",
+          "scope",
+          "symbol",
+          "interval",
+          "data"
+        ]
+      },
+      "HistoryPoint": {
+        "type": "object",
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "description": "ISO 8601 UTC",
+            "example": "2026-10-01T16:00:00.000Z"
+          },
+          "blockNumber": {
+            "type": "string",
+            "pattern": "^-?\\d+$",
+            "description": "Integer as a decimal string (raw onchain units)",
+            "example": "1000000000000000000"
+          },
+          "supplied": {
+            "type": "string",
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "borrowed": {
+            "type": "string",
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "borrowedUsd": {
+            "type": "string",
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "utilization": {
+            "type": "string",
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "utilizationVault": {
+            "type": "string",
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "borrowApr": {
+            "type": "string",
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "supplyApy": {
+            "type": "number"
+          },
+          "siPctFloat": {
+            "type": "string",
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "borrowers": {
+            "type": "integer"
+          },
+          "marketStatus": {
+            "type": "string"
+          },
+          "buffer": {
+            "type": "string",
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "priceUsdPerShare": {
+            "type": "string",
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "borrowFlow": {
+            "type": "string",
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "repayFlow": {
+            "type": "string",
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "liquidationFlow": {
+            "type": "string",
+            "description": "Decimal string",
+            "example": "1234.56"
+          }
+        },
+        "required": [
+          "bucket",
+          "blockNumber",
+          "supplied",
+          "borrowed",
+          "borrowedUsd",
+          "utilization",
+          "utilizationVault",
+          "borrowApr",
+          "supplyApy",
+          "siPctFloat",
+          "borrowers",
+          "marketStatus",
+          "buffer",
+          "priceUsdPerShare",
+          "borrowFlow",
+          "repayFlow",
+          "liquidationFlow"
+        ]
+      },
+      "EventsResponse": {
+        "type": "object",
+        "properties": {
+          "asOfBlock": {
+            "type": "string",
+            "pattern": "^-?\\d+$",
+            "description": "Block the data is as of (SI-R13)",
+            "example": "1000000000000000000"
+          },
+          "asOfTime": {
+            "type": "string",
+            "description": "ISO 8601 UTC",
+            "example": "2026-10-01T16:00:00.000Z"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "description": "asOfBlock ≤ the chain's finalized block (SI-R3)"
+          },
+          "safe": {
+            "type": "boolean",
+            "description": "asOfBlock ≤ the chain's safe block"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "asOfBlock",
+          "asOfTime",
+          "confirmed",
+          "safe",
+          "scope",
+          "data",
+          "nextCursor"
+        ]
+      },
+      "Event": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "account": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assets": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "shares": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^-?\\d+$",
+            "description": "Integer as a decimal string (raw onchain units)",
+            "example": "1000000000000000000"
+          },
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {}
+          },
+          "blockNumber": {
+            "type": "string",
+            "pattern": "^-?\\d+$",
+            "description": "Integer as a decimal string (raw onchain units)",
+            "example": "1000000000000000000"
+          },
+          "logIndex": {
+            "type": "integer"
+          },
+          "time": {
+            "type": "string",
+            "description": "ISO 8601 UTC",
+            "example": "2026-10-01T16:00:00.000Z"
+          },
+          "txHash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "symbol",
+          "type",
+          "source",
+          "account",
+          "assets",
+          "shares",
+          "data",
+          "blockNumber",
+          "logIndex",
+          "time",
+          "txHash"
+        ]
+      },
+      "PositionsResponse": {
+        "type": "object",
+        "properties": {
+          "asOfBlock": {
+            "type": "string",
+            "pattern": "^-?\\d+$",
+            "description": "Block the data is as of (SI-R13)",
+            "example": "1000000000000000000"
+          },
+          "asOfTime": {
+            "type": "string",
+            "description": "ISO 8601 UTC",
+            "example": "2026-10-01T16:00:00.000Z"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "description": "asOfBlock ≤ the chain's finalized block (SI-R3)"
+          },
+          "safe": {
+            "type": "boolean",
+            "description": "asOfBlock ≤ the chain's safe block"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Position"
+            }
+          }
+        },
+        "required": [
+          "asOfBlock",
+          "asOfTime",
+          "confirmed",
+          "safe",
+          "scope",
+          "address",
+          "data"
+        ]
+      },
+      "Position": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "account",
+              "vault-adapter"
+            ]
+          },
+          "supplyShares": {
+            "type": "string",
+            "pattern": "^-?\\d+$",
+            "description": "Integer as a decimal string (raw onchain units)",
+            "example": "1000000000000000000"
+          },
+          "borrowShares": {
+            "type": "string",
+            "pattern": "^-?\\d+$",
+            "description": "Integer as a decimal string (raw onchain units)",
+            "example": "1000000000000000000"
+          },
+          "borrowed": {
+            "type": "string",
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "collateralUsdg": {
+            "type": "string",
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "healthFactor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "liquidationPriceUsdPerToken": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Decimal string",
+            "example": "1234.56"
+          },
+          "updatedBlock": {
+            "type": "string",
+            "pattern": "^-?\\d+$",
+            "description": "Integer as a decimal string (raw onchain units)",
+            "example": "1000000000000000000"
+          }
+        },
+        "required": [
+          "symbol",
+          "role",
+          "supplyShares",
+          "borrowShares",
+          "borrowed",
+          "collateralUsdg",
+          "healthFactor",
+          "liquidationPriceUsdPerToken",
+          "updatedBlock"
+        ]
+      },
+      "StatusResponse": {
+        "type": "object",
+        "properties": {
+          "asOfBlock": {
+            "type": "string",
+            "pattern": "^-?\\d+$",
+            "description": "Block the data is as of (SI-R13)",
+            "example": "1000000000000000000"
+          },
+          "asOfTime": {
+            "type": "string",
+            "description": "ISO 8601 UTC",
+            "example": "2026-10-01T16:00:00.000Z"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "description": "asOfBlock ≤ the chain's finalized block (SI-R3)"
+          },
+          "safe": {
+            "type": "boolean",
+            "description": "asOfBlock ≤ the chain's safe block"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "chainId": {
+                "type": "number"
+              },
+              "network": {
+                "type": "string"
+              },
+              "indexer": {
+                "type": "object",
+                "properties": {
+                  "headBlock": {
+                    "type": "string",
+                    "pattern": "^-?\\d+$",
+                    "description": "Integer as a decimal string (raw onchain units)",
+                    "example": "1000000000000000000"
+                  },
+                  "headTime": {
+                    "type": "string",
+                    "description": "ISO 8601 UTC",
+                    "example": "2026-10-01T16:00:00.000Z"
+                  },
+                  "chainBlock": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^-?\\d+$",
+                    "description": "Integer as a decimal string (raw onchain units)",
+                    "example": "1000000000000000000"
+                  },
+                  "lagBlocks": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "safeBlock": {
+                    "type": "string",
+                    "pattern": "^-?\\d+$",
+                    "description": "Integer as a decimal string (raw onchain units)",
+                    "example": "1000000000000000000"
+                  },
+                  "finalizedBlock": {
+                    "type": "string",
+                    "pattern": "^-?\\d+$",
+                    "description": "Integer as a decimal string (raw onchain units)",
+                    "example": "1000000000000000000"
+                  }
+                },
+                "required": [
+                  "headBlock",
+                  "headTime",
+                  "chainBlock",
+                  "lagBlocks",
+                  "safeBlock",
+                  "finalizedBlock"
+                ]
+              },
+              "markets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "symbol": {
+                      "type": "string"
+                    },
+                    "marketStatus": {
+                      "type": "string",
+                      "enum": [
+                        "open",
+                        "closed",
+                        "ramping",
+                        "guard_tripped"
+                      ]
+                    },
+                    "snapshotBlock": {
+                      "type": "string",
+                      "pattern": "^-?\\d+$",
+                      "description": "Integer as a decimal string (raw onchain units)",
+                      "example": "1000000000000000000"
+                    },
+                    "oracle": {
+                      "type": "object",
+                      "properties": {
+                        "usdPerToken": {
+                          "type": "string",
+                          "description": "Decimal string",
+                          "example": "1234.56"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "description": "ISO 8601 UTC",
+                          "example": "2026-10-01T16:00:00.000Z"
+                        },
+                        "ageSec": {
+                          "type": "number"
+                        },
+                        "sessionOpen": {
+                          "type": "boolean"
+                        },
+                        "stale": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "usdPerToken",
+                        "updatedAt",
+                        "ageSec",
+                        "sessionOpen",
+                        "stale"
+                      ]
+                    },
+                    "guard": {
+                      "type": "object",
+                      "properties": {
+                        "tripped": {
+                          "type": "boolean"
+                        },
+                        "reasons": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "mask": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$",
+                          "description": "Integer as a decimal string (raw onchain units)",
+                          "example": "1000000000000000000"
+                        }
+                      },
+                      "required": [
+                        "tripped",
+                        "reasons",
+                        "mask"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "symbol",
+                    "marketStatus",
+                    "snapshotBlock",
+                    "oracle",
+                    "guard"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "chainId",
+              "network",
+              "indexer",
+              "markets"
+            ]
+          }
+        },
+        "required": [
+          "asOfBlock",
+          "asOfTime",
+          "confirmed",
+          "safe",
+          "scope",
+          "data"
+        ]
+      },
+      "TermsResponse": {
+        "type": "object",
+        "properties": {
+          "terms": {
+            "type": "string"
+          },
+          "attribution": {
+            "type": "string"
+          },
+          "warranty": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "terms",
+          "attribution",
+          "warranty"
+        ]
+      },
+      "NonceResponse": {
+        "type": "object",
+        "properties": {
+          "nonce": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "chainId": {
+            "type": "number"
+          },
+          "statement": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nonce",
+          "domain",
+          "chainId",
+          "statement"
+        ]
+      },
+      "CreateKeyResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string",
+            "description": "Shown once; store it"
+          },
+          "address": {
+            "type": "string"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "keyed"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "address",
+          "tier"
+        ]
+      },
+      "KeysResponse": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "description": "ISO 8601 UTC",
+                  "example": "2026-10-01T16:00:00.000Z"
+                },
+                "revokedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "ISO 8601 UTC",
+                  "example": "2026-10-01T16:00:00.000Z"
+                }
+              },
+              "required": [
+                "id",
+                "label",
+                "createdAt",
+                "revokedAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "address",
+          "keys"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/v1/markets": {
+      "get": {
+        "tags": [
+          "markets"
+        ],
+        "summary": "All stocks, current snapshot (07 §Definitions)",
+        "responses": {
+          "200": {
+            "description": "Snapshots",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (SI-R10)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Indexer not ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/markets/{symbol}": {
+      "get": {
+        "tags": [
+          "markets"
+        ],
+        "summary": "One stock: snapshot + params (LLTV, caps, U_MAX, buffer now, next session)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9.]{1,12}$",
+              "example": "NVDA"
+            },
+            "required": true,
+            "name": "symbol",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Snapshot and parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (SI-R10)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Indexer not ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/markets/{symbol}/history": {
+      "get": {
+        "tags": [
+          "markets"
+        ],
+        "summary": "Time series of the snapshot fields (1m / 1h / 1d buckets); `format=csv` for CSV (SI-R12)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9.]{1,12}$",
+              "example": "NVDA"
+            },
+            "required": true,
+            "name": "symbol",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1m",
+                "1h",
+                "1d"
+              ],
+              "default": "1h"
+            },
+            "required": false,
+            "name": "interval",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Inclusive; default: 7 days before `to`",
+              "example": "2026-10-01T16:00:00.000Z"
+            },
+            "required": false,
+            "description": "Inclusive; default: 7 days before `to`",
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Exclusive; default: now",
+              "example": "2026-10-01T16:00:00.000Z"
+            },
+            "required": false,
+            "description": "Exclusive; default: now",
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "default": "json",
+              "description": "SI-R12"
+            },
+            "required": false,
+            "description": "SI-R12",
+            "name": "format",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5000,
+              "default": 2000
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "History",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryResponse"
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (SI-R10)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Indexer not ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/markets/{symbol}/events": {
+      "get": {
+        "tags": [
+          "markets"
+        ],
+        "summary": "Event feed, newest first, paginated with `cursor`",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9.]{1,12}$",
+              "example": "NVDA"
+            },
+            "required": true,
+            "name": "symbol",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "borrow",
+                "repay",
+                "liquidate",
+                "all"
+              ],
+              "default": "all"
+            },
+            "required": false,
+            "name": "type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "`nextCursor` of the previous page"
+            },
+            "required": false,
+            "description": "`nextCursor` of the previous page",
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (SI-R10)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Indexer not ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/positions/{address}": {
+      "get": {
+        "tags": [
+          "positions"
+        ],
+        "summary": "Positions of a wallet in Stockline markets (public onchain data)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^0x[0-9a-fA-F]{40}$"
+            },
+            "required": true,
+            "name": "address",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Positions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PositionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (SI-R10)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Indexer not ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/status": {
+      "get": {
+        "tags": [
+          "status"
+        ],
+        "summary": "Oracle freshness, guard state and indexer lag per market",
+        "responses": {
+          "200": {
+            "description": "Status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (SI-R10)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Indexer not ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/terms": {
+      "get": {
+        "tags": [
+          "status"
+        ],
+        "summary": "Data terms of use (SI-R14)",
+        "responses": {
+          "200": {
+            "description": "Terms",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TermsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/nonce": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "One-time nonce for a Sign-In with Ethereum message",
+        "responses": {
+          "200": {
+            "description": "Nonce",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NonceResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/keys": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Create an API key by signing a SIWE message (the key is shown once)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "signature": {
+                    "type": "string",
+                    "pattern": "^0x[0-9a-fA-F]+$"
+                  },
+                  "label": {
+                    "type": "string",
+                    "maxLength": 64
+                  }
+                },
+                "required": [
+                  "message",
+                  "signature"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateKeyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Bad signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Too many keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (SI-R10)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Indexer not ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Keys of the wallet that owns the `X-API-Key`",
+        "responses": {
+          "200": {
+            "description": "Keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeysResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/keys/{id}": {
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Revoke one of the wallet's keys",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{16}$"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "revoked": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "revoked"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}

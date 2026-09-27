@@ -134,5 +134,5 @@ start web web dev
 start allocator keepers allocator
 start guard keepers guard
 start alerts keepers alerts
-echo "[dev] up. web http://localhost:3000 · api http://localhost:42069/v1 · Ctrl-C stops everything"
+echo "[dev] up. web http://localhost:3000 · api http://localhost:42070/v1 · indexer http://localhost:42069 · Ctrl-C stops everything"
 wait

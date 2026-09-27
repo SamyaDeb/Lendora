@@ -1,0 +1,82 @@
+import type {AddressInfo} from "node:net";
+import type {IncomingMessage, Server} from "node:http";
+import {serve} from "@hono/node-server";
+import {Redis} from "ioredis";
+import {createApp} from "./app.js";
+import type {ApiConfig} from "./config.js";
+import {IndexerDb} from "./db.js";
+import {ApiKeys, MemoryNonceStore, RedisNonceStore} from "./keys.js";
+import {MemoryLimiter, RedisLimiter, type Limiter} from "./limits.js";
+import {RpcChainReader} from "./chain.js";
+import {MemoryFanout, RedisFanout, StreamPublisher, StreamServer, type Fanout} from "./stream.js";
+
+export interface RunningApi {
+  url: string;
+  port: number;
+  db: IndexerDb;
+  stream: StreamServer;
+  close(): Promise<void>;
+}
+
+/** HTTP + `WS /v1/stream` on one port. Redis when `redisUrl` is set (rate limits, nonces, fan-out, leader election),
+ * in-memory otherwise (single instance). */
+export async function startApi(config: ApiConfig): Promise<RunningApi> {
+  const db = new IndexerDb(config.databaseUrl, config.indexerSchema, config.apiSchema);
+  await db.migrate();
+  const chain = new RpcChainReader(config.rpcUrl, config.d);
+  let limiter: Limiter;
+  let fanout: Fanout;
+  let redis: Redis | undefined;
+  let nonces;
+  if (config.redisUrl) {
+    redis = new Redis(config.redisUrl, {maxRetriesPerRequest: 2});
+    limiter = new RedisLimiter(redis);
+    fanout = new RedisFanout(new Redis(config.redisUrl), new Redis(config.redisUrl));
+    nonces = new RedisNonceStore(redis);
+  } else {
+    limiter = new MemoryLimiter();
+    fanout = new MemoryFanout();
+    nonces = new MemoryNonceStore();
+  }
+  const keys = new ApiKeys(db, nonces, chain.client, {domain: config.siweDomain, chainId: config.chainId, maxPerAddress: config.maxKeysPerAddress});
+  const app = createApp({db, limiter, keys, chain, config});
+
+  const clientIp = (req: IncomingMessage) => {
+    if (config.trustProxy) {
+      const xff = req.headers["x-forwarded-for"];
+      const first = (Array.isArray(xff) ? xff[0] : xff)?.split(",")[0]?.trim();
+      if (first) return first;
+    }
+    return req.socket.remoteAddress ?? "unknown";
+  };
+  const stream = new StreamServer({db, fanout, limiter, keys, d: config.d, freeWs: config.freeWs, keyedWs: config.keyedWs, clientIp});
+  const publisher = new StreamPublisher(db, fanout, config.d, config.streamPollMs);
+  publisher.start();
+
+  const server = (await new Promise<Server>((resolve) => {
+    const s = serve({fetch: app.fetch, port: config.port, hostname: config.host}, () => resolve(s as Server));
+  })) as Server;
+  server.on("upgrade", (req, socket, head) => {
+    const path = new URL(req.url ?? "/", "http://x").pathname;
+    if (path !== "/v1/stream") {
+      socket.destroy();
+      return;
+    }
+    void stream.handleUpgrade(req, socket, head).catch(() => socket.destroy());
+  });
+  const port = (server.address() as AddressInfo).port;
+  return {
+    url: `http://127.0.0.1:${port}`,
+    port,
+    db,
+    stream,
+    async close() {
+      publisher.stop();
+      stream.close();
+      await new Promise<void>((r) => server.close(() => r()));
+      await fanout.close();
+      if (redis) await redis.quit();
+      await db.close();
+    },
+  };
+}

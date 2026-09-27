@@ -40,12 +40,22 @@ export function freeLiquidity(s: AllocatorState): bigint {
   return s.adapterAssets < unborrowed ? s.adapterAssets : unborrowed;
 }
 
-/** Room left under the absolute and relative caps (relative cap measured on totalAssets, as Vault V2 does). */
+/** Safety margin kept under the caps: 1 ppm of vault assets, ~16 s of interest at Vault V2's 200% `maxRate`, for the
+ * interest that accrues between reading the state and the transaction being mined. */
+export const ROOM_MARGIN_PPM_DIVISOR = 1_000_000n;
+
+/**
+ * Room left under the absolute and relative caps (relative cap measured on totalAssets, as Vault V2 does). Vault V2
+ * re-marks the allocation to the adapter's real (interest-accrued) assets on every `allocate`, so the current
+ * allocation is the larger of the recorded one and `adapterAssets` (Phase 2 fix: the recorded value alone let a plan
+ * exceed the relative cap by the interest accrued since the last allocation, reverting `RelativeCapExceeded`).
+ */
 export function allocationRoom(s: AllocatorState): bigint {
-  const absRoom = s.absoluteCap > s.allocation ? s.absoluteCap - s.allocation : 0n;
+  const current = (s.adapterAssets > s.allocation ? s.adapterAssets : s.allocation) + s.totalAssets / ROOM_MARGIN_PPM_DIVISOR;
+  const absRoom = s.absoluteCap > current ? s.absoluteCap - current : 0n;
   if (s.relativeCap >= WAD) return absRoom;
   const relLimit = (s.totalAssets * s.relativeCap) / WAD;
-  const relRoom = relLimit > s.allocation ? relLimit - s.allocation : 0n;
+  const relRoom = relLimit > current ? relLimit - current : 0n;
   return absRoom < relRoom ? absRoom : relRoom;
 }
 

@@ -75,6 +75,8 @@ const snapshotColumns = (t: PgColumnsBuilders) => ({
   priceAnswer: t.bigint().notNull(),
   priceUpdatedAt: t.bigint().notNull(),
   priceUsd: t.bigint().notNull(),
+  /** USDG/USD answer in use by the oracle (8 dp); with `priceAnswer` and `bufferWad` it gives the Morpho price. */
+  usdgAnswer: t.bigint().notNull(),
   multiplier: t.bigint().notNull(),
   bufferWad: t.bigint().notNull(),
   guardReasons: t.bigint().notNull(),

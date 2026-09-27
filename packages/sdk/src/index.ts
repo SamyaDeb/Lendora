@@ -16,3 +16,6 @@ export * from "./math/morpho.js";
 export * from "./math/irm.js";
 export * from "./math/rates.js";
 export * from "./shortInterest.js";
+export * from "./params.js";
+export * from "./calendar/schedule.js";
+export * as api from "./api/index.js";
