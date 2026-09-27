@@ -15,6 +15,7 @@ import {LocalStockline} from "../utils/LocalStockline.sol";
 /// Vault V2 keeps `firstTotalAssets` in transient storage (once per transaction); `isolate` runs every top-level call
 /// as its own transaction, as on chain.
 /// forge-config: default.isolate = true
+/// forge-config: ci.isolate = true
 contract StocklineRouterTest is LocalStockline {
     using MarketParamsLib for MarketParams;
 

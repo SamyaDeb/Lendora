@@ -81,7 +81,7 @@ router's `multicall` (USDG, Stock Tokens and `rSTOCK` all support EIP-2612; veri
 
 ## Acceptance criteria
 
-- [ ] Fork tests for every flow in the table, including partial fills and slippage failures.
-- [ ] Invariants CL-R6 and RT-R5 hold under 1M fuzz runs.
-- [ ] A liquidation of a router-opened position succeeds with a standard Morpho liquidator script that knows nothing about Stockline beyond `clUSDG.unwrap`.
-- [ ] Gas: `openShort` ≤ 600k and `closeShort` ≤ 650k gas on Robinhood Chain (placeholder; measure on fork).
+- [x] Fork tests for every flow in the table, including partial fills and slippage failures ([`Router.fork.t.sol`](../../contracts/test/fork/phase1/Router.fork.t.sol): all flows through the live Morpho, Vault V2 and UniversalRouter, live-pool slippage failure; partial fills and a lying DEX in [`StocklineRouter.t.sol`](../../contracts/test/router/StocklineRouter.t.sol), which has no live counterpart for a partial fill).
+- [x] Invariants CL-R6 and RT-R5 hold under 1M fuzz runs: `FOUNDRY_PROFILE=deep` runs 1,000 × 1,000 = 1M calls of every router flow with a misbehaving DEX ([`StocklineRouter.invariant.t.sol`](../../contracts/test/router/StocklineRouter.invariant.t.sol): RT-R5, CL-R6, LM-R7), plus 1M calls each for the standalone CL-R6 and LM-R7 suites (2026-09-27).
+- [x] A liquidation of a router-opened position succeeds with a standard Morpho liquidator script that knows nothing about Stockline beyond `clUSDG.unwrap` ([`test_RT_routerPositionLiquidatableByStandardLiquidator`](../../contracts/test/router/StocklineRouter.t.sol)).
+- [ ] Gas: `openShort` ≤ 600k and `closeShort` ≤ 650k gas on Robinhood Chain (placeholder; measure on fork). **Measured on a fork (cold storage), 2026-09-27: `openShort` ≈ 650k (over by ~8%), `closeShort` ≈ 434k.** The overage is the RT-R1 checks (guard reasons and the t + 24h price read the feeds, calendar and issuer flags). Open question in [12](12-open-questions.md): accept ≤ 700k or optimize.

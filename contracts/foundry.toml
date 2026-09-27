@@ -68,6 +68,12 @@ runs = 10000
 runs = 512
 depth = 200
 
+# 05 acceptance: "CL-R6 and RT-R5 hold under 1M fuzz runs" (1 000 runs x 1 000 calls). FOUNDRY_PROFILE=deep.
+[profile.deep.invariant]
+runs = 1000
+depth = 1000
+fail_on_revert = true
+
 [fmt]
 line_length = 120
 tab_width = 4

@@ -14,6 +14,7 @@ import {LocalStockline} from "../utils/LocalStockline.sol";
 /// through the
 /// Morpho callback, for any position, holding nothing afterwards.
 /// forge-config: default.isolate = true
+/// forge-config: ci.isolate = true
 contract StocklineLiquidatorTest is LocalStockline {
     using MarketParamsLib for MarketParams;
 

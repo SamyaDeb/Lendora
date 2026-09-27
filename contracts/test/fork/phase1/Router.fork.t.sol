@@ -17,6 +17,7 @@ interface IUniversalRouter {
 /// @notice Task 8 on a fork: every router flow against the live Morpho Blue, Vault V2, NVDA, USDG and Uniswap's
 /// UniversalRouter (RT-R3 first allowlisted target, A8), with gas per flow for the 05 acceptance criterion.
 /// forge-config: default.isolate = true
+/// forge-config: ci.isolate = true
 contract RouterForkTest is Phase1ForkBase, ForkConfig {
     using MarketParamsLib for MarketParams;
 

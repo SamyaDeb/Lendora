@@ -24,6 +24,7 @@ contract DeployForkTest is Phase1ForkBase, ForkConfig {
     CoreConfig internal c;
     Core internal core;
     StockDeployment internal nvdaD;
+    StockDeployment[] internal allD;
     StockConfig[] internal stocksCfg;
 
     function setUp() public override {
@@ -38,6 +39,7 @@ contract DeployForkTest is Phase1ForkBase, ForkConfig {
         core = _deployCore(c, s);
         for (uint256 i; i < s.length; i++) {
             StockDeployment memory d = _deployStock(c, core, s[i]);
+            allD.push(d);
             if (i == 1) nvdaD = d;
         }
         core = _finalize(c, core);
@@ -112,17 +114,26 @@ contract DeployForkTest is Phase1ForkBase, ForkConfig {
     /// Vault V2 records `firstTotalAssets` in transient storage once per transaction; `isolate` runs every call as its
     /// own transaction, as on chain.
     /// forge-config: default.isolate = true
-    function test_LM_R22_R30_supplyAllocateBorrowRepayWithdraw() public {
-        IVaultV2Min v = IVaultV2Min(nvdaD.vault);
-        address lender = makeAddr("lender");
-        address borrower = makeAddr("borrower");
+    /// forge-config: ci.isolate = true
+    function test_LM_R11_R22_R30_lifecycleEveryMarket() public {
+        for (uint256 i; i < 3; i++) {
+            _flow(i);
+        }
+    }
 
-        // Lender: NVDA → wNVDA → rNVDA.
-        deal(NVDA, lender, 100e18, true);
+    function _flow(uint256 i) internal {
+        StockDeployment memory sd = allD[i];
+        address stockToken = stocksCfg[i].token;
+        IVaultV2Min v = IVaultV2Min(sd.vault);
+        address lender = makeAddr(string.concat("lender", stocksCfg[i].ticker));
+        address borrower = makeAddr(string.concat("borrower", stocksCfg[i].ticker));
+
+        // Lender: Stock Token → wSTOCK → rSTOCK.
+        deal(stockToken, lender, 100e18, true);
         vm.startPrank(lender);
-        IERC20(NVDA).approve(address(nvdaD.wrapper), 100e18);
-        nvdaD.wrapper.wrap(100e18, lender);
-        IERC20(address(nvdaD.wrapper)).approve(address(v), 100e18);
+        IERC20(stockToken).approve(address(sd.wrapper), 100e18);
+        sd.wrapper.wrap(100e18, lender);
+        IERC20(address(sd.wrapper)).approve(address(v), 100e18);
         uint256 shares = v.deposit(100e18, lender);
         vm.stopPrank();
         assertGt(shares, 0);
@@ -130,54 +141,55 @@ contract DeployForkTest is Phase1ForkBase, ForkConfig {
         // Allocator: up to the relative cap (U_MAX = 90%) goes to the market; 10% stays idle.
         vm.prank(c.allocator);
         vm.expectRevert(); // RelativeCapExceeded
-        v.allocate(nvdaD.adapter, abi.encode(nvdaD.market), 100e18);
+        v.allocate(sd.adapter, abi.encode(sd.market), 100e18);
         vm.prank(c.allocator);
-        v.allocate(nvdaD.adapter, abi.encode(nvdaD.market), 90e18);
+        v.allocate(sd.adapter, abi.encode(sd.market), 90e18);
 
         // Borrower: USDG → clUSDG collateral through the router (addCollateral needs no attestation), then borrow
         // directly on Morpho (permissionless; the router's entry checks are soft gates, 05 §1).
-        (uint256 p,) = nvdaD.oracle.stockAnswer();
+        (uint256 p,) = sd.oracle.stockAnswer();
         uint256 collateral = p * 10 * 2 / 100; // 2x the debt value, USDG 6 dp
         _fundUsdg(borrower, collateral);
         vm.startPrank(borrower);
         IERC20(USDG).approve(address(core.router), collateral);
-        core.router.addCollateral(NVDA, collateral, borrower, block.timestamp);
+        core.router.addCollateral(stockToken, collateral, borrower, block.timestamp);
         vm.stopPrank();
         vm.prank(borrower);
-        IMorpho(MORPHO).borrow(nvdaD.market, 10e18, 0, borrower, borrower);
-        assertEq(IERC20(address(nvdaD.wrapper)).balanceOf(borrower), 10e18);
+        IMorpho(MORPHO).borrow(sd.market, 10e18, 0, borrower, borrower);
+        assertEq(IERC20(address(sd.wrapper)).balanceOf(borrower), 10e18);
 
         vm.warp(block.timestamp + 7 days);
-        IMorpho(MORPHO).accrueInterest(nvdaD.market);
+        IMorpho(MORPHO).accrueInterest(sd.market);
 
-        // Repay all (interest in wNVDA), withdraw collateral, unwrap to USDG.
-        deal(NVDA, borrower, 1e18, true); // interest, as real NVDA wrapped 1:1 (never `deal` wrapper units)
+        // Repay all (interest in wSTOCK), withdraw collateral, unwrap to USDG.
+        deal(stockToken, borrower, 1e18, true); // interest, as real Stock Tokens wrapped 1:1 (never `deal` wrapper
+        // units)
         vm.startPrank(borrower);
-        IERC20(NVDA).approve(address(nvdaD.wrapper), 1e18);
-        nvdaD.wrapper.wrap(1e18, borrower);
-        IERC20(address(nvdaD.wrapper)).approve(MORPHO, type(uint256).max);
-        (, uint128 borrowShares,) = _position(borrower);
-        IMorpho(MORPHO).repay(nvdaD.market, 0, borrowShares, borrower, "");
-        IMorpho(MORPHO).withdrawCollateral(nvdaD.market, collateral, borrower, borrower);
+        IERC20(stockToken).approve(address(sd.wrapper), 1e18);
+        sd.wrapper.wrap(1e18, borrower);
+        IERC20(address(sd.wrapper)).approve(MORPHO, type(uint256).max);
+        (, uint128 borrowShares,) = _position(sd, borrower);
+        IMorpho(MORPHO).repay(sd.market, 0, borrowShares, borrower, "");
+        IMorpho(MORPHO).withdrawCollateral(sd.market, collateral, borrower, borrower);
         core.clUSDG.unwrap(collateral, borrower);
         vm.stopPrank();
         assertEq(IERC20(USDG).balanceOf(borrower), collateral);
 
         // Guardian (sentinel) pulls the liquidity back (LM-R31/R32), lender redeems everything with interest.
-        uint256 free = IMorphoMarketV1AdapterV2Min(nvdaD.adapter).realAssets();
+        uint256 free = IMorphoMarketV1AdapterV2Min(sd.adapter).realAssets();
         vm.prank(c.guardian);
-        v.deallocate(nvdaD.adapter, abi.encode(nvdaD.market), free);
+        v.deallocate(sd.adapter, abi.encode(sd.market), free);
         vm.startPrank(lender);
         uint256 out = v.redeem(v.balanceOf(lender), lender, lender);
-        nvdaD.wrapper.unwrap(out, lender);
+        sd.wrapper.unwrap(out, lender);
         vm.stopPrank();
         assertGt(out, 100e18, "lender earned interest in stock");
-        assertEq(IERC20(NVDA).balanceOf(lender), out);
-        assertEq(nvdaD.wrapper.backingShortfall(), 0);
+        assertEq(IERC20(stockToken).balanceOf(lender), out);
+        assertEq(sd.wrapper.backingShortfall(), 0);
     }
 
-    function _position(address who) internal view returns (uint256, uint128, uint128) {
-        Position memory pos = IMorpho(MORPHO).position(nvdaD.market.id(), who);
+    function _position(StockDeployment memory sd, address who) internal view returns (uint256, uint128, uint128) {
+        Position memory pos = IMorpho(MORPHO).position(sd.market.id(), who);
         return (pos.supplyShares, pos.borrowShares, pos.collateral);
     }
 }

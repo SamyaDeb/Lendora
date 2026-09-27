@@ -31,6 +31,28 @@ Ordered so each task unblocks the next. IDs map to requirements.
 11. **Fallback liquidator.** `StocklineLiquidator` (Morpho callback, unwraps `clUSDG`) + bot.
 12. **Full lifecycle fork test.** Lend → open short → Friday ramp-in → weekend hold → Monday gap → liquidation → lender withdraws whole; plus earnings event, 1e18 feed incident, issuer pause, `adminBurn`.
 
+### Phase 1 status (2026-09-27)
+
+All twelve tasks are built and committed, with fork tests on Robinhood Chain (public RPC, latest block). The exit
+criterion ("03, 04, 05 acceptance criteria pass on fork") is met for every criterion that can be met before testnet,
+except the `openShort` gas placeholder (≈ 650k measured vs 600k; open question in [12](12-open-questions.md)).
+
+| Task | Status | Evidence |
+|---|---|---|
+| 0 · PRD decisions D1–D10 | Done | [12](12-open-questions.md#phase-0-decisions-applied-2026-09-27) |
+| 1–3 · Scaffold, mocks, `StockWrapper` | Done (before Phase 0) | – |
+| 3b · `backingShortfall`, blocklist adapter | Done | `contracts/test/StockWrapper`, `test/fork/phase1/BlocklistHolderAllowlist.fork.t.sol` |
+| 3c · Live-parity mocks | Done | `test/fork/phase1/MockParity.fork.t.sol` |
+| 4 · `MarketHours` + calendar generator | Done | `test/MarketHours`, `packages/sdk/test/calendar.test.ts` (all 1,923 observed rounds inside generated sessions) |
+| 5 · Oracles + SDK math + vectors | Done | `test/oracle` (exact match on 36k vectors) |
+| 6 · `clUSDG` | Done | `test/CollateralToken`, `test/fork/phase1/CollateralTokenFreeze.fork.t.sol` |
+| 7 · Deploy scripts (Vault V2) | Done | `script/`, `test/fork/phase1/{Deploy,VaultV2CodeHash}.fork.t.sol`, `docs/runbooks/list-stock.md` |
+| 8 · `StocklineRouter` | Done (gas placeholder open) | `test/router`, `test/fork/phase1/Router.fork.t.sol` |
+| 9 · Allocator keeper | Done | `keepers/test/allocator.test.ts` |
+| 10 · Guard keeper | Done | `keepers/test/guard.test.ts` |
+| 11 · Fallback liquidator | Done | `test/liquidator`, `keepers/test/liquidator.test.ts` |
+| 12 · Full lifecycle fork test | Done | `test/fork/phase1/Lifecycle.fork.t.sol` |
+
 ## Phase 2 task breakdown
 
 1. Ponder indexer (SI-R1…R5) and reconciliation job.

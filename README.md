@@ -5,9 +5,9 @@ Start with [`docs/LITEPAPER.md`](docs/LITEPAPER.md) and the PRD in [`docs/prd/`]
 
 | Path | What | Status |
 |---|---|---|
-| `contracts/` | Foundry project: wrapper, oracle, `clUSDG`, router, `MarketHours` | Phase 1 in progress |
-| `packages/sdk/` | Shared TS: addresses, ABIs, and the math the contracts use (health factor, buffer, oracle price) | Phase 1 |
-| `keepers/` | Allocator, guard, fee converter, fallback liquidator, alerts | Phase 1 (tasks 9–11) |
+| `contracts/` | Foundry project: wrapper, oracles, `MarketHours`, `clUSDG`, router, liquidator, deploy scripts (Vault V2) | Phase 1 done (2026-09-27); audit in Phase 3 |
+| `packages/sdk/` | Shared TS: addresses, typed ABIs, calendar generator, oracle/buffer/health/allocator math, test vectors | Phase 1 done |
+| `keepers/` | Allocator, guard and fallback-liquidator keepers (dry run by default); fee converter and alerts later | Phase 1 done (tasks 9–11) |
 | `indexer/` | Ponder indexer for short interest | Phase 2 |
 | `api/` | Public REST + WebSocket API | Phase 2 |
 | `web/` | Next.js app | Phase 2 |
@@ -43,6 +43,13 @@ license headers and formatting. MetaMorpho keeps its own nested OpenZeppelin, th
 Vault V2 is compiled with Morpho's own settings (solc 0.8.28, via-IR, 100k runs, cancun) through a
 `compilation_restrictions` profile in `foundry.toml`, and keeps its own nested `morpho-blue` and `morpho-blue-irm`, so the
 bytecode equals the deployed one. Stockline code talks to it only through `src/interfaces/external/IMorphoVaultV2.sol`.
+
+## Keepers
+
+```sh
+pnpm --filter @stockline/keepers test        # needs anvil (Foundry) on PATH
+DEPLOYMENT_KEY=fork-4663 RPC_URL=<rpc> pnpm --filter @stockline/keepers allocator   # dry run
+```
 
 ## SDK
 

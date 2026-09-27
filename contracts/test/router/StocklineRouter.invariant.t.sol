@@ -189,9 +189,13 @@ contract RouterHandler is Test {
 
 /// @notice RT-R5: the router holds no balances after any fuzzed flow; CL-R6 holds for clUSDG in the full system.
 /// forge-config: default.isolate = true
+/// forge-config: ci.isolate = true
+/// forge-config: deep.isolate = true
 /// forge-config: default.invariant.runs = 64
 /// forge-config: default.invariant.depth = 60
 /// forge-config: default.invariant.fail-on-revert = true
+/// forge-config: deep.invariant.runs = 1000
+/// forge-config: deep.invariant.depth = 1000
 contract StocklineRouterInvariantTest is LocalStockline {
     RouterHandler internal handler;
     uint256 internal constant I = 1; // NVDA

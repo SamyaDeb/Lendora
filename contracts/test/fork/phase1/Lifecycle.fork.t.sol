@@ -23,6 +23,7 @@ interface IUniversalRouterL {
 /// Chainlink feeds, swapped into the oracle at deployment because chain time cannot produce real rounds.
 /// Every scenario asserts what lenders end up with and whether Morpho realized bad debt.
 /// forge-config: default.isolate = true
+/// forge-config: ci.isolate = true
 contract LifecycleForkTest is Phase1ForkBase, ForkConfig {
     using MarketParamsLib for MarketParams;
 

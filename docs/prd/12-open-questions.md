@@ -116,3 +116,19 @@ interface or a constructor parameter. Items marked *public docs* come from Robin
 | # | Assumption | Where it lives | If wrong |
 |---|---|---|---|
 | A9 | On NYSE early-close days (13:00 ET) the 24/5 feed stops at 17:00 ET (end of the shortened post-market), not 20:00 ET. Conservative: a longer closure and an earlier ramp. No early close has occurred since the feeds launched (first: 2026-11-27). | `packages/sdk/scripts/genSessions.ts` | Regenerate sessions; only the buffer timing on those days changes. |
+| A10 | Earnings dates in `packages/sdk/data/events.json` are consensus estimates (NVDA 2026-11-17, AAPL 2026-10-29), `confirmed: false` until the companies announce them; `endTs` = the scheduled release time. | `packages/sdk/data/events.json` | Replace the future window before its ramp starts (`replaceEventsFrom`, timelock). |
+| A11 | D8 per-address caps are read as **debt value at the feed price** per address and market (the position a single liquidation must absorb). | `StocklineRouter._positionChecks` | If counsel/risk mean collateral, change the check; the owner can already set overrides. |
+| A12 | Vault V2 runs **without a liquidity adapter** (deposits stay idle until allocated, so a deposit during a guard trip adds no borrowable liquidity) and with `forceDeallocatePenalty = 0` (free in-kind exits; misuse can only pull liquidity, which pauses borrows until the allocator re-allocates). | `script/StocklineDeploy.sol` | Set a small penalty (48h timelock) if griefing shows up. |
+| A13 | After a genuine > 2× move between `poke`s, the oracle keeps the last good answer until the owner re-anchors through the timelock (OR-R7). The guard keeper pokes every round, so this needs a keeper outage plus a doubling. | `StocklineOracleBase.resetReferences` | Shorter path (guardian re-anchor) if the risk owner prefers liveness over manipulation resistance. |
+| A14 | The router's t + 24h health check assumes no fresh round in the horizon (buffers do not release), which is conservative. | `StocklineRouter.healthFactorAt` | – |
+| A15 | The Robinhood Chain UniversalRouter (`0x8876…0904`) decodes V3 swaps as `(recipient, amountIn, amountOutMin, path, payerIsUser, uint256[] minHopPriceX36)` (verified: Sourcify source, fork tests). | router/liquidator swap builders | Update the builders if Uniswap redeploys. |
+| A16 | Keeper tests run on a plain anvil loaded with the task-7 deployment against mocks of the chain, not on an anvil fork of 4663 (a 316-tx deploy per fork run is slow on the public RPC). The same contracts are exercised on a fork by the forge fork suite. | `keepers/test/fixtures/anvil-state.hex` | Add a fork-mode keeper suite once an archive RPC is available. |
+| A17 | Phase 1 fork tests fork **latest** (the public RPC is not an archive node); results are recorded per run, not pinned. | `test/fork/phase1/Phase1ForkBase.sol` | Pin `PHASE1_FORK_BLOCK` with an archive RPC. |
+
+### Open questions from Phase 1 (need your call; nothing is blocked)
+
+1. **OR-R3 quiet multiplier step** (default 5%, `0` = strict D1). See "Proposals raised while applying" above.
+2. **Event timing (OR-R14).** Keep "release on the first round at/after the scheduled print", or have the sim evaluate an anchored `P_eff ≥ P_pre-event · (1 + b)` design that does not depend on the exact print time?
+3. **`openShort` gas.** Measured ≈ 650k on a fork (cold) vs the 600k placeholder. Accept ≤ 700k, or spend effort on the RT-R1 checks (they read feeds, the calendar and issuer flags twice)?
+4. **Aggregator support (A8).** Only Uniswap's UniversalRouter is allowlisted. Adding 0x/1inch needs API keys and a fork test with a live quote.
+5. **Archive RPC** for pinned fork runs and weekday DEX depth (still open from Phase 0).
