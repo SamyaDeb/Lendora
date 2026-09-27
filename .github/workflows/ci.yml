@@ -84,6 +84,9 @@ jobs:
       REDIS_URL: redis://127.0.0.1:6379
     steps:
       - uses: actions/checkout@v4
+      # packages/sdk/test/morphoEvents.test.ts checks the SDK's Morpho event ABI against EventsLib.sol (SI-R1).
+      - name: Checkout morpho-blue
+        run: git submodule update --init --depth 1 contracts/lib/morpho-blue
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
