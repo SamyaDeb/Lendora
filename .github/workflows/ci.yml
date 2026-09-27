@@ -66,6 +66,9 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - uses: foundry-rs/foundry-toolchain@v1 # keepers tests run anvil with the task-7 deployment fixture
+        with:
+          version: stable
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r typecheck
       - run: pnpm -r test
