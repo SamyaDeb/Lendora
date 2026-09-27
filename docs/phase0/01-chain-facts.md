@@ -194,3 +194,30 @@ onchain at latest (fork test log: `docs/phase0/evidence/fork-run.log`, block 73,
 | Testnet facts | `ROBINHOOD_TESTNET_RPC_URL` (public `rpc.testnet.chain.robinhood.com` exists; not checked in this session) |
 | Whether the issuer would block DeFi contracts; whether role keys are MPC/multisig | Issuer (outreach is yours) |
 | 0x/1inch contract-caller support | API keys + a fork test |
+
+## 10. Testnet (46630), checked 2026-09-27 (Phase 2 task 7)
+
+Read-only checks against the public RPC `https://rpc.testnet.chain.robinhood.com` (Nitro `v3.12.0-rc.3`, same as
+mainnet), block ≈ 125,178,000.
+
+| Item | Value | Status | Evidence |
+|---|---|---|---|
+| Chain id | 46630 | VERIFIED onchain | `eth_chainId` |
+| Block time | ≈ 0.14 s (10,000 blocks in 1,426 s) | VERIFIED onchain | block timestamps at latest and latest − 10,000 |
+| Finality (SI-R3) | `safe` trails `latest` by ≈ 4.5k blocks, `finalized` by ≈ 6.4k (≈ 15 min) | VERIFIED onchain | block tags at 125,178,318 |
+| Archive state | **No** (public RPC): `missing trie node` for old blocks | VERIFIED onchain | `eth_getBalance` at block 1,000,000. The indexer needs an archive RPC for exact historical snapshots (A24) |
+| Morpho Blue, AdaptiveCurveIrm, VaultV2Factory, MorphoMarketV1AdapterV2Factory | **Not at the mainnet addresses** (no code) | NO | `eth_getCode` = 0x at each 4663 address. No testnet deployment is listed in Morpho's or Robinhood's docs (read 2026-09-27) |
+| USDG, Stock Tokens (SPY, NVDA, AAPL), issuer registry | **Not at the mainnet addresses** | NO | no code. Robinhood's contracts page lists mainnet USDG and WETH only |
+| Chainlink Stock Token and USDG feeds | **Not at the mainnet addresses**; none listed for testnet | NO | no code |
+| Uniswap v3 factory | not at the mainnet address | NO | no code |
+| UniversalRouter `0x8876…0904`, Permit2, Multicall3 `0xcA11…CA11` | present | VERIFIED onchain | code sizes 24,546 / 9,152 / 3,808 |
+| WETH | `0x7943e237c7F95DA44E0301572D358911207852Fa` (testnet) | VERIFIED onchain | `symbol()` = WETH |
+| CREATE2 deployers | `0x4e59…956C`, `0x914d…43d7` present | VERIFIED onchain | code |
+| Faucets (testnet ETH) | faucet.testnet.chain.robinhood.com, QuickNode, Chainlink | VERIFIED docs only | search results 2026-09-27 |
+
+**Consequence for the testnet deployment** (`contracts/script/DeployTestnet.s.sol`): deploy unmodified Morpho Blue,
+AdaptiveCurveIrm and the Vault V2 factories from the pinned artifacts (same bytecode as mainnet, LM-R20), mock
+Stock Tokens / USDG / feeds / swap aggregator / pools with an **operator gate** (only the deployer, the feed-mirror
+keeper and the faucet can move prices, pause or mint), a faucet, 24h timelocks, the lens. The feed-mirror keeper
+copies the real mainnet Chainlink rounds (read-only) to the testnet mock feeds, so testnet follows real prices and
+the real 24/5 sessions and weekend freezes.

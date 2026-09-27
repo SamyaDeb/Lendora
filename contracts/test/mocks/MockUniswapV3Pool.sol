@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.26;
 
+import {MockGate} from "./MockGate.sol";
+
 /// @notice Uniswap v3 pool stand-in for TWAP reads (OR-R31): `slot0`, `observe`, `token0/token1/fee`. The tick is
 /// piecewise constant between `setTick` calls, and `observe` returns the exact time-integral of the tick, like the real
 /// oracle accumulator. No swaps: the guard keeper only reads.
-contract MockUniswapV3Pool {
+contract MockUniswapV3Pool is MockGate {
     struct Observation {
         uint32 timestamp;
         int24 tick;
@@ -27,7 +29,7 @@ contract MockUniswapV3Pool {
     }
 
     /// @notice The pool trades at `tick` from now on.
-    function setTick(int24 tick) external {
+    function setTick(int24 tick) external gate {
         Observation memory last = _obs[_obs.length - 1];
         uint32 nowTs = uint32(block.timestamp);
         int56 cum = last.tickCumulative + int56(last.tick) * int56(uint56(nowTs - last.timestamp));

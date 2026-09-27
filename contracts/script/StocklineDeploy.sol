@@ -44,6 +44,8 @@ abstract contract StocklineDeploy {
     Vm private constant VM = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     uint256 internal constant LLTV = 0.77e18;
+    /// @notice First block the indexer should read (written as `startBlock` when set; Phase 2 testnet deployment).
+    string internal _startBlock;
     uint256 internal constant U_MAX = 0.9e18;
     uint256 internal constant PERFORMANCE_FEE = 0.1e18;
     /// @notice Vault V2 `MAX_MAX_RATE` (200% APR): interest reaches the share price at up to this rate.
@@ -260,7 +262,11 @@ abstract contract StocklineDeploy {
         _curate(v, abi.encodeCall(IVaultV2Min.setPerformanceFeeRecipient, (c.feeSplitter)));
         _curate(v, abi.encodeCall(IVaultV2Min.setPerformanceFee, (PERFORMANCE_FEE)));
         v.setMaxRate(MAX_RATE); // Vault V2 defaults to 0, which would keep interest out of the share price
-        _curate(v, abi.encodeCall(IVaultV2Min.setIsAllocator, (c.deployer, false)));
+        // Drop the temporary role, unless the deployer is also a configured allocator (testnet default: one key holds
+        // every role); removing it then would strip the real allocator (Phase 2 fix, found by the testnet dry run).
+        if (c.deployer != c.allocator && c.deployer != c.owner) {
+            _curate(v, abi.encodeCall(IVaultV2Min.setIsAllocator, (c.deployer, false)));
+        }
 
         // Seed the vault for a dead address (share inflation).
         IERC20(address(d.wrapper)).approve(d.vault, SEED);
@@ -335,7 +341,8 @@ abstract contract StocklineDeploy {
 
     // ------------------------------------------------------------------ Address book (LM-R10)
 
-    /// @notice Write the deployment under `key` in packages/sdk/addresses.json ("31337" or "fork-4663"; never "4663").
+    /// @notice Write the deployment under `key` in packages/sdk/addresses.json ("31337", "fork-4663", "46630"; never
+    /// "4663").
     function _writeAddresses(
         string memory key,
         CoreConfig memory c,
@@ -358,6 +365,7 @@ abstract contract StocklineDeploy {
         VM.serializeAddress(obj, "routerImplementation", core.routerImplementation);
         VM.serializeAddress(obj, "liquidator", address(core.liquidator));
         if (address(core.lens) != address(0)) VM.serializeAddress(obj, "lens", address(core.lens));
+        if (bytes(_startBlock).length > 0) VM.serializeString(obj, "startBlock", _startBlock);
         VM.serializeAddress(obj, "vaultV2Factory", c.vaultFactory);
         VM.serializeAddress(obj, "adapterFactory", c.adapterFactory);
         string memory roles = _rolesJson(string.concat(obj, "-roles"), c);

@@ -12,7 +12,8 @@
     "guard": "tsx src/guard/main.ts",
     "liquidator": "tsx src/liquidator/main.ts",
     "lint": "eslint .",
-    "alerts": "tsx src/alerts/main.ts"
+    "alerts": "tsx src/alerts/main.ts",
+    "feed-mirror": "tsx src/feedMirror/main.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
@@ -33,6 +34,7 @@
   "exports": {
     "./signer": "./src/common/signer.ts",
     "./alerts": "./src/alerts/index.ts",
-    "./health": "./src/common/health.ts"
+    "./health": "./src/common/health.ts",
+    "./feed-mirror": "./src/feedMirror/mirror.ts"
   }
 }

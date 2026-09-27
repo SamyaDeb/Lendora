@@ -43,3 +43,8 @@ export function priceFromTick(tick: number, stockIsToken0: boolean, stockDecimal
   const raw = Math.pow(1.0001, tick);
   return stockIsToken0 ? raw * 10 ** (stockDecimals - quoteDecimals) : (1 / raw) * 10 ** (stockDecimals - quoteDecimals);
 }
+
+/** Tick of a stock(18 dp)/USDG(6 dp) pool (stock = token0) at a USD feed answer with 8 dp (mock pools, testnet). */
+export function tickForAnswer(answer8: bigint): number {
+  return Math.floor(Math.log(Number(answer8) / 1e8 / 1e12) / Math.log(1.0001));
+}

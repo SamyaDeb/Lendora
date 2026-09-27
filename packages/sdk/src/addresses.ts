@@ -47,15 +47,13 @@ export interface ChainDeployment {
   routerImplementation?: Address;
   roles: Roles;
   stocks: Record<string, StockDeployment>;
-  /** Anvil only: mock feeds, tokens and pools keepers and tests can drive. */
+  /** Anvil and testnet: mock feeds, tokens, pools, swap aggregator (and the testnet `faucet`). */
   mocks?: Record<string, Address>;
   forkBlock?: string;
   /** First block to index (the deployment block); the indexer falls back to `forkBlock`, then 0 (anvil). */
   startBlock?: string;
   /** ShortInterestLens (Phase 2, SI-R20). */
   lens?: Address;
-  /** Testnet only: faucet for mock Stock Tokens and USDG. */
-  faucet?: Address;
 }
 
 /** Keys: a chain id ("31337" anvil) or "fork-4663" (a simulated deployment on a Robinhood Chain fork). Real 4663 is

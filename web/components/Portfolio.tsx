@@ -16,6 +16,7 @@ import {num, wad} from "@/lib/format";
 import {useRestricted} from "@/app/providers";
 import {AmountInput, parseAmount} from "./AmountInput";
 import {Empty, HealthFactor, Notice, Skeleton, Stat, StepList} from "./ui";
+import {FaucetButton} from "./FaucetButton";
 
 /** 06 `/portfolio`: every Stockline position of the wallet, from the chain (APP-R5), refreshed every 5 s and after
  * every transaction (APP-R7). Exits are always available (APP-R2, APP-R4, CP-R4). */
@@ -34,6 +35,7 @@ export function Portfolio() {
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Portfolio</h1>
       {restricted && <RestrictedNote />}
+      {!restricted && <FaucetButton />}
       <div className="space-y-4" data-testid="positions">
         {TICKERS.map((t) => (
           <PositionCard key={t} symbol={t} restricted={restricted} />

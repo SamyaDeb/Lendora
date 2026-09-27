@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     "./app": "./src/app.ts",
-    "./harness": "./test/harness.ts"
+    "./harness": "./test/harness.ts",
+    "./server": "./src/server.ts"
   },
   "scripts": {
     "pretypecheck": "pnpm --filter @stockline/sdk build",

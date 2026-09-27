@@ -1,18 +1,12 @@
-import {createPublicClient, defineChain, http, type PublicClient} from "viem";
-import {anvil} from "viem/chains";
-import type {DeploymentKey} from "@stockline/sdk";
+import {createPublicClient, http, type Chain, type PublicClient} from "viem";
+import {chainFor as sdkChainFor, robinhoodChain, type DeploymentKey} from "@stockline/sdk";
 
-/** Robinhood Chain (4663). Keepers only read from it in Phase 1; dry-run is the default. */
-export const robinhoodChain = defineChain({
-  id: 4663,
-  name: "Robinhood Chain",
-  blockTime: 100, // ~0.1 s blocks (01-chain-facts §1): viem then polls receipts every 500 ms instead of 4 s
-  nativeCurrency: {name: "Ether", symbol: "ETH", decimals: 18},
-  rpcUrls: {default: {http: ["https://rpc.mainnet.chain.robinhood.com"]}},
-});
+/** Robinhood Chain (4663; ~0.1 s blocks, receipts polled every 500 ms). Keepers never send there in Phase 2. */
+export {robinhoodChain};
 
-export function chainFor(key: DeploymentKey) {
-  return key === "fork-4663" ? robinhoodChain : anvil;
+/** The viem chain of a deployment key: anvil (31337), testnet (46630) or a fork of 4663. */
+export function chainFor(key: DeploymentKey): Chain {
+  return key === "fork-4663" ? robinhoodChain : sdkChainFor(key);
 }
 
 export function publicClient(rpcUrl: string, key: DeploymentKey): PublicClient {

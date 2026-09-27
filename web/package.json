@@ -32,6 +32,7 @@
     "@stockline/api": "workspace:*",
     "@stockline/compliance": "workspace:*",
     "@stockline/devnet": "workspace:*",
+    "@stockline/indexer": "workspace:*",
     "@stockline/keepers": "workspace:*",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/react": "^16.3.3",

@@ -294,6 +294,9 @@ importers:
       '@stockline/devnet':
         specifier: workspace:*
         version: link:../packages/devnet
+      '@stockline/indexer':
+        specifier: workspace:*
+        version: link:../indexer
       '@stockline/keepers':
         specifier: workspace:*
         version: link:../keepers

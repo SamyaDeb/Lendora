@@ -18,6 +18,7 @@ import {
   mockUsdgAbi,
   morphoAbi,
   planAllocation,
+  tickForAnswer,
   stocklineOracleAbi,
   stocklineRouterAbi,
   stockWrapperAbi,
@@ -48,13 +49,13 @@ export interface DriverOptions {
   /** Compliance signer key for attestations (RT-R2). Default: a fresh random key, installed on the router through the
    * timelock (impersonated on anvil). Never a committed key. */
   attestationKey?: Hex;
+  /** Get attestations elsewhere (e.g. the compliance service on testnet) instead of signing them here. */
+  attestationProvider?: (user: `0x${string}`) => Promise<{expiry: bigint; signature: Hex}>;
   log?: (m: string) => void;
 }
 
 /** Uniswap v3 tick of a stock(18 dp)/USDG(6 dp) pool (stock = token0) at a feed answer with 8 dp. */
-export function tickForPrice(answer8: bigint): number {
-  return Math.floor(Math.log(Number(answer8) / 1e8 / 1e12) / Math.log(1.0001));
-}
+export const tickForPrice = tickForAnswer;
 
 /**
  * Seeds realistic Stockline activity on anvil (Phase 2 task 0): lends, borrows, shorts, repays, closes, liquidations,
@@ -229,6 +230,7 @@ export class ChainDriver {
 
   /** An EIP-712 attestation for `user`, valid 24h (CP-R3). */
   async attest(user: `0x${string}`, ttl = ATTESTATION_TTL_SEC): Promise<{expiry: bigint; signature: Hex}> {
+    if (this.opts.attestationProvider) return this.opts.attestationProvider(user);
     if (!this.signer) await this.useAttestationSigner();
     const expiry = (await this.now()) + ttl;
     const signature = await this.signer!.signTypedData({

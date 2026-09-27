@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.26;
 
+import {MockGate} from "./MockGate.sol";
+
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -15,7 +17,7 @@ import {MockAccessControlsRegistry} from "./MockAccessControlsRegistry.sol";
 /// `oraclePaused()` flag and EIP-2612 `permit` (version "1"). Check order and errors copy the live modifiers:
 /// `onlyNotPaused` first, then `onlyNotBlocked` on each party. Extra knobs (allowlist, fee-on-transfer) cover behavior
 /// the live token does not have. Mint/burn and all setters are open: test use only.
-contract MockStockToken is ERC20, ERC20Permit, IScaledUIAmount, IHolderAllowlist {
+contract MockStockToken is ERC20, ERC20Permit, IScaledUIAmount, IHolderAllowlist, MockGate {
     uint256 internal constant WAD = 1e18;
 
     uint8 internal immutable _decimals;
@@ -68,43 +70,43 @@ contract MockStockToken is ERC20, ERC20Permit, IScaledUIAmount, IHolderAllowlist
         return tokenPaused || registry.paused();
     }
 
-    function pause() external {
+    function pause() external gate {
         tokenPaused = true;
         emit Paused();
     }
 
-    function unpause() external {
+    function unpause() external gate {
         tokenPaused = false;
         emit Unpaused();
     }
 
-    function pauseOracle() external {
+    function pauseOracle() external gate {
         oraclePaused = true;
         emit OraclePaused();
     }
 
-    function unpauseOracle() external {
+    function unpauseOracle() external gate {
         oraclePaused = false;
         emit OracleUnpaused();
     }
 
     /// @notice Burns from any address with no pause or blocklist check, like `Stock.adminBurn` (D10 R1).
-    function adminBurn(address from, uint256 amount) external {
+    function adminBurn(address from, uint256 amount) external gate {
         _burn(from, amount);
     }
 
     /// @notice Immediate multiplier change, like `Stock.updateMultiplier(uint256)`.
-    function updateMultiplier(uint256 newMultiplier) external onlyNotPaused {
+    function updateMultiplier(uint256 newMultiplier) external gate onlyNotPaused {
         _schedule(newMultiplier, block.timestamp);
     }
 
     /// @notice Scheduled multiplier change, like `Stock.updateMultiplier(uint256,uint256)`.
-    function updateMultiplier(uint256 newMultiplier, uint256 effectiveAt_) external onlyNotPaused {
+    function updateMultiplier(uint256 newMultiplier, uint256 effectiveAt_) external gate onlyNotPaused {
         _schedule(newMultiplier, effectiveAt_);
     }
 
     /// @notice Point this token at a shared registry (global pause and blocklist across tokens).
-    function setRegistry(MockAccessControlsRegistry registry_) external {
+    function setRegistry(MockAccessControlsRegistry registry_) external gate {
         registry = registry_;
     }
 
@@ -186,12 +188,12 @@ contract MockStockToken is ERC20, ERC20Permit, IScaledUIAmount, IHolderAllowlist
     }
 
     /// @notice Schedule a corporate action. `effectiveAt_ == block.timestamp` applies it immediately.
-    function scheduleUIMultiplier(uint256 multiplier_, uint256 effectiveAt_) external {
+    function scheduleUIMultiplier(uint256 multiplier_, uint256 effectiveAt_) external gate {
         _schedule(multiplier_, effectiveAt_);
     }
 
     /// @notice Shorthand for an immediate multiplier change.
-    function setUIMultiplier(uint256 multiplier_) external {
+    function setUIMultiplier(uint256 multiplier_) external gate {
         uint256 current = uiMultiplier();
         _uiMultiplier = multiplier_;
         newUIMultiplier = multiplier_;
@@ -200,7 +202,7 @@ contract MockStockToken is ERC20, ERC20Permit, IScaledUIAmount, IHolderAllowlist
     }
 
     /// @dev EIP-draft only; the live token has no cancel path.
-    function cancelUIMultiplierUpdate() external {
+    function cancelUIMultiplierUpdate() external gate {
         require(block.timestamp < effectiveAt, "not pending");
         emit UIMultiplierUpdateCancelled(newUIMultiplier, effectiveAt);
         newUIMultiplier = _uiMultiplier;
@@ -218,23 +220,23 @@ contract MockStockToken is ERC20, ERC20Permit, IScaledUIAmount, IHolderAllowlist
 
     // ---------------------------------------------------------------- Test knobs
 
-    function mint(address to, uint256 amount) external {
+    function mint(address to, uint256 amount) external gate {
         _mint(to, amount);
     }
 
-    function burn(address from, uint256 amount) external {
+    function burn(address from, uint256 amount) external gate {
         _burn(from, amount);
     }
 
-    function setAllowlistEnabled(bool enabled) external {
+    function setAllowlistEnabled(bool enabled) external gate {
         allowlistEnabled = enabled;
     }
 
-    function setAllowed(address account, bool isAllowed_) external {
+    function setAllowed(address account, bool isAllowed_) external gate {
         allowed[account] = isAllowed_;
     }
 
-    function setTransferFeeBps(uint256 bps) external {
+    function setTransferFeeBps(uint256 bps) external gate {
         require(bps <= 10_000, "bps");
         transferFeeBps = bps;
     }

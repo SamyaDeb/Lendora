@@ -17,6 +17,7 @@ import {
   type WalletClient,
 } from "viem";
 import {anvil} from "viem/chains";
+import {privateKeyToAccount} from "viem/accounts";
 import {formatAbiItem} from "viem/utils";
 import {
   collateralTokenAbi,
@@ -89,8 +90,11 @@ async function waitUp(client: PublicClient, what: string): Promise<void> {
 export async function connectAnvil(url: string, stop: () => void = () => {}): Promise<Anvil> {
   const {client, test, wallet} = clients(url);
   await waitUp(client, url);
-  const d = getDeployment(31337);
-  if (!d) throw new Error("no 31337 deployment in @stockline/sdk addresses.json");
+  // Plain anvil (31337), or an anvil fork of testnet (46630) for the dry run. Never mainnet.
+  const chainId = await client.getChainId();
+  if (chainId === 4663) throw new Error("refusing an anvil fork of Robinhood Chain mainnet for driving");
+  const d = getDeployment(chainId);
+  if (!d) throw new Error(`no ${chainId} deployment in @stockline/sdk addresses.json`);
   return {
     url,
     client,
@@ -104,7 +108,7 @@ export async function connectAnvil(url: string, stop: () => void = () => {}): Pr
       // Gas is estimated on a pending block whose timestamp can be one second off the mined one; interest accrual
       // (Morpho, Vault V2) then runs extra code, so estimates alone make sends flaky. Anvil gas is free: add headroom.
       const estimate = await client.estimateGas({account: from, to, data}).catch(() => 5_000_000n);
-      const hash = await wallet.sendTransaction({account: from, to, data, chain: anvil, gas: (estimate * 3n) / 2n + 100_000n});
+      const hash = await wallet.sendTransaction({account: from, to, data, chain: {...anvil, id: chainId}, gas: (estimate * 3n) / 2n + 100_000n});
       const r = await client.waitForTransactionReceipt({hash});
       if (r.status !== "success") throw new Error(`tx reverted ${hash}: ${await revertReason(client, from, to, data)}`);
       return r;
@@ -152,6 +156,38 @@ const errorNames = new Map<string, string>(
       .map((x) => [toFunctionSelector(formatAbiItem(x as never)).toLowerCase(), x.name!] as [string, string]),
   ),
 );
+
+/**
+ * A live chain driven by one key (testnet smoke flows, after the owner's go). Every `send` is signed by that key,
+ * whatever `from` says: on testnet the deployer holds every role and is a mock operator. No time travel.
+ */
+export async function connectWallet(url: string, privateKey: Hex): Promise<Anvil> {
+  const {client, test} = clients(url);
+  const account = privateKeyToAccount(privateKey);
+  const chainId = await client.getChainId();
+  if (chainId === 4663) throw new Error("never on Robinhood Chain mainnet");
+  const d = getDeployment(chainId);
+  if (!d) throw new Error(`no deployment for chain ${chainId}`);
+  const chain = {...anvil, id: chainId, name: `chain ${chainId}`};
+  const wallet = createWalletClient({account, chain, transport: http(url), pollingInterval: 250});
+  return {
+    url,
+    client,
+    test,
+    wallet,
+    d,
+    stop: () => {},
+    async send(_from, to, data) {
+      const hash = await wallet.sendTransaction({account, to, data, chain});
+      const r = await client.waitForTransactionReceipt({hash, pollingInterval: 250, timeout: 120_000});
+      if (r.status !== "success") throw new Error(`tx reverted ${hash}: ${await revertReason(client, account.address, to, data)}`);
+      return r;
+    },
+    async setTime() {
+      throw new Error("no time travel on a live chain");
+    },
+  };
+}
 
 export interface StartOptions {
   port?: number;

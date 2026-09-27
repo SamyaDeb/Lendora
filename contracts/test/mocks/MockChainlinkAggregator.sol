@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.26;
 
+import {MockGate} from "./MockGate.sol";
+
 import {AggregatorV3Interface} from "../../src/interfaces/external/AggregatorV3Interface.sol";
 
 /// @notice Chainlink feed with full control over answer, timestamps and failure modes. Each `setAnswer*` call starts
 /// a new round, so `getRoundData` history is available to tests.
-contract MockChainlinkAggregator is AggregatorV3Interface {
+contract MockChainlinkAggregator is AggregatorV3Interface, MockGate {
     struct Round {
         int256 answer;
         uint256 startedAt;
@@ -30,22 +32,22 @@ contract MockChainlinkAggregator is AggregatorV3Interface {
     }
 
     /// @notice New round with `updatedAt = block.timestamp`.
-    function setAnswer(int256 answer) external {
+    function setAnswer(int256 answer) external gate {
         _push(answer, block.timestamp);
     }
 
     /// @notice New round with an explicit `updatedAt` (can be in the past to simulate staleness).
-    function setAnswerAt(int256 answer, uint256 updatedAt) external {
+    function setAnswerAt(int256 answer, uint256 updatedAt) external gate {
         _push(answer, updatedAt);
     }
 
     /// @notice Rewrites `updatedAt` of the latest round without changing the answer.
-    function setUpdatedAt(uint256 updatedAt) external {
+    function setUpdatedAt(uint256 updatedAt) external gate {
         _rounds[latestRound].updatedAt = updatedAt;
     }
 
     /// @notice Makes every read revert, to test that consumers never propagate a feed revert.
-    function setReverts(bool reverts_) external {
+    function setReverts(bool reverts_) external gate {
         reverts = reverts_;
     }
 

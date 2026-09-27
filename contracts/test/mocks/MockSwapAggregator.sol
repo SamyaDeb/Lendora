@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.26;
 
+import {MockGate} from "./MockGate.sol";
+
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -10,7 +12,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// amount it sent. The router must check balances, never the return value.
 /// @dev [VERIFY] which DEX/aggregator Robinhood Chain uses; the router will call it through an allowlisted target and
 /// opaque `swapData`, so only this contract changes when the real venue is known.
-contract MockSwapAggregator {
+contract MockSwapAggregator is MockGate {
     using SafeERC20 for IERC20;
 
     uint256 internal constant WAD = 1e18;
@@ -29,21 +31,21 @@ contract MockSwapAggregator {
 
     event Swapped(address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut, address to);
 
-    function setRate(address tokenIn, address tokenOut, uint256 rateWad) external {
+    function setRate(address tokenIn, address tokenOut, uint256 rateWad) external gate {
         rate[tokenIn][tokenOut] = rateWad;
     }
 
-    function setFeeBps(uint256 bps) external {
+    function setFeeBps(uint256 bps) external gate {
         require(bps <= 10_000, "bps");
         feeBps = bps;
     }
 
-    function setFillFraction(uint256 fraction) external {
+    function setFillFraction(uint256 fraction) external gate {
         require(fraction <= WAD, "fraction");
         fillFraction = fraction;
     }
 
-    function setReportedAmountOut(uint256 amount) external {
+    function setReportedAmountOut(uint256 amount) external gate {
         reportedAmountOut = amount;
     }
 

@@ -56,6 +56,33 @@ if (cmd === "serve") {
     }
     await new Promise((r) => setTimeout(r, every));
   }
+} else if (cmd === "smoke") {
+  // Live chains: TESTNET_GO=yes is required on 46630 (the owner's go); the key comes from env, never from the repo.
+  const key = (process.env.SMOKE_KEY ?? process.env.TESTNET_DEPLOYER_KEY) as `0x${string}` | undefined;
+  const {connectWallet} = await import("./anvil.js");
+  const {smokeFlows} = await import("./smoke.js");
+  const {privateKeyToAccount} = await import("viem/accounts");
+  if (!key) throw new Error("set SMOKE_KEY (or TESTNET_DEPLOYER_KEY)");
+  const a = await connectWallet(rpc, key);
+  const chainId = await a.client.getChainId();
+  if (chainId === 46630 && process.env.TESTNET_GO !== "yes") throw new Error("TESTNET_GO=yes is required to send on testnet");
+  const me = privateKeyToAccount(key).address;
+  const compliance = flag("compliance", "");
+  const provider = compliance
+    ? async (user: `0x${string}`) => {
+        const account = privateKeyToAccount(key);
+        const headers = {"content-type": "application/json", "x-geo-country": "DE", ...(process.env.PROXY_SECRET ? {"x-stockline-proxy": process.env.PROXY_SECRET} : {})};
+        const t = (await (await fetch(`${compliance}/v1/compliance/terms?address=${user}`)).json()) as {version: string; message: string};
+        await fetch(`${compliance}/v1/compliance/terms`, {method: "POST", headers, body: JSON.stringify({address: user, signature: await account.signMessage({message: t.message}), version: t.version})});
+        const r = await fetch(`${compliance}/v1/compliance/attest`, {method: "POST", headers, body: JSON.stringify({address: user})});
+        const j = (await r.json()) as {expiry: string; signature: `0x${string}`; error?: string};
+        if (!r.ok) throw new Error(`compliance: ${j.error}`);
+        return {expiry: BigInt(j.expiry), signature: j.signature};
+      }
+    : undefined;
+  const drv = new ChainDriver(a, {log: console.log, attestationProvider: provider, attestationKey: process.env.ATTESTATION_SIGNER_KEY as `0x${string}` | undefined});
+  const events = await smokeFlows(drv, me);
+  console.log(`smoke flows done on chain ${chainId}: ${events.length} actions`);
 } else if (cmd === "dump-state") {
   const a = await guardAnvil(rpc);
   const state = await a.test.dumpState();
