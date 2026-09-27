@@ -84,3 +84,12 @@ describe("allocator plan (LM-R30, LM-R31, LM-R34)", () => {
     }
   });
 });
+
+describe("withdrawable (LM-R22)", () => {
+  it("LM_R22 is the user's assets up to idle plus pullable market liquidity", async () => {
+    const {withdrawableAssets} = await import("../src/math/allocator.js");
+    expect(withdrawableAssets(100n, 10n, 500n, 1000n, 950n)).toBe(60n); // idle 10 + free 50
+    expect(withdrawableAssets(100n, 200n, 0n, 0n, 0n)).toBe(100n);
+    expect(withdrawableAssets(100n, 0n, 30n, 1000n, 0n)).toBe(30n); // adapter owns only 30
+  });
+});

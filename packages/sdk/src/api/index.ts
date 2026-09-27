@@ -51,7 +51,7 @@ export function createClient(baseUrl: string, opts: ClientOptions = {}) {
     markets: () => unwrap(c.GET("/v1/markets")),
     market: (symbol: string) => unwrap(c.GET("/v1/markets/{symbol}", {params: {path: {symbol}}})),
     history: (symbol: string, query: {interval?: "1m" | "1h" | "1d"; from?: string; to?: string; limit?: number} = {}) =>
-      unwrap(c.GET("/v1/markets/{symbol}/history", {params: {path: {symbol}, query: {...query, format: "json"}}})),
+      unwrap(c.GET("/v1/markets/{symbol}/history", {params: {path: {symbol}, query: {...query, format: "json"}}})) as Promise<components["schemas"]["HistoryResponse"]>,
     /** SI-R12: the same series as CSV text. */
     historyCsv: async (symbol: string, query: {interval?: "1m" | "1h" | "1d"; from?: string; to?: string} = {}) => {
       const qs = new URLSearchParams({...query, format: "csv"} as Record<string, string>);
@@ -59,7 +59,7 @@ export function createClient(baseUrl: string, opts: ClientOptions = {}) {
       if (!r.ok) throw new ApiError(r.status, await r.text());
       return r.text();
     },
-    events: (symbol: string, query: {type?: "borrow" | "repay" | "liquidate" | "all"; cursor?: string; limit?: number} = {}) =>
+    events: (symbol: string, query: {type?: "borrow" | "repay" | "liquidate" | "lend" | "withdrawLend" | "all"; cursor?: string; limit?: number; account?: string} = {}) =>
       unwrap(c.GET("/v1/markets/{symbol}/events", {params: {path: {symbol}, query}})),
     positions: (address: string) => unwrap(c.GET("/v1/positions/{address}", {params: {path: {address}}})),
     status: () => unwrap(c.GET("/v1/status")),

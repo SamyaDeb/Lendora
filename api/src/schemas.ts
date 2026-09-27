@@ -139,8 +139,9 @@ export const Event = z
   .openapi("Event");
 
 export const EventsQuery = z.object({
-  type: z.enum(["borrow", "repay", "liquidate", "all"]).default("all").openapi({param: {name: "type", in: "query"}}),
+  type: z.enum(["borrow", "repay", "liquidate", "lend", "withdrawLend", "all"]).default("all").openapi({param: {name: "type", in: "query"}}),
   cursor: z.string().optional().openapi({param: {name: "cursor", in: "query"}, description: "`nextCursor` of the previous page"}),
+  account: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional().openapi({param: {name: "account", in: "query"}, description: "Only events of this wallet (public onchain data)"}),
   limit: z.coerce.number().int().min(1).max(500).default(100).openapi({param: {name: "limit", in: "query"}}),
 });
 

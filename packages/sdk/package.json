@@ -32,5 +32,6 @@
   "dependencies": {
     "openapi-fetch": "^0.17.0",
     "viem": "^2.56.9"
-  }
+  },
+  "sideEffects": false
 }

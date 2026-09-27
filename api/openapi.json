@@ -1637,6 +1637,8 @@
                 "borrow",
                 "repay",
                 "liquidate",
+                "lend",
+                "withdrawLend",
                 "all"
               ],
               "default": "all"
@@ -1653,6 +1655,17 @@
             "required": false,
             "description": "`nextCursor` of the previous page",
             "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^0x[0-9a-fA-F]{40}$",
+              "description": "Only events of this wallet (public onchain data)"
+            },
+            "required": false,
+            "description": "Only events of this wallet (public onchain data)",
+            "name": "account",
             "in": "query"
           },
           {

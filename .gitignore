@@ -25,3 +25,9 @@ contracts/broadcast/*/46630/
 
 # Local dev stack state (scripts/dev.sh): generated compliance key, logs, native pg/redis data
 .dev/
+
+# Next.js / Playwright output
+.next/
+web/e2e/.results/
+web/e2e/.report/
+web/lighthouse/*.json

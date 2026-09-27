@@ -245,9 +245,11 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    type?: "borrow" | "repay" | "liquidate" | "all";
+                    type?: "borrow" | "repay" | "liquidate" | "lend" | "withdrawLend" | "all";
                     /** @description `nextCursor` of the previous page */
                     cursor?: string;
+                    /** @description Only events of this wallet (public onchain data) */
+                    account?: string;
                     limit?: number;
                 };
                 header?: never;

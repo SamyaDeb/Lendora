@@ -1,4 +1,5 @@
 import {mulDivDown, WAD} from "./wad.js";
+import {adaptiveCurveBorrowRate} from "./irm.js";
 
 /**
  * Rate conventions for display (LM-R13, CP-R7: every APY in the app is labeled "variable"). Morpho accrues per second
@@ -35,4 +36,11 @@ export function vaultSupplyRate(marketRate: bigint, allocatedAssets: bigint, vau
 export function utilizationPlus(utilizationWad: bigint, deltaWad: bigint): bigint {
   const u = utilizationWad + deltaWad;
   return u > WAD ? WAD : u;
+}
+
+/** Borrow rate (per second) if utilization were `utilizationWad`, AdaptiveCurveIrm at the stored `rateAtTarget` with no
+ * elapsed adaptation (06 preview: "the rate at +10% utilization"). */
+export function borrowRateAtUtilization(utilizationWad: bigint, rateAtTarget: bigint): bigint {
+  const supply = WAD;
+  return adaptiveCurveBorrowRate({totalSupplyAssets: supply, totalBorrowAssets: (supply * utilizationWad) / WAD, lastUpdate: 0n}, rateAtTarget, 0n).avgRate;
 }

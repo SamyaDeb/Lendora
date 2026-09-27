@@ -83,3 +83,13 @@ describe("rates and Morpho math", () => {
     expect(liquidationIncentiveFactor(0n)).toBe(115n * 10n ** 16n);
   });
 });
+
+describe("preview rates (06)", () => {
+  it("the rate at +10% utilization is higher and equals the IRM curve at that utilization", async () => {
+    const {borrowRateAtUtilization} = await import("../src/math/rates.js");
+    const rat = 1_268_391_679n; // ≈ 4% APR at target
+    expect(borrowRateAtUtilization(9n * 10n ** 17n, rat)).toBe(rat); // at target: rate = rateAtTarget
+    expect(borrowRateAtUtilization(10n ** 18n, rat)).toBe(rat * 4n); // 100%: × CURVE_STEEPNESS
+    expect(borrowRateAtUtilization(5n * 10n ** 17n, rat)).toBeLessThan(rat);
+  });
+});

@@ -84,9 +84,13 @@ export class IndexerDb {
 
   /** Event feed, newest first, strictly before `cursor` (07 `/events`). `ticker = "*"` for all stocks; empty
    * `types` = every type. */
-  async events(ticker: string, types: string[], cursor: EventCursor | undefined, limit: number): Promise<Row[]> {
+  async events(ticker: string, types: string[], cursor: EventCursor | undefined, limit: number, account?: string): Promise<Row[]> {
     const params: unknown[] = [types, limit];
     let where = "(cardinality($1::text[]) = 0 or type = any($1))";
+    if (account) {
+      params.push(account);
+      where += ` and lower(account) = lower($${params.length})`;
+    }
     if (ticker !== "*") {
       params.push(ticker);
       where += ` and ticker = $${params.length}`;

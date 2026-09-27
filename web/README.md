@@ -1,3 +1,41 @@
 # web
 
-Next.js app (see `docs/prd/06-web-app.md`). Imports all math and addresses from `@stockline/sdk`. Phase 2.
+Stockline app (docs/prd/06): Next.js 16 App Router, wagmi 3 + viem, TanStack Query, Tailwind 4. Every safety number
+(health factor, liquidation price, buffer, rates) comes from `@stockline/sdk`; lists and charts from the public API,
+positions and previews straight from the chain.
+
+| Route | |
+|---|---|
+| `/` | Markets table, sortable by utilization, live status |
+| `/market/[symbol]` | Rate/utilization and short-interest charts (7d/30d/90d, closures shaded), weekend buffer schedule, params, contracts |
+| `/lend/[symbol]` | Deposit / withdraw through the router, variable APY, withdrawable now (LM-R22), earnings, cap and liquidity states |
+| `/short/[symbol]` | Open short or just borrow; collateral, amount or target-HF slider, full 06 preview panel |
+| `/portfolio` | Positions from the chain, HF and liquidation price now and at the next close, accrued interest, Close / Repay / Add / Withdraw |
+| `/short-interest` | 07 §4 dashboard: leaderboard, per-stock chart, weekend panel (DEX TWAP vs Chainlink), API snippets |
+| `/alerts` | APP-R8 settings, saved with a signed message |
+| `/status`, `/terms`, `/restricted` | APP-R4 status link target, APP-R10 terms, APP-R2 block page |
+
+| Req | Where |
+|---|---|
+| APP-R1 | `lib/wagmi.ts` (injected, WalletConnect with a project id, Coinbase Wallet); `ConnectButton` wrong-network prompt |
+| APP-R2 | `proxy.ts` (Next 16 Proxy, the successor of edge middleware): restricted countries/regions from the SDK config see `/restricted`; `/portfolio`, `/terms`, `/status`, `/api/*` stay reachable for exits |
+| APP-R3 | `lib/tx.ts` step list, `eth_call` simulation before every send, `lib/errors.ts` plain-language reasons |
+| APP-R4 | `GuardBanner`, borrow disabled with the reason and a status link; exits enabled |
+| APP-R5 | API for lists/charts (`lib/api.ts`), chain for positions and the preview (`lib/chain.ts`, one batched JSON-RPC request) |
+| APP-R6 | `HealthFactor` colors; copy says liquidation at 1.00 |
+| APP-R7 | 5 s refresh (and after every tx) |
+| APP-R9 | Keyboard navigable, skip link, AA contrast tokens (light and dark), 360 px layouts; Lighthouse accessibility 100 |
+| APP-R10 | Footer notice; terms signed once per wallet through the compliance service (`/api/compliance/*` proxy adds geo headers + `PROXY_SECRET`) |
+| APP-R11 | `lib/analytics.ts` + `/api/analytics`: event, funnel and path only; no wallet, no cookies, no IP stored |
+
+## Run and test
+
+```sh
+scripts/dev.sh                                   # whole stack; web on :3000
+pnpm --filter @stockline/web test                # component and unit tests
+pnpm --filter @stockline/web e2e                 # Playwright on anvil: every router flow, preview vs onchain ≤ 0.1%
+pnpm --filter @stockline/web lighthouse          # writes lighthouse/results.md
+```
+
+E2E uses wagmi's mock connector bound to anvil's unlocked default account #7 (`NEXT_PUBLIC_E2E=1`, anvil only): no key
+material anywhere. Results: `lighthouse/results.md` (performance 96 on `/`, 94 on `/short-interest`).

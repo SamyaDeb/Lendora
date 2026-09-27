@@ -76,3 +76,14 @@ export function planAllocation(s: AllocatorState, p: AllocatorParams): Allocator
   const amount = short < free ? short : free;
   return amount >= p.minMove ? {kind: "deallocate", assets: amount, reason: "restore idle reserve"} : {kind: "none", reason: "within band"};
 }
+
+/**
+ * LM-R22: what a lender can redeem now: their assets, up to the vault's idle balance plus the market liquidity
+ * `forceDeallocate` can pull (Vault V2's `max*` views always return 0, so the app shows this instead).
+ */
+export function withdrawableAssets(userAssets: bigint, idle: bigint, adapterAssets: bigint, marketSupply: bigint, marketBorrow: bigint): bigint {
+  const unborrowed = marketSupply > marketBorrow ? marketSupply - marketBorrow : 0n;
+  const pullable = adapterAssets < unborrowed ? adapterAssets : unborrowed;
+  const liquid = idle + pullable;
+  return userAssets < liquid ? userAssets : liquid;
+}

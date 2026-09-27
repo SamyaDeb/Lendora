@@ -264,7 +264,7 @@ export function createApp(deps: AppDeps) {
       const t = symbolOf(c.req.valid("param").symbol);
       const q = c.req.valid("query");
       const types = q.type === "all" ? [] : [q.type];
-      const [rows, head] = await Promise.all([db.events(t, types, decodeCursor(q.cursor), q.limit), db.head()]);
+      const [rows, head] = await Promise.all([db.events(t, types, decodeCursor(q.cursor), q.limit, q.account), db.head()]);
       const last = rows[rows.length - 1];
       const nextCursor = rows.length === q.limit && last ? encodeCursor({block: BigInt(String(last.block_number)), logIndex: Number(last.log_index)}) : null;
       const e = envelope(head);
