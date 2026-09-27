@@ -32,7 +32,10 @@ mainnet proposals.
 | `rSTOCK` → USDG market LLTV | 62.5% | 62.5% | 62.5% | Morpho market, listed ≥ 30 days after launch |
 
 Caps rise in steps (for example ×2) only after 2 weekends without a guard incident and a sim rerun. The AAPL cap
-follows the Saturday 2% depth ($146k); re-measure on a weekday (BLOCKED on an archive RPC).
+follows the Saturday 2% depth ($146k across both pools); a Sunday rerun (2026-09-27) is within 2% on the binding
+USDG pool, so caps are unchanged. The weekday rerun needs no archive RPC, only a weekday run of
+`dex_depth.py --label weekday` ([WS-C §6](../../sim/reports/phase0-weekend-gaps.md)); a difference above ±25% is
+flagged to the owner before any cap change.
 
 ## Risk register
 

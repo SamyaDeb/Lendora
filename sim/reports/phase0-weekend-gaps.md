@@ -112,7 +112,27 @@ Largest weekend episodes (by peak abs premium, USDG pool where available):
 | 2026-09-26T15:57 | 73207817 | AAPL_WETH_500 | $48,564 | $39,128 |
 | 2026-09-26T15:57 | 73207817 | AAPL_USDG_500 | $97,186 | $98,564 |
 
-Only weekend snapshots exist. **Weekday comparison: BLOCKED** until `dex_depth.py` runs on a weekday or an archive RPC is available to read `slot0`/ticks at past weekday blocks. v3 pools are passive liquidity, so depth should not change by day unless LPs pull liquidity for weekends; this needs the check.
+| 2026-09-27T19:08 (Sun) | 74177271 | NVDA_USDG_500 | $923,398 | $1,535,860 |
+| 2026-09-27T19:08 (Sun) | 74177271 | NVDA_WETH_500 | $130,627 | $106,536 |
+| 2026-09-27T19:08 (Sun) | 74177271 | SPY_WETH_500 | $212,954 | $179,323 |
+| 2026-09-27T19:08 (Sun) | 74177271 | SPY_USDG_500 | $89,505 | $128,599 |
+| 2026-09-27T19:08 (Sun) | 74177271 | AAPL_WETH_500 | $49,543 | $37,685 |
+| 2026-09-27T19:08 (Sun) | 74177271 | AAPL_USDG_500 | $91,429 | $96,807 |
+
+**Remediation update (2026-09-27).** A second weekend snapshot (Sunday) is within −17%…+7% of Saturday per pool; the
+binding figure for caps, AAPL USDG sell-side 2% depth, is $96.8k vs $98.6k (−2%). Two weekend points agree, so the D8
+caps stand for weekends. **Weekday comparison: pending a weekday run, not an archive RPC** — the public RPC serves the
+latest block, so the script only has to run on a weekday during US hours. `dex_depth.py` now takes
+`--label weekday` and refuses to run outside Mon–Fri 09:30–16:00 ET, so a weekday row is always a real weekday
+measurement:
+
+```sh
+sim/.venv/bin/python sim/phase0/dex_depth.py --label weekday --markdown   # Mon–Fri 09:30–16:00 ET; paste the rows here
+```
+
+Owner: engineering, first US session after 2026-09-28 13:30 UTC. If any pool's weekday 2% depth differs from the
+weekend figure by more than ±25%, flag it to the owner before changing caps (10 launch parameters: per-address cap ≈
+25% of 2% depth, D8); caps are not changed by this rerun alone.
 
 ## 7. Liquidation profitability during weekend premiums
 
