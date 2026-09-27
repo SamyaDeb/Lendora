@@ -12,3 +12,7 @@ export * from "./uniswap.js";
 export * from "./abis.js";
 export * from "./morphoEvents.js";
 export * from "./encoding.js";
+export * from "./math/morpho.js";
+export * from "./math/irm.js";
+export * from "./math/rates.js";
+export * from "./shortInterest.js";

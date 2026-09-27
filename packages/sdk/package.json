@@ -18,7 +18,8 @@
     "abis": "node scripts/export-abis.mjs",
     "gen:sessions": "tsx scripts/genSessions.ts",
     "gen:vectors": "tsx scripts/genVectors.ts",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "gen:vectors:morpho": "tsx scripts/genMorphoVectors.ts"
   },
   "devDependencies": {
     "@noble/hashes": "1.8.0",

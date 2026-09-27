@@ -132,3 +132,18 @@ interface or a constructor parameter. Items marked *public docs* come from Robin
 3. **`openShort` gas.** Measured ≈ 650k on a fork (cold) vs the 600k placeholder. Accept ≤ 700k, or spend effort on the RT-R1 checks (they read feeds, the calendar and issuer flags twice)?
 4. **Aggregator support (A8).** Only Uniswap's UniversalRouter is allowlisted. Adding 0x/1inch needs API keys and a fork test with a live quote.
 5. **Archive RPC** for pinned fork runs and weekday DEX depth (still open from Phase 0).
+
+## Phase 2 engineering assumptions (A18+)
+
+Added while building the indexer, API and app. Each is isolated in one SDK function or config value.
+
+| # | Assumption | Where it lives | If wrong |
+|---|---|---|---|
+| A18 | `supplyApy` (07) = market supply rate × allocated / (idle + allocated) × (1 − performance fee), continuously compounded (`e^(r·365d) − 1`). Vault assets are taken as idle + the adapter's accrued market supply (Vault V2 `maxRate` is set to its maximum, so distributed = real interest). | `packages/sdk/src/shortInterest.ts`, `math/rates.ts` | Change the one function; indexer, API and app follow. |
+| A19 | "Current borrow rate" = the IRM's `borrowRateView(params, market())` at the block: the average rate over the pending accrual period, the rate Morpho will apply. The lens reports the same. | `adaptiveCurveBorrowRate` (SDK), `ShortInterestLens` | Report the end-of-period `curve(endRateAtTarget)` instead, in both. |
+| A20 | `newShorts24h` / `covered24h` are summed at 1-hour granularity (the current hour plus the 23 before it); "covered" includes the repaid assets of liquidations. | `indexer/src/snapshot.ts` | Use 1m buckets (more lookups per snapshot). |
+| A21 | `daysToCover` = borrowed / average daily Stock Token DEX volume over the last 30 days (over the available history if shorter, minimum 1 day). Volume = Uniswap v3 0.05% USDG and WETH pools (fork/mainnet) or the mock swap aggregator (anvil/testnet). Uniswap v4, RFQ and Lighter spot volume are not counted; `null` where no source exists. | `indexer/lib/network.ts`, `shortInterestFields` | Add v4 `PoolManager` swaps or an offchain volume feed. |
+| A22 | `marketStatus` precedence: `guard_tripped` (any reason) > `closed` (feed session closed) > `ramping` (open with a buffer in force: closure ramp-in, event buffer, or the hold after a reopen until the first fresh round) > `open`. | `marketStatusOf` (SDK) | One function. |
+| A23 | Data is `confirmed` when its block is ≤ the chain's `finalized` tag (~18 min on Robinhood Chain); `safe` is exposed too. | `chain_head` (indexer), API | Use `safe` (~11.5 min). |
+| A24 | Exact historical snapshots need an archive RPC (oracle views are read at each block). On a non-archive node the indexer derives totals from events and starts snapshots at the earliest block with state. Same open question as Phase 1 #5. | `indexer/src/snapshot.ts` | Provide an archive RPC for testnet/mainnet. |
+| A25 | While the issuer pauses a Stock Token (`TOKEN_PAUSED`), exits that move the Stock Token (`repay`, `closeShort`, `withdrawLend`, `unwrap`) revert in the token itself (LM-R5). USDG-side exits (`withdrawCollateral` while healthy) still work. The app keeps exits enabled and explains the issuer pause when a simulation fails this way (found by the Phase 2 chain driver). | `web/` (APP-R4 copy), `docs/runbooks/testnet.md` | – (issuer behavior; disclosed). |

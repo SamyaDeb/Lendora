@@ -1,0 +1,35 @@
+{
+  "name": "@stockline/indexer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "pretypecheck": "pnpm --filter @stockline/sdk build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "pretest": "pnpm --filter @stockline/sdk build",
+    "test": "vitest run",
+    "dev": "ponder dev --schema stockline_dev --disable-ui",
+    "start": "ponder start --views-schema stockline",
+    "reconcile": "tsx scripts/reconcile.ts"
+  },
+  "dependencies": {
+    "@stockline/sdk": "workspace:*",
+    "pg": "^8.23.0",
+    "ponder": "^0.17.12",
+    "viem": "^2.56.9"
+  },
+  "devDependencies": {
+    "@stockline/devnet": "workspace:*",
+    "@types/node": "^22.20.4",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.21.0",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.7"
+  },
+  "exports": {
+    "./harness": "./lib/harness.ts",
+    "./reconcile": "./lib/reconcile.ts",
+    "./network": "./lib/network.ts"
+  }
+}

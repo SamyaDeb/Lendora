@@ -50,11 +50,22 @@ export interface ChainDeployment {
   /** Anvil only: mock feeds, tokens and pools keepers and tests can drive. */
   mocks?: Record<string, Address>;
   forkBlock?: string;
+  /** First block to index (the deployment block); the indexer falls back to `forkBlock`, then 0 (anvil). */
+  startBlock?: string;
+  /** ShortInterestLens (Phase 2, SI-R20). */
+  lens?: Address;
+  /** Testnet only: faucet for mock Stock Tokens and USDG. */
+  faucet?: Address;
 }
 
 /** Keys: a chain id ("31337" anvil) or "fork-4663" (a simulated deployment on a Robinhood Chain fork). Real 4663 is
  * never written in Phase 1. */
 export type DeploymentKey = number | "fork-4663";
+
+/** Parse `DEPLOYMENT_KEY` / `STOCKLINE_NETWORK` ("31337", "46630", "fork-4663"). */
+export function parseDeploymentKey(s: string): DeploymentKey {
+  return s === "fork-4663" ? s : Number(s);
+}
 
 const book = addresses.chains as unknown as Record<string, ChainDeployment>;
 
