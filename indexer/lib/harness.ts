@@ -55,12 +55,27 @@ export async function startIndexer(o: StartIndexerOptions): Promise<IndexerHandl
       cwd: INDEXER_DIR,
       env: {...process.env, DATABASE_URL: o.databaseUrl, RPC_URL: o.rpcUrl, STOCKLINE_NETWORK: o.network ?? "31337", ...o.env},
       stdio: ["ignore", "pipe", "pipe"],
+      // Own process group: `npx` runs Ponder as a child, so stop() must signal the whole group or Ponder outlives
+      // the wrapper and keeps its schema lock (a resumed indexer then fails: "Schema is locked by a different app").
+      detached: true,
     },
   );
   proc.stdout!.on("data", (d) => (out += d.toString()));
   proc.stderr!.on("data", (d) => (out += d.toString()));
   let exited = false;
-  proc.on("exit", () => (exited = true));
+  // A detached group is not killed with this process: do it on exit so no Ponder outlives a test run.
+  const killGroup = () => {
+    try {
+      process.kill(-proc.pid!, "SIGKILL");
+    } catch {
+      /* already gone */
+    }
+  };
+  process.once("exit", killGroup);
+  proc.on("exit", () => {
+    exited = true;
+    process.removeListener("exit", killGroup);
+  });
 
   const until = Date.now() + (o.timeoutMs ?? 180_000);
   for (;;) {
@@ -96,9 +111,17 @@ export async function startIndexer(o: StartIndexerOptions): Promise<IndexerHandl
     },
     async stop() {
       if (exited) return;
-      proc.kill("SIGTERM");
-      await new Promise((r) => setTimeout(r, 500));
-      if (!exited) proc.kill("SIGKILL");
+      const group = (signal: NodeJS.Signals) => {
+        try {
+          process.kill(-proc.pid!, signal);
+        } catch {
+          /* already gone */
+        }
+      };
+      // SIGTERM lets Ponder shut down cleanly and release its schema lock; SIGKILL only if it does not exit in time.
+      group("SIGTERM");
+      for (let i = 0; i < 150 && !exited; i++) await new Promise((r) => setTimeout(r, 100));
+      if (!exited) group("SIGKILL");
     },
     logs: () => out,
   };
