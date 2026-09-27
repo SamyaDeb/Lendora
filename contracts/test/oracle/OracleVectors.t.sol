@@ -131,14 +131,7 @@ contract OracleVectorsTest is Test {
         usdg.setAnswer(1e8);
         MarketHours mh = new MarketHours(address(this));
 
-        // Decoded straight into the MarketHours structs: forge orders JSON object fields by a project struct with the
-        // same field names when one exists, so a look-alike struct would silently swap fields.
-        IMarketHours.Session[] memory s = abi.decode(vm.parseJson(json, ".sessions"), (IMarketHours.Session[]));
-        assertLt(s[0].openTs, s[0].closeTs);
-        mh.replaceSessionsFrom(0, s);
-        IMarketHours.EventWindow[] memory ev = abi.decode(vm.parseJson(json, ".events"), (IMarketHours.EventWindow[]));
-        assertLe(ev[0].startTs, ev[0].endTs);
-        mh.replaceEventsFrom(address(stock), 0, ev);
+        _loadCalendar(json, mh, address(stock));
 
         IStocklineOracle.Params memory p = IStocklineOracle.Params({
             zWad: uint64(vm.parseJsonUint(json, ".params.z")),
@@ -186,5 +179,24 @@ contract OracleVectorsTest is Test {
             if (got != 0) nonZero++;
         }
         assertGt(nonZero, cases.length / 2, "vectors exercise the buffer");
+    }
+
+    /// @dev Flat arrays (forge's object-to-struct decoding can reorder same-named fields).
+    function _loadCalendar(string memory json, MarketHours mh, address stock) internal {
+        uint256[] memory opens = vm.parseJsonUintArray(json, ".sessionOpens");
+        uint256[] memory closes = vm.parseJsonUintArray(json, ".sessionCloses");
+        IMarketHours.Session[] memory s = new IMarketHours.Session[](opens.length);
+        for (uint256 i; i < opens.length; i++) {
+            s[i] = IMarketHours.Session(uint64(opens[i]), uint64(closes[i]));
+        }
+        mh.replaceSessionsFrom(0, s);
+        uint256[] memory st = vm.parseJsonUintArray(json, ".eventStarts");
+        uint256[] memory en = vm.parseJsonUintArray(json, ".eventEnds");
+        uint256[] memory bu = vm.parseJsonUintArray(json, ".eventBuffers");
+        IMarketHours.EventWindow[] memory ev = new IMarketHours.EventWindow[](st.length);
+        for (uint256 i; i < st.length; i++) {
+            ev[i] = IMarketHours.EventWindow(uint64(st[i]), uint64(en[i]), uint64(bu[i]));
+        }
+        mh.replaceEventsFrom(stock, 0, ev);
     }
 }

@@ -14,27 +14,12 @@ library CalendarJson {
         return vm.readFile(PATH);
     }
 
-    /// @dev Mirrors one `sessions[]` entry; forge decodes JSON objects with keys in alphabetical order.
-    struct SessionJson {
-        uint256 closeTs;
-        string closeUtc;
-        uint256 openTs;
-        string openUtc;
-    }
-
-    /// @dev Mirrors one `events.<TICKER>[]` entry (alphabetical keys).
-    struct EventJson {
-        string bufferWad;
-        uint256 endTs;
-        string endUtc;
-        uint256 startTs;
-    }
-
     function sessions(string memory json) internal pure returns (IMarketHours.Session[] memory out) {
-        SessionJson[] memory raw = abi.decode(vm.parseJson(json, ".sessions"), (SessionJson[]));
-        out = new IMarketHours.Session[](raw.length);
-        for (uint256 i; i < raw.length; i++) {
-            out[i] = IMarketHours.Session(uint64(raw[i].openTs), uint64(raw[i].closeTs));
+        uint256[] memory opens = vm.parseJsonUintArray(json, ".sessionOpens");
+        uint256[] memory closes = vm.parseJsonUintArray(json, ".sessionCloses");
+        out = new IMarketHours.Session[](opens.length);
+        for (uint256 i; i < opens.length; i++) {
+            out[i] = IMarketHours.Session(uint64(opens[i]), uint64(closes[i]));
         }
     }
 
@@ -44,14 +29,14 @@ library CalendarJson {
         view
         returns (IMarketHours.EventWindow[] memory out)
     {
-        string memory key = string.concat(".events.", ticker);
+        string memory key = string.concat(".eventArrays.", ticker);
         if (!vm.keyExistsJson(json, key)) return out;
-        EventJson[] memory raw = abi.decode(vm.parseJson(json, key), (EventJson[]));
-        out = new IMarketHours.EventWindow[](raw.length);
-        for (uint256 i; i < raw.length; i++) {
-            out[i] = IMarketHours.EventWindow(
-                uint64(raw[i].startTs), uint64(raw[i].endTs), uint64(vm.parseUint(raw[i].bufferWad))
-            );
+        uint256[] memory starts = vm.parseJsonUintArray(json, string.concat(key, ".starts"));
+        uint256[] memory ends = vm.parseJsonUintArray(json, string.concat(key, ".ends"));
+        string[] memory buffers = vm.parseJsonStringArray(json, string.concat(key, ".buffers"));
+        out = new IMarketHours.EventWindow[](starts.length);
+        for (uint256 i; i < starts.length; i++) {
+            out[i] = IMarketHours.EventWindow(uint64(starts[i]), uint64(ends[i]), uint64(vm.parseUint(buffers[i])));
         }
     }
 }
