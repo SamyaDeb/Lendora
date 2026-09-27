@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@stockline/sdk": "workspace:*",
+    "hono": "^4.13.9",
     "pg": "^8.23.0",
     "ponder": "^0.17.12",
     "viem": "^2.56.9"
