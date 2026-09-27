@@ -5,6 +5,7 @@
       "adapterFactory": "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
       "adaptiveCurveIrm": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
       "clUSDG": "0x4c5859f0F772848b2D91F1D83E2Fe57935348029",
+      "lens": "0xBEe6FFc1E8627F51CcDF0b4399a1e1abc5165f15",
       "liquidator": "0x627b9A657eac8c3463AD17009a424dFE3FDbd0b1",
       "marketHours": "0x8f86403A4DE0BB5791fa46B8e795C547942fE4Cf",
       "mocks": {

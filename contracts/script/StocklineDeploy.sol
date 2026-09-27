@@ -25,6 +25,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {StocklineRouter} from "../src/StocklineRouter.sol";
 import {StocklineLiquidator} from "../src/StocklineLiquidator.sol";
 import {IStocklineRouter} from "../src/interfaces/IStocklineRouter.sol";
+import {ShortInterestLens} from "../src/ShortInterestLens.sol";
 
 /// @title StocklineDeploy
 /// @notice Deployment logic shared by the scripts (anvil, fork) and the fork tests, so tests exercise exactly what the
@@ -91,6 +92,7 @@ abstract contract StocklineDeploy {
         StocklineRouter router; // ERC1967 proxy
         address routerImplementation;
         StocklineLiquidator liquidator;
+        ShortInterestLens lens; // Phase 2 (SI-R20, SI-R21)
     }
 
     struct StockDeployment {
@@ -143,6 +145,17 @@ abstract contract StocklineDeploy {
             core.liquidator.setSwapTarget(c.swapTarget, StocklineLiquidator.SwapMode(uint8(c.swapMode)));
         }
         core.liquidator.transferOwnership(c.owner);
+        return core;
+    }
+
+    /// @notice Phase 2: the stateless `ShortInterestLens` over the listed stocks (SI-R21: list fixed at deployment).
+    /// Deployed after `_finalize`, so every Phase 1 address is unchanged; redeploy it to change the list.
+    function _deployLens(Core memory core, StockConfig[] memory stocks) internal returns (Core memory) {
+        address[] memory tokens = new address[](stocks.length);
+        for (uint256 i; i < stocks.length; i++) {
+            tokens[i] = stocks[i].token;
+        }
+        core.lens = new ShortInterestLens(address(core.router), tokens);
         return core;
     }
 
@@ -344,6 +357,7 @@ abstract contract StocklineDeploy {
         VM.serializeAddress(obj, "router", address(core.router));
         VM.serializeAddress(obj, "routerImplementation", core.routerImplementation);
         VM.serializeAddress(obj, "liquidator", address(core.liquidator));
+        if (address(core.lens) != address(0)) VM.serializeAddress(obj, "lens", address(core.lens));
         VM.serializeAddress(obj, "vaultV2Factory", c.vaultFactory);
         VM.serializeAddress(obj, "adapterFactory", c.adapterFactory);
         string memory roles = _rolesJson(string.concat(obj, "-roles"), c);

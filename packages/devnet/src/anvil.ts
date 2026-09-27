@@ -144,10 +144,25 @@ export interface StartOptions {
   args?: string[];
 }
 
-/** Start anvil on a free port with the Stockline deployment. */
+/** Start anvil with the Stockline deployment. Without an explicit port, anvil binds port 0 and we read the port it
+ * chose from its output: picking a "free" port first races when suites run in parallel (`pnpm -r test`), and a
+ * suite could end up talking to another suite's chain. */
 export async function startAnvil(opts: StartOptions = {}): Promise<Anvil> {
-  const port = opts.port ?? (await freePort());
-  const proc: ChildProcess = spawn("anvil", ["--port", String(port), "--silent", ...(opts.args ?? [])], {stdio: "ignore"});
+  const proc: ChildProcess = spawn("anvil", ["--port", String(opts.port ?? 0), ...(opts.args ?? [])], {stdio: ["ignore", "pipe", "ignore"]});
+  const port = await new Promise<number>((resolve, reject) => {
+    let buf = "";
+    const timer = setTimeout(() => reject(new Error(`anvil did not report a port: ${buf.slice(-500)}`)), 30_000);
+    proc.stdout!.on("data", (d: Buffer) => {
+      buf += d.toString();
+      const m = /Listening on [\d.]+:(\d+)/.exec(buf);
+      if (m) {
+        clearTimeout(timer);
+        resolve(Number(m[1]));
+      }
+    });
+    proc.on("exit", (code) => reject(new Error(`anvil exited (${code}): ${buf.slice(-500)}`)));
+  });
+  proc.stdout!.resume(); // keep draining so anvil never blocks on a full pipe
   const url = `http://127.0.0.1:${port}`;
   const a = await connectAnvil(url, () => proc.kill());
   const state = opts.state ?? "fixture";

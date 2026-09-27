@@ -1,0 +1,118 @@
+[
+  {
+    "type": "function",
+    "name": "snapshot",
+    "inputs": [
+      {
+        "name": "stockToken",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct IShortInterestLens.StockSnapshot",
+        "components": [
+          {
+            "name": "stockToken",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "suppliedShares",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "borrowedShares",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "utilizationWad",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "borrowRatePerSecWad",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "bufferWad",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "marketOpen",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "guardTripped",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "snapshotAll",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple[]",
+        "internalType": "struct IShortInterestLens.StockSnapshot[]",
+        "components": [
+          {
+            "name": "stockToken",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "suppliedShares",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "borrowedShares",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "utilizationWad",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "borrowRatePerSecWad",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "bufferWad",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "marketOpen",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "guardTripped",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  }
+]

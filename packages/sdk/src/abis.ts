@@ -9412,6 +9412,196 @@ export const erc20Abi = [
   }
 ] as const;
 
+export const shortInterestLensAbi = [
+  {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "router",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "stocks_",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "MORPHO",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IMorpho"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "ROUTER",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IStocklineRouterMarkets"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "snapshot",
+    "inputs": [
+      {
+        "name": "stockToken",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "s",
+        "type": "tuple",
+        "internalType": "struct IShortInterestLens.StockSnapshot",
+        "components": [
+          {
+            "name": "stockToken",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "suppliedShares",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "borrowedShares",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "utilizationWad",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "borrowRatePerSecWad",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "bufferWad",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "marketOpen",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "guardTripped",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "snapshotAll",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "out",
+        "type": "tuple[]",
+        "internalType": "struct IShortInterestLens.StockSnapshot[]",
+        "components": [
+          {
+            "name": "stockToken",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "suppliedShares",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "borrowedShares",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "utilizationWad",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "borrowRatePerSecWad",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "bufferWad",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "marketOpen",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "guardTripped",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "stocks",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "error",
+    "name": "UnknownStock",
+    "inputs": [
+      {
+        "name": "stockToken",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ZeroAddress",
+    "inputs": []
+  }
+] as const;
+
 export const vaultV2FullAbi = [
   {
     "type": "constructor",

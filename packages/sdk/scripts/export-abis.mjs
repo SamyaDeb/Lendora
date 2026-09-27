@@ -47,6 +47,7 @@ const typed = [
   ["erc20Abi", "IERC20.sol/IERC20.json"],
   // Phase 2: full Vault V2 (events for the indexer), the IRM (rate views), Stock Token multiplier events, and the
   // anvil mocks the chain driver moves (swap aggregator rates, USDG mint, issuer registry).
+  ["shortInterestLensAbi", "ShortInterestLens.sol/ShortInterestLens.json"],
   ["vaultV2FullAbi", "VaultV2.sol/VaultV2.json"],
   ["adaptiveCurveIrmAbi", "AdaptiveCurveIrm.sol/AdaptiveCurveIrm.json"],
   ["scaledUiAmountAbi", "IScaledUIAmount.sol/IScaledUIAmount.json"],

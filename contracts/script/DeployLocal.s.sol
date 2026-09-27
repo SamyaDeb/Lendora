@@ -83,5 +83,6 @@ contract DeployLocal is Script, StocklineDeploy, LocalMocks {
             ds[i] = _deployStock(c, core, stocks[i]);
         }
         core = _finalize(c, core);
+        core = _deployLens(core, stocks);
     }
 }
