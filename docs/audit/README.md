@@ -119,7 +119,7 @@ SDK math equals the contracts exactly on 36k shared vectors (`test/oracle/Oracle
 ## 6. Build and run
 
 ```sh
-git submodule update --init contracts/lib/{forge-std,openzeppelin-contracts,morpho-blue,vault-v2,metamorpho-v1.1}
+# submodules, including the nested ones Vault V2 and MetaMorpho need: see the root README, "Contracts"
 cd contracts
 forge build --sizes
 forge fmt --check

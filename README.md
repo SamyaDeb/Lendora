@@ -5,17 +5,17 @@ Start with [`docs/LITEPAPER.md`](docs/LITEPAPER.md) and the PRD in [`docs/prd/`]
 
 | Path | What | Status |
 |---|---|---|
-| `contracts/` | Foundry project: wrapper, oracles, `MarketHours`, `clUSDG`, router, liquidator, deploy scripts (Vault V2) | Phase 1 done (2026-09-27); audit in Phase 3 |
-| `packages/sdk/` | Shared TS: addresses, typed ABIs, calendar generator, oracle/buffer/health/allocator math, test vectors | Phase 1 done |
-| `keepers/` | Allocator, guard, fallback-liquidator, alerts (APP-R8) and testnet feed-mirror keepers (dry run by default); fee converter later | Phase 1 done; alerts and feed mirror Phase 2 |
+| `contracts/` | Foundry project: wrapper, oracles, `MarketHours`, `clUSDG`, router, liquidator, deploy scripts (Vault V2) | Phase 1 done; remediation done (2026-09-28, RT-R8); audit-ready ([`docs/audit`](docs/audit/README.md)) |
+| `packages/sdk/` | Shared TS: addresses, typed ABIs, calendar generator, oracle/buffer/health/allocator math, test vectors, timelock calldata tool | Phase 1 done; timelock tool (remediation) |
+| `keepers/` | Allocator, guard, fallback-liquidator, alerts (APP-R8), testnet feed-mirror keepers (dry run by default) and the read-only ops monitor (MON-R1…R14); fee converter in Phase 3 | Phase 1 done; alerts and feed mirror Phase 2; monitor (remediation) |
 | `indexer/` | Ponder indexer for short interest (SI-R1…R5) | Phase 2 done (2026-09-27) |
 | `api/` | Public REST + WebSocket API, OpenAPI 3.1 (SI-R10…R14) | Phase 2 done |
-| `compliance/` | Compliance signer, geo/sanctions/terms checks (CP-R1…R4) | Phase 2 done (provider pending) |
+| `compliance/` | Compliance signer, geo/sanctions/terms checks (CP-R1…R4, CP-R8 proxy secret) | Phase 2 done; CP-R8 (remediation); sanctions provider pending (Q5) |
 | `web/` | Next.js app (06) and short-interest dashboard (07 §4) | Phase 2 done |
 | `packages/devnet/` | Local chain, chain driver, seed week, smoke flows | Phase 2 |
-| `infra/` | Dockerfiles, Railway config, health checks | Phase 2 (not deployed) |
-| `sim/` | Python parameter simulations | Phase 1 (oracle params) |
-| `docs/` | Litepaper, PRD, runbooks | |
+| `infra/` | Dockerfiles, Railway config (incl. monitor), health checks | Phase 2 (not deployed) |
+| `sim/` | Python parameter simulations; event-timing study stub (Q2) | Phase 1 (oracle params); `sim/event_timing` stub |
+| `docs/` | Litepaper, PRD, runbooks (P0/P1 + mainnet launch), audit package | Remediation done 2026-09-28 |
 
 ## Contracts
 

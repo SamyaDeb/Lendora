@@ -1,6 +1,6 @@
 # Lighthouse (06 acceptance: performance ≥ 85)
 
-Run: `pnpm --filter @stockline/web lighthouse` on 2026-09-27T16:18:44.466Z: production build (`next build && next start`) against the local
+Run: `pnpm --filter @stockline/web lighthouse` on 2026-09-27T19:42:05.548Z: production build (`next build && next start`) against the local
 stack (anvil seed week → indexer → API), Lighthouse 13 default mobile profile (simulated slow 4G, 4× CPU), Chromium from Playwright.
 
 | Page | Performance | Accessibility | Best practices | FCP | LCP | TBT | CLS |

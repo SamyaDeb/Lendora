@@ -83,6 +83,30 @@ testers) are pending; the tooling for them is in place.
 | Exit · 2 clean testnet weekends | Pending (go + 2 weekends) | weekend watch in `runbooks/testnet.md` |
 | Exit · 20 external testers | Pending (owner recruits) | tester kit in `runbooks/testnet.md` |
 
+### Remediation status (2026-09-27 → 2026-09-28)
+
+A senior review on 2026-09-27 found one high-severity contract bug, several gaps and open decisions
+([`docs/prompts/phase2-remediation.md`](../prompts/phase2-remediation.md)). All engineering items are done; the items
+that need people, money or time are listed at the end.
+
+| Task | Status | Evidence |
+|---|---|---|
+| 1 · HIGH unattested collateral via `addCollateral` | Fixed (RT-R8): rescue top-up only, reverts `NoDebtPosition` without debt; residual documented (05 §1) | `test_RT_R8_*`, `StocklineRouterUpgrade.t.sol`; deep invariants 3 × 1M; fork 22/22; e2e 10/10 — `c158b8e` |
+| 2 · MEDIUM geo headers trusted without the proxy secret | Fixed (CP-R8): startup refuses without `PROXY_SECRET` off anvil; web proxy drops client geo; per-wallet rate limit | `compliance.test.ts` `CP_R8_*`, `web/test/complianceProxy.test.ts` — `62415dc` |
+| 3 · MEDIUM no ops monitoring / paging | Done: `keepers/src/monitor` MON-R1…R14, pagers, weekend log `GET /weekends` | `keepers/test/monitor.test.ts` (18, real chain conditions) — `48ddfb3` |
+| 4 · Runbooks for every P0/P1 | Done: 12 runbooks + mainnet launch; timelock calldata tool; 7 rehearsals on anvil through the real timelock | `docs/runbooks/`, `packages/devnet/test/runbooks.test.ts`, `packages/sdk/test/timelock.test.ts` — `8550ba0` |
+| 5 · Phase 0 gaps | Done for engineering: weekday depth tooling + Sunday snapshot (caps unchanged; weekday run pending the clock); syrupUSDG deferred v1.1; sequencer feed confirmed absent; 12 checklist reconciled | `sim/phase0/dex_depth.py`, WS-C §6, 12 — `609e111` |
+| 6 · Coverage and cleanups | Done: router branches 77% → 91.1%, StockWrapper 94.87% → 100% lines, liquidator branches 87.5% → 93.75% (100% lines with the fork suite); `node_modules.nosync/` ignored | `StocklineRouterBranches.t.sol` — `c938fc9` |
+| 7 · Open decisions Q1–Q7 | Q1–Q4 applied (openShort 649k → 644k on a fork, ≤ 700k accepted); Q5–Q7 `[OWNER]` | 12 "Decisions (remediation)", `sim/event_timing` — `5a5a574` |
+| 8 · Audit readiness | Done: scope/threat model/known issues, NatSpec on every external/public function (`forge doc` clean), mainnet launch checklist, Phase 3 breakdown | `docs/audit/`, `docs/audit/FREEZE` — `84bfc62` |
+| MetaMorpho v1.1 submodule | **Kept, pending the owner's call** (only the scaffold smoke test uses it; removing it shrinks audit scope) | `contracts/lib/metamorpho-v1.1` |
+
+Final run (2026-09-28): `forge fmt --check` clean; `forge test` 205 passed / 15 skipped (fork, no RPC); with the
+public RPC the fork suites pass 39/40 — the one failure is `test/fork/phase0` pinned to a historical block, which needs
+an archive RPC (Q7, pending); `FOUNDRY_PROFILE=deep` router invariants 3 × 1,000,000 calls pass; every `src/` file ≥
+97.8% lines; slither 67 findings, none medium+; `pnpm -r typecheck` / `lint` clean, `pnpm -r test` 183 passed; Playwright
+10/10; Lighthouse 96 / 91 (accessibility 100).
+
 ## Phase 3 task breakdown (audit, guarded mainnet, fees) — draft, not started
 
 Starts once the remediation is merged and the owner confirms the audit freeze ([`docs/audit`](../audit/README.md)).
