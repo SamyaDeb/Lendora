@@ -38,6 +38,7 @@ interface IStocklineOracle is IOracle {
     error InsaneAnswer(address feed);
     error FloorNotRaised();
 
+    /// @notice Morpho IOracle price with the buffer in force now; never reverts (OR-R2).
     function price() external view returns (uint256);
     /// @notice `price()` with the buffer evaluated at `t` (current feed answers, no new rounds assumed).
     function priceAt(uint256 t) external view returns (uint256);
@@ -45,14 +46,23 @@ interface IStocklineOracle is IOracle {
     function bufferAt(uint256 t, uint256 lastGoodUpdatedAt) external view returns (uint256);
     /// @notice Buffer in force now.
     function buffer() external view returns (uint256);
+    /// @notice Whether any guard reason is set (OR-R30).
     function guardTripped() external view returns (bool);
+    /// @notice Bitmask of latched and live guard reasons (OR-R30).
     function guardReasons() external view returns (uint256);
+    /// @notice Permissionless: record the latest good rounds, latch or clear onchain reasons, emit GuardChanged
+    /// (OR-R32).
     function poke() external;
     /// @notice The stock feed answer in use (raw feed decimals) and its `updatedAt` (OR-R2, OR-R7).
     function stockAnswer() external view returns (uint256 answer, uint256 updatedAt);
+    /// @notice Last good USDG/USD answer (8 dp) and its updatedAt.
     function usdgAnswer() external view returns (uint256 answer, uint256 updatedAt);
+    /// @notice The Stock Token priced.
     function STOCK_TOKEN() external view returns (address);
+    /// @notice The StockWrapper that is the market loan token.
     function WRAPPER() external view returns (address);
+    /// @notice The feed calendar (OR-R10).
     function MARKET_HOURS() external view returns (address);
+    /// @notice Buffer, heartbeat, band and multiplier parameters (OR-R5).
     function params() external view returns (Params memory);
 }

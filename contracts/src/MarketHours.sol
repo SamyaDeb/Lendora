@@ -70,18 +70,22 @@ contract MarketHours is IMarketHours, Ownable {
 
     // ------------------------------------------------------------------ Raw access
 
+    /// @notice Number of stored feed sessions (OR-R11).
     function sessionCount() external view returns (uint256) {
         return _sessions.length;
     }
 
+    /// @notice The `i`-th stored feed session.
     function sessionAt(uint256 i) external view returns (Session memory) {
         return _sessions[i];
     }
 
+    /// @notice Number of stored event windows for `stock` (OR-R14).
     function eventCount(address stock) external view returns (uint256) {
         return _events[stock].length;
     }
 
+    /// @notice The `i`-th event window of `stock`.
     function eventAt(address stock, uint256 i) external view returns (EventWindow memory) {
         return _events[stock][i];
     }

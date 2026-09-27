@@ -15,7 +15,10 @@ interface IScaledUIAmount {
     event UIMultiplierUpdated(uint256 oldMultiplier, uint256 newMultiplier, uint256 effectiveAtTimestamp);
     event UIMultiplierUpdateCancelled(uint256 cancelledMultiplier, uint256 cancelledEffectiveAt);
 
+    /// @notice Effective multiplier (1e18 = 1.0), already switched at `effectiveAt`.
     function uiMultiplier() external view returns (uint256);
+    /// @notice Scheduled multiplier.
     function newUIMultiplier() external view returns (uint256);
+    /// @notice When `newUIMultiplier` takes effect.
     function effectiveAt() external view returns (uint256);
 }

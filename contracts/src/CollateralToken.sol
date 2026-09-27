@@ -45,18 +45,22 @@ contract CollateralToken is ERC20, ICollateralToken {
         emit RouterSet(router_);
     }
 
+    /// @notice Decimals of the backing asset (USDG: 6); one clUSDG is one backing unit (CL-R1).
     function decimals() public view override(ERC20, IERC20Metadata) returns (uint8) {
         return _decimals;
     }
 
+    /// @notice The backing asset (USDG in v1, CL-R1).
     function backing() external view returns (address) {
         return address(_backing);
     }
 
+    /// @notice Morpho Blue: one of the two addresses clUSDG may move to or from (CL-R3).
     function morpho() external view returns (address) {
         return _morpho;
     }
 
+    /// @notice The router, the only minter (CL-R2); set once at deployment (CL-R5).
     function router() external view returns (address) {
         return _router;
     }

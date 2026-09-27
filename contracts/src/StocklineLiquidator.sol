@@ -46,8 +46,11 @@ contract StocklineLiquidator is IMorphoLiquidateCallback, Ownable, ReentrancyGua
         uint256 deadline;
     }
 
+    /// @notice Morpho Blue.
     IMorpho public immutable MORPHO;
+    /// @notice The collateral token unwrapped in the callback.
     ICollateralToken public immutable CL_USDG;
+    /// @notice clUSDG's backing asset, sold for the Stock Token.
     IERC20 public immutable USDG;
 
     mapping(address target => SwapMode) public swapModes;
@@ -81,6 +84,7 @@ contract StocklineLiquidator is IMorphoLiquidateCallback, Ownable, ReentrancyGua
         USDG = IERC20(ICollateralToken(clUsdg).backing());
     }
 
+    /// @notice Owner: allowlist a swap target and how it is paid (`SwapMode`); `None` removes it.
     function setSwapTarget(address target, SwapMode mode) external onlyOwner {
         if (target == address(0) || target == address(MORPHO) || target == address(CL_USDG)) revert ZeroAddress();
         swapModes[target] = mode;

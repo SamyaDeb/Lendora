@@ -15,7 +15,9 @@ import {IMarketHours} from "./interfaces/IMarketHours.sol";
 
 /// @notice The router views the lens needs (`StocklineRouter` public getters).
 interface IStocklineRouterMarkets {
+    /// @notice Morpho Blue.
     function MORPHO() external view returns (IMorpho);
+    /// @notice The router's market record for `stock`.
     function market(address stock) external view returns (IStocklineRouter.Market memory);
 }
 
@@ -38,7 +40,9 @@ contract ShortInterestLens is IShortInterestLens {
     using MathLib for uint256;
     using MorphoBalancesLib for IMorpho;
 
+    /// @notice The router whose listed markets the lens reads.
     IStocklineRouterMarkets public immutable ROUTER;
+    /// @notice Morpho Blue.
     IMorpho public immutable MORPHO;
     address[] internal _stocks;
 

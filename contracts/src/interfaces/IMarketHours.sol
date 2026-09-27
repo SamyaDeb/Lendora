@@ -42,7 +42,10 @@ interface IMarketHours {
         view
         returns (EventWindow memory latest, EventWindow memory previous);
 
+    /// @notice Whether a feed session is open at `t` (OR-R10).
     function isOpen(uint256 t) external view returns (bool);
+    /// @notice Close of the last stored session; past it the market counts as closed and the guard trips (OR-R12).
     function lastSessionClose() external view returns (uint256);
+    /// @notice Closure length assumed when the next reopen is unknown (96h, OR-R12).
     function MAX_CLOSURE() external view returns (uint256);
 }

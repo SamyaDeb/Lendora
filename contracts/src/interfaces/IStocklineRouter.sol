@@ -79,12 +79,16 @@ interface IStocklineRouter {
     /// @notice RT-R8: `addCollateral` is a rescue top-up; `user` has no debt in the market.
     error NoDebtPosition(address user);
 
+    /// @notice Stock Token → wrap → Vault V2 deposit; shares to `receiver` (US-L1).
     function lend(address stock, uint256 amount, uint256 minShares, address receiver, uint256 deadline)
         external
         returns (uint256 shares);
+    /// @notice Redeem rSTOCK shares → unwrap → Stock Token to `receiver`, force-deallocating if idle is short
+    /// (US-L3, LM-R22).
     function withdrawLend(address stock, uint256 shares, uint256 minAssets, address receiver, uint256 deadline)
         external
         returns (uint256 assets);
+    /// @notice Attested entry: USDG collateral → borrow → Stock Token to `receiver` (US-B1, RT-R1, RT-R2).
     function borrow(
         address stock,
         uint256 collateralIn,
@@ -93,6 +97,7 @@ interface IStocklineRouter {
         Attestation calldata att,
         uint256 deadline
     ) external;
+    /// @notice Attested entry: borrow, then sell the Stock Token for USDG through an allowlisted target (US-B2, RT-R3).
     function openShort(
         address stock,
         uint256 collateralIn,
@@ -103,14 +108,17 @@ interface IStocklineRouter {
         Attestation calldata att,
         uint256 deadline
     ) external returns (uint256 usdgOut);
+    /// @notice Exit: buy back with USDG, repay all shares, withdraw collateral, refund leftovers (US-B4, RT-R4).
     function closeShort(address stock, uint256 usdgIn, Swap calldata swap, address receiver, uint256 deadline)
         external
         returns (uint256 collateralOut);
     /// @notice RT-R8: rescue top-up for a position with debt (reverts `NoDebtPosition` otherwise). No attestation,
     /// guard or cap check; new collateral enters only through the attested `borrow` / `openShort`.
     function addCollateral(address stock, uint256 amount, address onBehalf, uint256 deadline) external;
+    /// @notice Exit: repay `onBehalf`'s debt by assets or shares (`type(uint256).max` = all, RT-R4).
     function repay(address stock, uint256 assets, uint256 shares, address onBehalf, uint256 deadline)
         external
         returns (uint256 repaidAssets);
+    /// @notice Exit: withdraw the caller's collateral (`type(uint256).max` = all) and unwrap to USDG.
     function withdrawCollateral(address stock, uint256 amount, address receiver, uint256 deadline) external;
 }

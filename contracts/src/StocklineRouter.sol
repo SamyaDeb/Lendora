@@ -53,11 +53,16 @@ contract StocklineRouter is
 
     /// @notice RT-R1 minimum health factor at `t + HORIZON`.
     uint256 public constant HF_MIN_OPEN = 1.1e18;
+    /// @notice RT-R1 health-factor horizon (24h).
     uint256 public constant HORIZON = 24 hours;
+    /// @notice EIP-712 type hash of `Attestation(address user,uint256 expiry)` (RT-R2).
     bytes32 public constant ATTESTATION_TYPEHASH = keccak256("Attestation(address user,uint256 expiry)");
 
+    /// @notice Morpho Blue.
     IMorpho public immutable MORPHO;
+    /// @notice The gated collateral token (clUSDG).
     ICollateralToken public immutable CL_USDG;
+    /// @notice clUSDG's backing asset.
     IERC20 public immutable USDG;
 
     /// @custom:storage-location erc7201:stockline.storage.StocklineRouter
@@ -98,6 +103,8 @@ contract StocklineRouter is
         _disableInitializers();
     }
 
+    /// @notice Proxy initializer: owner (the timelock after deployment), attestation signer (RT-R2), global clUSDG cap
+    /// (RT-R1, raw units).
     function initialize(address owner_, address signer, uint256 globalCap_) external initializer {
         if (owner_ == address(0)) revert ZeroAddress();
         RouterStorage storage $ = _s();
@@ -313,22 +320,27 @@ contract StocklineRouter is
 
     // ================================================================== Views
 
+    /// @notice The owner (the 48h timelock, RT-R7).
     function owner() external view returns (address) {
         return _s().owner;
     }
 
+    /// @notice The compliance signer whose EIP-712 attestations `borrow` and `openShort` require (RT-R2).
     function attestationSigner() external view returns (address) {
         return _s().attestationSigner;
     }
 
+    /// @notice Global clUSDG supply cap, raw units (RT-R1).
     function globalCap() external view returns (uint256) {
         return _s().globalCap;
     }
 
+    /// @notice The market record of `stock` (zero if never listed).
     function market(address stock) external view returns (Market memory) {
         return _s().markets[stock];
     }
 
+    /// @notice How the router pays an allowlisted swap target (`None` = not allowlisted, RT-R3).
     function swapMode(address target) external view returns (SwapMode) {
         return _s().swapModes[target];
     }
@@ -381,27 +393,32 @@ contract StocklineRouter is
         emit MarketDelisted(stock);
     }
 
+    /// @notice Owner: per-address debt cap override for `user` in `stock` (WAD USD, D8 allowlist; 0 = default).
     function setCapOverride(address user, address stock, uint256 capUsd) external onlyOwner {
         _s().capOverride[user][stock] = capUsd;
         emit CapOverrideSet(user, stock, capUsd);
     }
 
+    /// @notice Owner: global clUSDG supply cap (raw units); only checked on attested entries.
     function setGlobalCap(uint256 cap) external onlyOwner {
         _s().globalCap = cap;
         emit GlobalCapSet(cap);
     }
 
+    /// @notice Owner: rotate the compliance signer (address(0) blocks all attested entries; exits unaffected).
     function setAttestationSigner(address signer) external onlyOwner {
         _s().attestationSigner = signer;
         emit AttestationSignerSet(signer);
     }
 
+    /// @notice Owner: allowlist a swap target (never Morpho or clUSDG) and its payment mode (RT-R3).
     function setSwapTarget(address target, SwapMode mode) external onlyOwner {
         if (target == address(0) || target == address(MORPHO) || target == address(CL_USDG)) revert ZeroAddress();
         _s().swapModes[target] = mode;
         emit SwapTargetSet(target, mode);
     }
 
+    /// @notice Owner: hand ownership to `newOwner` (the timelock at deployment).
     function transferOwnership(address newOwner) external onlyOwner {
         if (newOwner == address(0)) revert ZeroAddress();
         emit OwnershipTransferred(_s().owner, newOwner);

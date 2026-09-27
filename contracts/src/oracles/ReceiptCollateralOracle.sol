@@ -13,8 +13,11 @@ import {StocklineOracleBase} from "./StocklineOracleBase.sol";
 /// @dev Vault V2 share prices rise no faster than the vault's `maxRate` and fall on realized losses, so
 /// `convertToAssets` is not donation-manipulable. Listed only after 30 clean days (CL-R10).
 contract ReceiptCollateralOracle is StocklineOracleBase {
+    /// @notice The rSTOCK Vault V2 (collateral).
     address public immutable VAULT;
+    /// @notice The loan token of the market (USDG).
     address public immutable LOAN_TOKEN;
+    /// @notice One vault share in raw units.
     uint256 public immutable ONE_SHARE;
     /// @notice `36 + loanDecimals − shareDecimals + usdgFeedDecimals − assetDecimals − stockFeedDecimals` (6 at
     /// launch).
@@ -35,10 +38,12 @@ contract ReceiptCollateralOracle is StocklineOracleBase {
         SCALE_EXP = uint256(e);
     }
 
+    /// @notice Morpho IOracle price of rSTOCK collateral in the loan token, haircut by the buffer now.
     function price() external view returns (uint256) {
         return priceAt(block.timestamp);
     }
 
+    /// @notice The same price with the buffer at `t` (no new rounds).
     function priceAt(uint256 t) public view returns (uint256) {
         (uint256 p, uint256 u,) = _readStock();
         (uint256 usdg,,) = _readUsdg();

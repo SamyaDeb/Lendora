@@ -14,6 +14,8 @@ interface IShortInterestLens {
         bool guardTripped;
     }
 
+    /// @notice Short-interest snapshot of one stock at the current block (SI-R20).
     function snapshot(address stockToken) external view returns (StockSnapshot memory);
+    /// @notice Snapshots of every listed stock (SI-R21).
     function snapshotAll() external view returns (StockSnapshot[] memory);
 }

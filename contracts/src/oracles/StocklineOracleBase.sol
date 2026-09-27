@@ -23,17 +23,29 @@ import {OracleMath} from "../libraries/OracleMath.sol";
 abstract contract StocklineOracleBase is IStocklineOracle, Ownable {
     // ------------------------------------------------------------------ Guard reasons (bitmask)
 
+    /// @notice Guard reason bit: guardian manual trip.
     uint256 public constant MANUAL = 1 << 0;
+    /// @notice Guard reason bit: DEX deviation (keeper).
     uint256 public constant DEVIATION = 1 << 1;
+    /// @notice Guard reason bit: L2 block gap (keeper, OR-R6).
     uint256 public constant L2_GAP = 1 << 2;
+    /// @notice Guard reason bit: stale feed while open.
     uint256 public constant STALE = 1 << 3;
+    /// @notice Guard reason bit: stock round rejected by the band (OR-R7).
     uint256 public constant SANITY = 1 << 4;
+    /// @notice Guard reason bit: USDG round rejected or stale.
     uint256 public constant USDG_FEED = 1 << 5;
+    /// @notice Guard reason bit: the token's oraclePaused() (D4).
     uint256 public constant ORACLE_PAUSED = 1 << 6;
+    /// @notice Guard reason bit: token or global pause (D4).
     uint256 public constant TOKEN_PAUSED = 1 << 7;
+    /// @notice Guard reason bit: wrapper blocklisted (D4).
     uint256 public constant WRAPPER_BLOCKED = 1 << 8;
+    /// @notice Guard reason bit: unaccepted multiplier change (OR-R3).
     uint256 public constant MULTIPLIER = 1 << 9;
+    /// @notice Guard reason bit: sequencer down or in grace (OR-R6).
     uint256 public constant SEQUENCER = 1 << 10;
+    /// @notice Guard reason bit: past the stored calendar (OR-R12).
     uint256 public constant CALENDAR = 1 << 11;
 
     /// @notice Reasons the keeper may set or clear (detected offchain: DEX deviation, L2 block gaps).
@@ -48,22 +60,30 @@ abstract contract StocklineOracleBase is IStocklineOracle, Ownable {
     uint256 public constant MAX_BUFFER = 0.2e18;
     /// @notice OR-R7 absolute range of the stock price, USD in WAD.
     uint256 public constant MIN_STOCK_PRICE = 0.01e18;
+    /// @notice Absolute upper bound of a sane stock price (WAD USD, OR-R7).
     uint256 public constant MAX_STOCK_PRICE = 1e6 * 1e18;
     /// @notice OR-R4 absolute range of USDG/USD, WAD.
     uint256 public constant MIN_USDG_PRICE = 0.5e18;
+    /// @notice Absolute upper bound of a sane USDG price (WAD).
     uint256 public constant MAX_USDG_PRICE = 2e18;
     /// @notice OR-R3 multiplier bounds per change.
     uint256 public constant MIN_MULTIPLIER_RATIO = 0.1e18;
+    /// @notice Largest accepted multiplier ratio (10x, OR-R3).
     uint256 public constant MAX_MULTIPLIER_RATIO = 10e18;
     /// @notice OR-R21: σ changes at most weekly.
     uint256 public constant SIGMA_UPDATE_INTERVAL = 7 days;
 
     // ------------------------------------------------------------------ Immutables
 
+    /// @notice Chainlink Stock Token feed.
     AggregatorV3Interface public immutable STOCK_FEED;
+    /// @notice Chainlink USDG/USD feed.
     AggregatorV3Interface public immutable USDG_FEED_ADDRESS;
+    /// @notice The Stock Token priced.
     address public immutable STOCK_TOKEN;
+    /// @notice The StockWrapper (market loan token).
     address public immutable WRAPPER;
+    /// @notice The feed calendar.
     address public immutable MARKET_HOURS;
     uint256 internal immutable _stockToWad;
     uint256 internal immutable _usdgToWad;
@@ -76,15 +96,22 @@ abstract contract StocklineOracleBase is IStocklineOracle, Ownable {
     }
 
     Params internal _params;
+    /// @notice Guardian (may trip/clear MANUAL, DEVIATION, L2_GAP and raise the floor).
     address public guardian;
+    /// @notice Guard keeper (DEVIATION, L2_GAP).
     address public keeper;
+    /// @notice Optional sequencer uptime feed (address(0) on 4663, OR-R6).
     address public sequencerFeed;
+    /// @notice Issuer registry for WRAPPER_BLOCKED.
     address public blocklist;
+    /// @notice Guardian-raised buffer floor (WAD).
     uint256 public bufferFloor;
+    /// @notice When σ last changed (OR-R21).
     uint256 public lastSigmaUpdate;
 
     Reference internal _stockRef;
     Reference internal _usdgRef;
+    /// @notice Multiplier last observed by poke() (OR-R3).
     uint256 public lastMultiplier;
     /// @notice Latched reasons: set by trip() or poke() (MULTIPLIER), cleared by clear() / the owner.
     uint256 public latchedReasons;
@@ -143,6 +170,7 @@ abstract contract StocklineOracleBase is IStocklineOracle, Ownable {
         (answer, updatedAt,) = _readUsdg();
     }
 
+    /// @notice Buffer, heartbeat, band and multiplier parameters (OR-R5).
     function params() external view returns (Params memory) {
         return _params;
     }
@@ -278,6 +306,8 @@ abstract contract StocklineOracleBase is IStocklineOracle, Ownable {
 
     // ------------------------------------------------------------------ Owner (timelock)
 
+    /// @notice Owner (timelock): set parameters; σ at most once per SIGMA_UPDATE_INTERVAL (OR-R21), B_MAX ≤ 20%
+    /// (OR-R8).
     function setParams(Params calldata p) external onlyOwner {
         if (p.sigmaWad != _params.sigmaWad && block.timestamp < lastSigmaUpdate + SIGMA_UPDATE_INTERVAL) {
             revert SigmaUpdateTooSoon();
@@ -293,11 +323,13 @@ abstract contract StocklineOracleBase is IStocklineOracle, Ownable {
         emit BufferFloorSet(floorWad);
     }
 
+    /// @notice Owner: set the guardian (2-of-4 multisig).
     function setGuardian(address guardian_) external onlyOwner {
         guardian = guardian_;
         emit RoleSet("guardian", guardian_);
     }
 
+    /// @notice Owner: set the guard keeper.
     function setKeeper(address keeper_) external onlyOwner {
         keeper = keeper_;
         emit RoleSet("keeper", keeper_);
@@ -309,6 +341,7 @@ abstract contract StocklineOracleBase is IStocklineOracle, Ownable {
         emit SequencerFeedSet(feed);
     }
 
+    /// @notice Owner: set the issuer registry read for WRAPPER_BLOCKED (D4).
     function setBlocklist(address registry) external onlyOwner {
         blocklist = registry;
         emit BlocklistSet(registry);

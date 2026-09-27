@@ -83,3 +83,9 @@ quote_style = "double"
 number_underscore = "thousands"
 wrap_comments = true
 ignore = ["lib/**"]
+
+# `forge doc` (audit readiness, remediation task 8): document src/ only; lib/, test/ and script/ are out of audit scope
+# (lib/vault-v2's own test tree needs submodules we do not check out).
+[doc]
+out = "../docs/audit/forge-doc"
+ignore = ["lib/**", "test/**", "script/**"]

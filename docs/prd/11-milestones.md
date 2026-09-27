@@ -83,6 +83,36 @@ testers) are pending; the tooling for them is in place.
 | Exit · 2 clean testnet weekends | Pending (go + 2 weekends) | weekend watch in `runbooks/testnet.md` |
 | Exit · 20 external testers | Pending (owner recruits) | tester kit in `runbooks/testnet.md` |
 
+## Phase 3 task breakdown (audit, guarded mainnet, fees) — draft, not started
+
+Starts once the remediation is merged and the owner confirms the audit freeze ([`docs/audit`](../audit/README.md)).
+Ordered so each task unblocks the next; nothing here is implemented yet.
+
+1. **Audit freeze and package.** Tag `audit-r1-freeze` at the commit in `docs/audit/FREEZE`; send the package
+   (scope, threat model, known issues) to both firms; set up a private repo remote and CI (human item).
+2. **Audit round 1** (firm A, ~3 weeks) and **round 2** (firm B, ~3 weeks, overlapping or sequential), plus a formal
+   review of the oracle math and buffer logic (OR-R1, OR-R20; 10 audits). **Fix windows:** 1 week after each report;
+   every fix with a failing-first test and the finding ID in the commit; re-review of the diff from the freeze.
+3. **`FeeSplitter`** (FE-R1…R3): recipients and weights in bps (lenders' share stays in the vault as the 10%
+   performance fee split: backstop ~5% → `BackstopReserve` multisig until Phase 5, treasury ~5%); permissionless
+   `distribute(token)`; weights via the owner timelock. Tests incl. invariant "sum of weights = 10,000", fork test with
+   live Vault V2 fee accrual. Enters audit round 2 scope (or a delta review).
+4. **Fee converter keeper** (FE-R4): swaps `rSTOCK`/`wSTOCK` fee shares to USDG weekly or above $1k, market hours only,
+   ≤ 1% slippage via the allowlisted UniversalRouter; same keeper standards (dry run default, `/health`, monitor
+   `KEEPER_DOWN`). Indexer + API revenue (FE-R5, `/v1/protocol/revenue`).
+5. **Monitor additions for mainnet:** page on any timelock `CallScheduled` / `CallExecuted` and on role changes
+   (threat model §7); bot-level "liquidation unprofitable" alert (missed-liquidation runbook).
+6. **Testnet weekends and testers** (Phase 2 exit carried over): 2 clean weekends with `GET /weekends` evidence;
+   20 external testers.
+7. **Runbook drills on testnet**: guard-tripped, oracle re-anchor, calendar push, multiplier change, keeper-down, a
+   P0 tabletop; record dates in `docs/runbooks/README.md`.
+8. **Mainnet deploy with caps** ([`runbooks/mainnet-launch.md`](../runbooks/mainnet-launch.md)): multisigs 4-of-7 and
+   2-of-4 on hardware wallets, 48h timelock, role split (no A27 shortcut), D8 caps at 25% of target, sanctions
+   provider live (Q5), `PROXY_SECRET`, monitoring and on-call live, bug bounty live.
+9. **Fees live** (09 §1 acceptance): performance fee to `FeeSplitter` through the vault timelock; first distribution
+   and conversion observed; revenue visible in the API.
+10. **Exit review:** 2 audits closed, runbooks drilled, mainnet running with caps, fees live (Phase 3 exit criteria).
+
 ## Definition of done (any requirement)
 
 - Code merged with tests. Contracts need ≥ 95% line coverage and fuzz/invariant tests where specified.

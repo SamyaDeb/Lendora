@@ -15,11 +15,17 @@ interface IStockWrapper is IERC20Metadata {
     /// @notice LM-R6: `to` may not hold the Stock Token under the issuer's rules.
     error RecipientNotAllowed(address to);
 
+    /// @notice The wrapped Stock Token.
     function underlying() external view returns (address);
+    /// @notice Optional unwrap pre-check adapter (LM-R6).
     function holderAllowlist() external view returns (address);
+    /// @notice Pull `rawAmount` Stock Tokens and mint the same amount of wSTOCK to `to` (LM-R1).
     function wrap(uint256 rawAmount, address to) external returns (uint256 minted);
+    /// @notice Burn `amount` wSTOCK and send the same raw amount of Stock Token to `to` (LM-R5).
     function unwrap(uint256 amount, address to) external returns (uint256 rawOut);
+    /// @notice The Stock Token ERC-8056 multiplier (1e18 = 1.0); display only (D1).
     function multiplier() external view returns (uint256); // 1e18 = 1.0
+    /// @notice Underlying shares represented by `amount` wSTOCK at the current multiplier (display).
     function underlyingEquivalent(uint256 amount) external view returns (uint256);
     /// @notice LM-R8: wrapper units not backed by held Stock Tokens (non-zero only after an issuer `adminBurn`).
     function backingShortfall() external view returns (uint256);

@@ -49,10 +49,12 @@ contract StockWrapper is ERC20, IStockWrapper {
         return _decimals;
     }
 
+    /// @notice The wrapped Stock Token (LM-R1).
     function underlying() external view returns (address) {
         return address(_underlying);
     }
 
+    /// @notice Optional unwrap pre-check adapter (LM-R6); address(0) = none.
     function holderAllowlist() external view returns (address) {
         return address(_holderAllowlist);
     }

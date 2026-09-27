@@ -10,6 +10,7 @@ import {IAccessControlsRegistry} from "../interfaces/external/IRobinhoodStock.so
 /// adapter only swaps that for the wrapper's `RecipientNotAllowed(to)` before any state change.
 /// @dev Launch wrappers deploy with `holderAllowlist = address(0)` (D10 R3). Stateless and immutable.
 contract BlocklistHolderAllowlist is IHolderAllowlist {
+    /// @notice The issuer's AccessControlsRegistry (blocklist).
     IAccessControlsRegistry public immutable registry;
 
     error ZeroAddress();

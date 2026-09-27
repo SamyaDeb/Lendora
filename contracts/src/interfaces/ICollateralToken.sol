@@ -19,7 +19,9 @@ interface ICollateralToken is IERC20Metadata {
 
     /// @notice The single backing asset (USDG for v1), fixed at deployment (CL-R1).
     function backing() external view returns (address);
+    /// @notice Morpho Blue (a permitted transfer counterparty, CL-R3).
     function morpho() external view returns (address);
+    /// @notice The only minter (CL-R2).
     function router() external view returns (address);
     /// @notice USD value per whole token in WAD, before the USDG/USD feed (CL-R4). 1e18 for USDG.
     function valuePerToken() external view returns (uint256);
