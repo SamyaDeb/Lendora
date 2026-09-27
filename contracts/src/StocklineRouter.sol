@@ -436,16 +436,22 @@ contract StocklineRouter is
         if (err != ECDSA.RecoverError.NoError || recovered != signer) revert BadAttestation();
     }
 
-    /// @dev RT-R1 after the position changed: HF at t + 24h, per-address debt cap, global clUSDG cap.
+    /// @dev RT-R1 after the position changed: HF at t + 24h, per-address debt cap, global clUSDG cap. Same values as
+    /// `healthFactorAt(stock, user, now + HORIZON)`, with the accrued debt read once for both checks (Q3 gas).
     function _positionChecks(address stock, Market storage m, address user) internal view {
-        uint256 hf = healthFactorAt(stock, user, block.timestamp + HORIZON);
+        IStocklineOracle oracle = IStocklineOracle(m.params.oracle);
+        uint256 borrowed = MORPHO.expectedBorrowAssets(m.params, user);
+        uint256 collateral = MORPHO.position(m.params.id(), user).collateral;
+        uint256 hf =
+            OracleMath.healthFactor(collateral, oracle.priceAt(block.timestamp + HORIZON), m.params.lltv, borrowed);
         if (hf < HF_MIN_OPEN) revert HealthTooLow(hf);
-        (uint256 answer,) = IStocklineOracle(m.params.oracle).stockAnswer();
-        uint256 debtUsd = MORPHO.expectedBorrowAssets(m.params, user) * answer / 1e8; // feeds are 8 dp (01 §4)
+        (uint256 answer,) = oracle.stockAnswer();
+        uint256 debtUsd = borrowed * answer / 1e8; // feeds are 8 dp (01 §4)
         uint256 cap = capOf(user, stock);
         if (debtUsd > cap) revert PerAddressCapExceeded(debtUsd, cap);
         uint256 supply = IERC20(address(CL_USDG)).totalSupply();
-        if (supply > _s().globalCap) revert GlobalCapExceeded(supply, _s().globalCap);
+        uint256 globalCap_ = _s().globalCap;
+        if (supply > globalCap_) revert GlobalCapExceeded(supply, globalCap_);
     }
 
     function _wrap(address stock, address wrapper, uint256 amount) internal {

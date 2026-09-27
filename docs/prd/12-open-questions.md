@@ -36,7 +36,7 @@ All approved decisions from [`../phase0/04-prd-decisions.md`](../phase0/04-prd-d
 | D9 | Keep the `StockWrapper` | [03 §1](03-lending-markets.md#1-stockwrapper) |
 | D10 | R1 LM-R7 + LM-R8 `backingShortfall`; R2 LM-R5; R3 LM-R6 + optional adapter; R4 comment; R5 mocks; R6 `vault-v2` submodule | [03 §1](03-lending-markets.md#1-stockwrapper), [11](11-milestones.md) tasks 3b, 3c, 7 |
 
-**Proposals raised while applying (need your OK; built as configurable so nothing blocks):**
+**Proposals raised while applying** (both decided 2026-09-27, see "Decisions (remediation)" below):
 
 - **OR-R3 quiet multiplier step.** Phase 0 saw dividend multiplier updates on SPY, NVDA and AAPL with no
   `oraclePaused()` window (01 §3.2–3.3). The strict D1 rule would trip the guard on every dividend and need a 48h
@@ -126,7 +126,19 @@ interface or a constructor parameter. Items marked *public docs* come from Robin
 | A16 | Keeper tests run on a plain anvil loaded with the task-7 deployment against mocks of the chain, not on an anvil fork of 4663 (a 316-tx deploy per fork run is slow on the public RPC). The same contracts are exercised on a fork by the forge fork suite. | `keepers/test/fixtures/anvil-state.hex` | Add a fork-mode keeper suite once an archive RPC is available. |
 | A17 | Phase 1 fork tests fork **latest** (the public RPC is not an archive node); results are recorded per run, not pinned. | `test/fork/phase1/Phase1ForkBase.sol` | Pin `PHASE1_FORK_BLOCK` with an archive RPC. |
 
-### Open questions from Phase 1 (need your call; nothing is blocked)
+### Decisions (remediation, 2026-09-27)
+
+| # | Question | Decision | Where |
+|---|---|---|---|
+| Q1 | OR-R3 quiet multiplier step | **Keep 5%** (proposal approved); OR-R3 text updated | [04](04-oracle.md) OR-R3 |
+| Q2 | OR-R14 event timing | **Keep release-on-round for launch**; sim task for the anchored design before mainnet parameters | [`sim/event_timing`](../../sim/event_timing/README.md) |
+| Q3 | `openShort` gas | **Accept ≤ 700k**; cheap win done (one debt read in RT-R1 checks): 649k → 644k on a fork | [05](05-collateral-router.md) acceptance |
+| Q4 | Aggregators beyond UniversalRouter | **UniversalRouter only at launch** (A8, A15) | router/liquidator allowlists |
+| Q5 | Sanctions provider (CP-R3) | **[OWNER] pending: Chainalysis or TRM.** Deny-list adapter until then; mainnet (4663) refuses to start with it (CP-R8) | `compliance/src/server.ts` |
+| Q6 | Brand name (Stockline vs Lendora) | **[OWNER] pending.** Nothing renamed in code | – |
+| Q7 | Archive RPC (pinned fork runs, weekday depth) | **[OWNER] pending.** Fork suites run against the public RPC at `latest`; the Phase 0 pinned suite (`test/fork/phase0`) stays "pending RPC". The weekday depth run does **not** need it (task 5) | `ROBINHOOD_RPC_URL` |
+
+### Open questions from Phase 1 (answered above, kept for the record)
 
 1. **OR-R3 quiet multiplier step** (default 5%, `0` = strict D1). See "Proposals raised while applying" above.
 2. **Event timing (OR-R14).** Keep "release on the first round at/after the scheduled print", or have the sim evaluate an anchored `P_eff ≥ P_pre-event · (1 + b)` design that does not depend on the exact print time?
