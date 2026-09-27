@@ -60,7 +60,7 @@ abstract contract LocalStockline is Test, StocklineDeploy, LocalMocks {
         for (uint256 i; i < 3; i++) {
             ds.push(_deployStock(c, core, s[i]));
         }
-        _finalize(core);
+        core = _finalize(c, core);
     }
 
     // ------------------------------------------------------------------ helpers

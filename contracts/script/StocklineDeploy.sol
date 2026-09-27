@@ -23,6 +23,7 @@ import {
 import {CalendarJson} from "./lib/CalendarJson.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {StocklineRouter} from "../src/StocklineRouter.sol";
+import {StocklineLiquidator} from "../src/StocklineLiquidator.sol";
 import {IStocklineRouter} from "../src/interfaces/IStocklineRouter.sol";
 
 /// @title StocklineDeploy
@@ -89,6 +90,7 @@ abstract contract StocklineDeploy {
         CollateralToken clUSDG;
         StocklineRouter router; // ERC1967 proxy
         address routerImplementation;
+        StocklineLiquidator liquidator;
     }
 
     struct StockDeployment {
@@ -132,9 +134,16 @@ abstract contract StocklineDeploy {
         if (c.swapTarget != address(0)) core.router.setSwapTarget(c.swapTarget, c.swapMode);
     }
 
-    /// @notice After every stock is listed: the router's owner becomes the timelock.
-    function _finalize(Core memory core) internal {
+    /// @notice After every stock is listed: the router's owner becomes the timelock; the fallback liquidator (holds no
+    /// funds) is deployed with the same swap target and handed to the owner multisig.
+    function _finalize(CoreConfig memory c, Core memory core) internal returns (Core memory) {
         core.router.transferOwnership(address(core.timelock));
+        core.liquidator = new StocklineLiquidator(c.morpho, address(core.clUSDG), c.deployer);
+        if (c.swapTarget != address(0)) {
+            core.liquidator.setSwapTarget(c.swapTarget, StocklineLiquidator.SwapMode(uint8(c.swapMode)));
+        }
+        core.liquidator.transferOwnership(c.owner);
+        return core;
     }
 
     // ------------------------------------------------------------------ Per stock
@@ -334,6 +343,7 @@ abstract contract StocklineDeploy {
         VM.serializeAddress(obj, "clUSDG", address(core.clUSDG));
         VM.serializeAddress(obj, "router", address(core.router));
         VM.serializeAddress(obj, "routerImplementation", core.routerImplementation);
+        VM.serializeAddress(obj, "liquidator", address(core.liquidator));
         VM.serializeAddress(obj, "vaultV2Factory", c.vaultFactory);
         VM.serializeAddress(obj, "adapterFactory", c.adapterFactory);
         string memory roles = _rolesJson(string.concat(obj, "-roles"), c);

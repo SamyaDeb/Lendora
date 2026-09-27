@@ -44,6 +44,7 @@ export interface ChainDeployment {
   adapterFactory: Address;
   router?: Address;
   liquidator?: Address;
+  routerImplementation?: Address;
   roles: Roles;
   stocks: Record<string, StockDeployment>;
   /** Anvil only: mock feeds, tokens and pools keepers and tests can drive. */

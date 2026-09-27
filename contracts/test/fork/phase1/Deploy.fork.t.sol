@@ -40,7 +40,7 @@ contract DeployForkTest is Phase1ForkBase, ForkConfig {
             StockDeployment memory d = _deployStock(c, core, s[i]);
             if (i == 1) nvdaD = d;
         }
-        _finalize(core);
+        core = _finalize(c, core);
         vm.stopPrank();
     }
 

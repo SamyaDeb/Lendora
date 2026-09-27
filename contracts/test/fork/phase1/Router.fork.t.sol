@@ -43,7 +43,7 @@ contract RouterForkTest is Phase1ForkBase, ForkConfig {
         vm.startPrank(deployer);
         core = _deployCore(c, one);
         d = _deployStock(c, core, one[0]);
-        _finalize(core);
+        core = _finalize(c, core);
         vm.stopPrank();
 
         deal(NVDA, lender, 200e18, true);

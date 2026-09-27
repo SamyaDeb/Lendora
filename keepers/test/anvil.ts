@@ -33,14 +33,17 @@ export async function startAnvil(): Promise<Anvil> {
   const proc: ChildProcess = spawn("anvil", ["--port", String(port), "--silent"], {stdio: "ignore"});
   const url = `http://127.0.0.1:${port}`;
   const client = createPublicClient({chain: anvil, transport: http(url)}) as PublicClient;
-  for (let i = 0; i < 100; i++) {
+  // Anvil can take a while to bind under load (e.g. CI running other suites); wait up to 30 s.
+  let up = false;
+  for (let i = 0; i < 300 && !up; i++) {
     try {
       await client.getBlockNumber();
-      break;
+      up = true;
     } catch {
       await new Promise((r) => setTimeout(r, 100));
     }
   }
+  if (!up) throw new Error(`anvil did not start on port ${port}`);
   const test = createTestClient({chain: anvil, mode: "anvil", transport: http(url)});
   const state = readFileSync(new URL("./fixtures/anvil-state.hex", import.meta.url), "utf8").trim() as Hex;
   await test.loadState({state});
