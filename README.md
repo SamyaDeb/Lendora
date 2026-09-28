@@ -5,17 +5,17 @@ Start with [`docs/LITEPAPER.md`](docs/LITEPAPER.md) and the PRD in [`docs/prd/`]
 
 | Path | What | Status |
 |---|---|---|
-| `contracts/` | Foundry project: wrapper, oracles, `MarketHours`, `clUSDG`, router, liquidator, deploy scripts (Vault V2) | Phase 1 done; remediation done (2026-09-28, RT-R8); audit-ready ([`docs/audit`](docs/audit/README.md)) |
-| `packages/sdk/` | Shared TS: addresses, typed ABIs, calendar generator, oracle/buffer/health/allocator math, test vectors, timelock calldata tool | Phase 1 done; timelock tool (remediation) |
-| `keepers/` | Allocator, guard, fallback-liquidator, alerts (APP-R8), testnet feed-mirror keepers (dry run by default) and the read-only ops monitor (MON-R1…R14); fee converter in Phase 3 | Phase 1 done; alerts and feed mirror Phase 2; monitor (remediation) |
-| `indexer/` | Ponder indexer for short interest (SI-R1…R5) | Phase 2 done (2026-09-27) |
-| `api/` | Public REST + WebSocket API, OpenAPI 3.1 (SI-R10…R14) | Phase 2 done |
-| `compliance/` | Compliance signer, geo/sanctions/terms checks (CP-R1…R4, CP-R8 proxy secret) | Phase 2 done; CP-R8 (remediation); sanctions provider pending (Q5) |
-| `web/` | Next.js app (06) and short-interest dashboard (07 §4) | Phase 2 done |
-| `packages/devnet/` | Local chain, chain driver, seed week, smoke flows | Phase 2 |
-| `infra/` | Dockerfiles, Railway config (incl. monitor), health checks | Phase 2 (not deployed) |
-| `sim/` | Python parameter simulations; event-timing study stub (Q2) | Phase 1 (oracle params); `sim/event_timing` stub |
-| `docs/` | Litepaper, PRD, runbooks (P0/P1 + mainnet launch), audit package | Remediation done 2026-09-28 |
+| `contracts/` | Foundry project: wrapper, oracles, `MarketHours`, `clUSDG`, router, liquidator, deploy scripts (Vault V2) | Phase 1 done; remediation done (2026-09-28, RT-R8); Phase 3: `FeeSplitter`, `FeeConverter`, `DeployMainnet` + `VerifyRoles` (never broadcast); audit round 1 + round 2 scope ready ([`docs/audit`](docs/audit/README.md)) |
+| `packages/sdk/` | Shared TS: addresses, typed ABIs, calendar generator, oracle/buffer/health/allocator math, test vectors, timelock calldata tool | Phase 1 done; timelock tool (remediation); vault fee timelock ops, `redactSecrets` (Phase 3) |
+| `keepers/` | Allocator, guard, fallback-liquidator, fee converter (FE-R4), alerts (APP-R8), testnet feed-mirror keepers (dry run by default) and the read-only ops monitor (MON-R1…R20) | Phase 1 done; alerts and feed mirror Phase 2; monitor (remediation); fee converter, MON-R16…R20, offchain security pass (Phase 3) |
+| `indexer/` | Ponder indexer for short interest (SI-R1…R5) and fee revenue (FE-R5) | Phase 2 done (2026-09-27); revenue (Phase 3) |
+| `api/` | Public REST + WebSocket API, OpenAPI 3.1 (SI-R10…R14) | Phase 2 done; protocol revenue FE-R5, security fixes OFF-7…11 (Phase 3) |
+| `compliance/` | Compliance signer, geo/sanctions/terms checks (CP-R1…R4, CP-R8 proxy secret) | Phase 2 done; CP-R8 (remediation); Chainalysis + TRM adapters (Phase 3), provider contract pending (Q5) |
+| `web/` | Next.js app (06) and short-interest dashboard (07 §4) | Phase 2 done; Lendora redesign; CSP/HSTS, revenue panel (Phase 3) |
+| `packages/devnet/` | Local chain, chain driver, seed week, smoke flows, runbook drills (anvil and 46630 fork) | Phase 2; fork drills (Phase 3) |
+| `infra/` | Dockerfiles (digest-pinned), Railway config (incl. monitor, fee converter), health checks | Not deployed; mainnet hosting pending (Q15) |
+| `sim/` | Python parameter simulations: Phase 0 weekend gaps, mainnet parameters (04 §5), event-timing study (Q2) | Phase 3 task 8 done; risk sign-off pending |
+| `docs/` | Litepaper, PRD, runbooks (P0/P1 + mainnet launch), audit package, bug bounty, owner action pack | Phase 3 engineering done 2026-09-28 ([11 Phase 3 status](docs/prd/11-milestones.md#phase-3-status-engineering-2026-09-28)); Phase 4 not started |
 
 ## Contracts
 

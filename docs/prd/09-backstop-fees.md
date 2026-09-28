@@ -44,6 +44,6 @@ govern stock listings and risk parameters and be stakeable as first-loss capital
 
 ## Acceptance criteria
 
-- [ ] Fork test: 30 days of accrual → fee shares minted → split → converted to USDG with correct amounts.
-- [ ] Backstop: simulated bad-debt event covered and the `rSTOCK` share price restored to the pre-event value within 1 tx.
-- [ ] Revenue endpoint matches the sum of onchain fee transfers.
+- [x] Fork test: 30 days of accrual → fee shares minted → split → converted to USDG with correct amounts. *(Phase 3: `test_FE_R1_R2_fork_thirtyDaysAccrualMintsFeeSharesToSplitterAndDistributes` and `test_FE_R4_fork_convertThroughLiveUniversalRouter` on a 4663 fork, live Vault V2 bytecode and UniversalRouter, 2026-09-28; end to end on anvil: `test_FE_R1_R4_accrueSplitConvertEndToEnd`. Fees **live** on testnet/mainnet: pending "go testnet" (rehearsed on a 46630 fork) and the mainnet launch.)*
+- [ ] Backstop: simulated bad-debt event covered and the `rSTOCK` share price restored to the pre-event value within 1 tx. *(Phase 5; not started.)*
+- [x] Revenue endpoint matches the sum of onchain fee transfers. *(Phase 3 task 4: `api/test/api.test.ts` "FE-R5 acceptance" on a devnet run.)*

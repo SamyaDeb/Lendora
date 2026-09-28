@@ -7,6 +7,9 @@ named person and evidence (tx hash, screenshot, link) in the launch log. Deploy 
 
 ## 0. Gates (all must be ✅ before the deploy transaction)
 
+Status per gate (engineering done vs. waiting on a person): [11 · Mainnet-readiness checklist](../prd/11-milestones.md#mainnet-readiness-checklist-gates-of-mainnet-launchmd-0-and-what-14-need).
+The boxes below are ticked only by the people who close them.
+
 - [ ] Two audits closed; every finding fixed or accepted in writing; fixes re-reviewed against the freeze
       ([`docs/audit`](../audit/README.md)).
 - [ ] Counsel opinions (06 legal questions A–D) and terms of use / risk disclosure signed off (CP-R6).
@@ -15,7 +18,8 @@ named person and evidence (tx hash, screenshot, link) in the launch log. Deploy 
 - [ ] Risk owner signed off the sim report (σ, z, event buffers, caps; 04 acceptance) and the weekday DEX depth run.
 - [ ] 2 clean testnet weekends (`GET /weekends` evidence) and 20 external testers (Phase 2 exit).
 - [ ] Runbooks drilled on testnet: at least guard-tripped, oracle re-anchor, calendar-push, multiplier-change,
-      keeper-down, and one P0 tabletop (bad-debt or wrapper shortfall); dates in [README.md](README.md).
+      keeper-down, and one P0 tabletop (bad-debt or wrapper shortfall); dates in [README.md](README.md). (Rehearsed
+      on a fork of 46630, 8/8: [fork-drills-46630.md](fork-drills-46630.md); testnet run waits for "go testnet".)
 - [ ] Bug bounty live (e.g. Immunefi), max payout sized to the caps.
 
 ## 1. Multisigs and keys (hardware wallets only)

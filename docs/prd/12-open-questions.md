@@ -136,7 +136,15 @@ interface or a constructor parameter. Items marked *public docs* come from Robin
 | Q4 | Aggregators beyond UniversalRouter | **UniversalRouter only at launch** (A8, A15) | router/liquidator allowlists |
 | Q5 | Sanctions provider (CP-R3) | **[OWNER] pending: Chainalysis or TRM.** Both adapters are built and tested against fake servers (task 6, `SANCTIONS_PROVIDER=chainalysis\|trm`); the deny-list stays for 31337/46630; mainnet (4663) refuses the deny-list, an unknown provider and a missing `SANCTIONS_API_KEY` (CP-R8). Owner: sign one provider contract and set the key | `compliance/src/sanctions/`, `compliance/src/server.ts` |
 | Q6 | Brand name (Stockline vs Lendora) | **[OWNER] pending.** Nothing renamed in code | – |
-| Q7 | Archive RPC (pinned fork runs, weekday depth) | **[OWNER] pending.** Fork suites run against the public RPC at `latest`; the Phase 0 pinned suite (`test/fork/phase0`) stays "pending RPC". The weekday depth run does **not** need it (task 5) | `ROBINHOOD_RPC_URL` |
+| Q7 | Archive RPC (pinned fork runs, weekday depth) | **[OWNER] pending.** Fork suites run against the public RPC at `latest`; the Phase 0 pinned suite (`test/fork/phase0`) stays "pending RPC". The weekday depth run does **not** need it (done 2026-09-28, Phase 3 task 8). The mainnet deploy fork test ran 2/2 on the public RPC at `latest` | `ROBINHOOD_RPC_URL` |
+| Q8 | Fee split (FE-R2) | **Default applied:** 10% performance fee; `FeeSplitter` 5,000 bps treasury / 5,000 bps `BackstopReserve`, each through its converter (A33) | `script/StocklineDeploy.sol` `_feeRecipients` |
+| Q9 | Treasury and `BackstopReserve` addresses | **[OWNER] pending.** Config fields; `DeployMainnet` refuses zero, EOA and placeholder addresses and requires Safes with ≥ 2 signers (MN-R1/R2) | `script/MainnetConfig.sol` |
+| Q10 | Fee conversion (FE-R4) | **Default applied:** both shares to USDG through onchain `FeeConverter`s; keeper triggers only; weekly or > $1k; feed session + NYSE regular hours (A34); ≤ 1% vs oracle onchain; UniversalRouter only | `src/fees/FeeConverter.sol`, `keepers/src/feeConverter` |
+| Q11 | Build Phase 4 before its sim gate passes? | **Default:** yes, build and test, ship nowhere with a non-zero cap until the gate report passes and is signed (Phase 4 session, not started) | [08](08-delta-neutral-vault.md) |
+| Q12 | Perp venue (08) | **Default:** venue-agnostic adapter + mock; research Lighter first (Phase 4 task 12, not started) | [08](08-delta-neutral-vault.md) |
+| Q13 | MetaMorpho v1.1 submodule | **[OWNER] pending (kept).** Only the scaffold smoke test uses it; removing it would drop `lib/metamorpho-v1.1` from every build and from the auditors' tree | `contracts/lib/metamorpho-v1.1` |
+| Q14 | Bug bounty | **Proposal drafted:** Immunefi-style scope; Critical max $450k = 10% of about $4.56M at risk under launch caps; owner to confirm payouts, budget and platform | [`bug-bounty.md`](../audit/bug-bounty.md) |
+| Q15 | Mainnet hosting | **Default:** Railway (`infra/railway/*`), base images pinned by digest (OFF-15); no project created. **[OWNER]** creates the mainnet project and secrets | `infra/` |
 
 ### Open questions from Phase 1 (answered above, kept for the record)
 

@@ -6,6 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {FeeConverter} from "../../src/fees/FeeConverter.sol";
 import {IFeeConverter} from "../../src/interfaces/IFeeConverter.sol";
 import {IVaultV2Min} from "../../src/interfaces/external/IMorphoVaultV2.sol";
+import {IStocklineOracle} from "../../src/interfaces/IStocklineOracle.sol";
 import {MockSwapAggregator} from "../mocks/MockSwapAggregator.sol";
 import {MockChainlinkAggregator} from "../mocks/MockChainlinkAggregator.sol";
 import {MockStockToken} from "../mocks/MockStockToken.sol";
@@ -83,6 +84,7 @@ contract FeeConverterHandler is Test {
 
     uint256 public honestAttempts;
     uint256 public honestFailures;
+    bytes public lastHonestError;
 
     /// Liveness: a DEX paying at least the oracle value, with `minOut` = the onchain floor, always converts while the
     /// gates are open (market hours, guard clear).
@@ -91,6 +93,10 @@ contract FeeConverterHandler is Test {
         if (shares == 0) return;
         uint256 stockIn = IVaultV2Min(vault).previewRedeem(shares);
         if (stockIn == 0) return;
+        // Only while the gates are open: a long random walk can take the feed past the oracle's ×0.5–×2 sanity
+        // band,
+        // which trips the guard; conversion is then refused by design (tested in FeeConverter.t.sol).
+        if (IStocklineOracle(conv.oracleOf(vault)).guardReasons() != 0) return;
         (, uint256 floor) = conv.quote(vault, stockIn);
         dex.setRate(
             address(stock), address(usdg), uint256(_answer()) * 1e6 / 1e8 * bound(dexBps, 10_000, 10_500) / 10_000
@@ -102,8 +108,9 @@ contract FeeConverterHandler is Test {
             if (out < floor) floorBreaches++;
             converted += usdg.balanceOf(conv.destination()) - before;
             conversions++;
-        } catch {
+        } catch (bytes memory err) {
             honestFailures++;
+            lastHonestError = err;
         }
     }
 
@@ -179,7 +186,8 @@ contract FeeConverterInvariantTest is LocalStockline {
         if (h.honestAttempts() > 0) assertGt(h.conversions(), 0, "not vacuous: something was converted");
     }
 
-    function invariant_FE_R4_conversionAtTheFloorAlwaysGoesThrough() public view {
+    function invariant_FE_R4_conversionAtTheFloorAlwaysGoesThrough() public {
+        if (h.honestFailures() != 0) emit log_named_bytes("revert", h.lastHonestError());
         assertEq(h.honestFailures(), 0, "a conversion meeting the floor reverted while the gates were open");
     }
 

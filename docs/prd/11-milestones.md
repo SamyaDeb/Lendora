@@ -107,10 +107,11 @@ an archive RPC (Q7, pending); `FOUNDRY_PROFILE=deep` router invariants 3 × 1,00
 97.8% lines; slither 67 findings, none medium+; `pnpm -r typecheck` / `lint` clean, `pnpm -r test` 183 passed; Playwright
 10/10; Lighthouse 96 / 91 (accessibility 100).
 
-## Phase 3 task breakdown (audit, guarded mainnet, fees) — draft, not started
+## Phase 3 task breakdown (audit, guarded mainnet, fees)
 
 Starts once the remediation is merged and the owner confirms the audit freeze ([`docs/audit`](../audit/README.md)).
-Ordered so each task unblocks the next; nothing here is implemented yet.
+Ordered so each task unblocks the next. The engineering session plan is
+[`docs/prompts/phase3-4-mainnet.md`](../prompts/phase3-4-mainnet.md); its status is below the list.
 
 1. **Audit freeze and package.** Tag `audit-r1-freeze` at the commit in `docs/audit/FREEZE`; send the package
    (scope, threat model, known issues) to both firms; set up a private repo remote and CI (human item).
@@ -136,6 +137,68 @@ Ordered so each task unblocks the next; nothing here is implemented yet.
 9. **Fees live** (09 §1 acceptance): performance fee to `FeeSplitter` through the vault timelock; first distribution
    and conversion observed; revenue visible in the API.
 10. **Exit review:** 2 audits closed, runbooks drilled, mainnet running with caps, fees live (Phase 3 exit criteria).
+
+### Phase 3 status (engineering, 2026-09-28)
+
+Every engineering item is done; nothing was deployed to mainnet and nothing was sent to testnet in Phase 3 (no
+"go testnet"). What remains needs people, money or calendar time: see the mainnet-readiness checklist below.
+
+| Session task | Status | Evidence |
+|---|---|---|
+| 0 · Uncommitted work (`LOW_GAS` pager, `dev-testnet.sh`, prompts) | Done | `efbbdc8` |
+| 1 · `FeeSplitter` (FE-R1…R3) | Done: bps weights (sum 10,000), permissionless `distribute`, revert-all (A32), owner = 48h timelock | `test/fees/FeeSplitter*.t.sol` incl. invariants `invariant_FE_R2_*` — `c21307e` |
+| 2 · Performance fee in the deploy (FE-R1) | Done: 10% to the splitter before the vault timelocks; turn-fees-on path for deployed vaults (`vaultCuratorOperation`) | `test_FE_R1_*`, fork `FeeAccrual.fork.t.sol` — `2df2caf` |
+| 3 · `FeeConverter` + keeper (FE-R4) | Done: onchain 1% floor, feed session + guard clear, one converter per recipient (A33) | `test/fees/FeeConverter.t.sol`, fork `FeeConverter.fork.t.sol`, `keepers/test/feeConverter.test.ts` — `b139605` |
+| 4 · Revenue: indexer, API, web (FE-R5) | Done: `/v1/protocol/revenue`, web lender yield net of fee, revenue panel | API acceptance "endpoint total = onchain fee transfers" — `4b9f779` |
+| 5 · Monitor MON-R16…R20 | Done | `keepers/test/monitor.test.ts` 22/22 — `4d003cf` |
+| 6 · Sanctions providers (Q5, CP-R3) | Done: Chainalysis + TRM adapters, fail closed, mainnet refuses deny-list / unknown provider / missing key | `compliance/test/sanctions.test.ts` (fake HTTP server) — `faacdec` |
+| 7 · Mainnet deploy script + `VerifyRoles` | Done: MN-R1…R5; refuses 4663 without `I_HAVE_THE_OWNERS_GO=1`; never broadcast | `test/deploy/DeployMainnet.t.sol` 13/13 (anvil), `DeployMainnet.fork.t.sol` 2/2 on the public 4663 RPC — `79f5f88` |
+| 8 · Parameter simulation (04 §5) | Done: [`mainnet-params.md`](../../sim/reports/mainnet-params.md), Q2 study [`event-timing.md`](../../sim/reports/event-timing.md) (keep release-on-round), weekday DEX depth run; evidence pre-filled in `risk-signoff.md`; **no parameter changed**, differences flagged | `sim/params/params.py` — `02ab883` |
+| 9 · Offchain security pass | Done: OFF-1…OFF-17 fixed or triaged, each fixed item with a test | [`offchain-review.md`](../audit/offchain-review.md) — `4107766` |
+| 10 · Audit round 2 package, bug bounty, fix workflow | Done: README §8 (270 nSLOC new `src/`, deploy changes, post-freeze diff = none), threat model §9, [`bug-bounty.md`](../audit/bug-bounty.md), [`fix-workflow.md`](../audit/fix-workflow.md), `FeeConverter` invariants | `bb9bbcf` |
+| 11 · Testnet fees and drills | **Rehearsed on a fork of 46630** (no "go testnet"): fee turn-on through the 24h timelock, first distribution and conversion, all §0 drills, 8/8; testnet drills pending the go | [`fork-drills-46630.md`](../runbooks/fork-drills-46630.md) — `3482ccb` |
+
+Phase 3 plan items (list above) against that: 1–2 (audits) ⏳ owner; 3–5 ✅ engineering; 6 ⏳ (0 of 2 weekends
+accrued, testers not recruited); 7 rehearsed on fork, ⏳ testnet go; 8 ✅ script and checks, ⏳ owner's go and the §0
+gates; 9 ✅ engineering, ⏳ on mainnet; 10 ⏳.
+
+Final run (2026-09-28, Part A exit): `forge fmt --check` clean; `forge build --sizes`: router 24,092 bytes (484 under
+EIP-170, unchanged), `FeeConverter` 7,391, `FeeSplitter` 3,435; `forge test` 251 passed / 18 skipped without an RPC;
+with the public 4663 RPC the fork suites pass 43/44 — the one failure is `test/fork/phase0` pinned to a historical
+block (archive RPC, Q7); `FOUNDRY_PROFILE=deep` invariants: router 3 × 1,000,000 calls, `FeeSplitter` 2 × 1M,
+`FeeConverter` 4 × 1M, all pass; coverage (Foundry 1.5.1 drops the router, liquidator, fee and adapter files from a
+non-IR coverage build, so they are measured with `--ir-minimum`): every `src/` file ≥ 95% lines — router 98.7%,
+liquidator 97.8%, `FeeConverter` 98.7%, `FeeSplitter` 97.6%, oracle base 99.5%, `StockWrapper` 100% (94.9% under
+`--ir-minimum`, where its two `return` lines are unmapped), the rest 100%; slither 77 findings, none medium+, no new
+low in the fee contracts; `forge doc` clean; `pnpm -r typecheck` / `lint` clean; `pnpm -r test` 287 passed / 8 skipped
+(opt-in fork drills; 8/8 when run); Playwright 15 passed / 4 skipped (vault flows waiting for Phase 4 contracts);
+Lighthouse `/markets` 82, `/data` 83 (accessibility and best practices 100) — **below the 85 target**: the pages are
+the Lendora redesign's (LCP ≈ 4.4 s); an A/B run without the new CSP scored 83 / 84, so the CSP is not the cause.
+Open item for the web owner.
+
+### Mainnet-readiness checklist (gates of [`mainnet-launch.md`](../runbooks/mainnet-launch.md) §0 and what §1–§4 need)
+
+✅ = engineering done, with evidence. ⏳ = needs a person, money or time (owner and next step). Nothing that needs
+people, time or mainnet is marked ✅.
+
+| Gate | State | Evidence / owner and next step |
+|---|---|---|
+| Two audits closed, findings fixed or accepted | ⏳ | Package ready (README §1–§8, threat model, round-2 scope, fix workflow). **Owner:** pick two firms from [`audit-rfq.md`](../owner-actions/audit-rfq.md), confirm the freeze tag, book the windows (~3 weeks each + 1 fix week) |
+| Counsel opinions and terms of use / risk disclosure (CP-R6) | ⏳ | **Owner + counsel:** send the engagement in [`messages.md`](../owner-actions/messages.md#counsel-engagement); terms draft `compliance/terms/` |
+| Sanctions provider live (Q5) | ✅ engineering / ⏳ contract | Adapters and mainnet refusals tested (task 6). **Owner:** sign Chainalysis or TRM, put `SANCTIONS_PROVIDER` + `SANCTIONS_API_KEY` in the secret store; for TRM confirm the chain name (A37) |
+| Risk owner signs the sim report and the weekday depth run | ✅ engineering / ⏳ sign-off | Reports and pre-filled evidence (task 8). **Risk owner:** sign [`risk-signoff.md`](../owner-actions/risk-signoff.md); decide the flagged items (D8 full caps SPY/AAPL, NVDA per-address cap on weekday depth, z); rerun weekday depth on 2 more sessions |
+| 2 clean testnet weekends + 20 external testers | ⏳ | 0 of 2 accrued ([`testnet-weekends.md`](../runbooks/testnet-weekends.md)); first eligible Oct 2–4. **Owner:** start the testnet services live (keys), post the recruitment message, create the feedback form |
+| Runbooks drilled on testnet | ✅ fork rehearsal / ⏳ testnet | 8/8 on a 46630 fork ([report](../runbooks/fork-drills-46630.md)). **Owner:** say "go testnet" (deployer gas ~0.0084 ETH, check first), then run the same drills live and record tx hashes |
+| Bug bounty live, payout sized to caps (Q14) | ✅ draft / ⏳ listing | [`bug-bounty.md`](../audit/bug-bounty.md) (Critical max $450k proposed). **Owner:** confirm payouts, budget in the treasury Safe, choose platform, publish after deploy |
+| Multisigs on hardware wallets (owner 4-of-7, guardian 2-of-4, curator, treasury, `BackstopReserve`) | ⏳ | `DeployMainnet` refuses anything weaker (MN-R2). **Owner:** create the five Safes with independent signers |
+| Treasury and `BackstopReserve` addresses (Q9) | ⏳ | Config fields, refused if zero/EOA/placeholder (MN-R1/R2). **Owner:** provide the two Safe addresses |
+| KMS keys (allocator, guard keeper, fee keeper, liquidator, compliance signer) | ✅ code / ⏳ keys | Remote signer on every signing service (OFF-4), gas cap, timeouts. **Owner:** create KMS keys and the signing bridge; fund keepers |
+| Mainnet deploy script and role verification | ✅ | `DeployMainnet`, `VerifyRoles`, fork rehearsal on 4663 (task 7). Broadcast only after every ⏳ above and the owner's go |
+| Paging / on-call (PagerDuty or Opsgenie) | ✅ code / ⏳ accounts | Monitor MON-R1…R20, pagers. **Owner:** create the account, routing key, on-call rotation; start the monitor **before** the first governance action |
+| Archive RPC (Q7) | ⏳ | Pinned fork runs pending. **Owner:** pick a provider ([`accounts.md`](../owner-actions/accounts.md#archive-rpc)), set `ROBINHOOD_RPC_URL` |
+| Hosting (Q15) | ⏳ | Railway configs in `infra/railway/`, pinned images (OFF-15). **Owner:** create the mainnet project and secrets |
+| Borrower / lender interviews | ⏳ | Outreach drafts in [`messages.md`](../owner-actions/messages.md). **Owner:** run them |
+| Brand (Q6) | ⏳ | Nothing renamed. **Owner:** decide the name |
 
 ## Definition of done (any requirement)
 
