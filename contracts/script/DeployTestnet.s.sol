@@ -3,7 +3,7 @@ pragma solidity 0.8.26;
 
 import {Script} from "forge-std/Script.sol";
 import {VmSafe} from "forge-std/Vm.sol";
-import {StocklineDeploy} from "./StocklineDeploy.sol";
+import {DnVaultDeploy} from "./DnVaultDeploy.sol";
 import {LocalMocks} from "./LocalMocks.sol";
 import {IStocklineRouter} from "../src/interfaces/IStocklineRouter.sol";
 import {StocklineFaucet} from "../testnet/StocklineFaucet.sol";
@@ -15,6 +15,8 @@ import {MockGate} from "../test/mocks/MockGate.sol";
 /// so it deploys the unmodified Morpho Blue, AdaptiveCurveIrm and Vault V2 factories from the pinned artifacts plus
 /// mocks, then the same Stockline deployment as mainnet with **24h** timelocks (02 roles), the lens and a faucet.
 /// Every mock is gated: only operators (deployer, feed-mirror keeper, faucet) can move prices, pause or mint.
+/// Phase 4: the delta-neutral vault on the (gated) mock perp venue with **every cap at 0** (Q11) — raising a cap is a
+/// timelocked owner action taken only after the sim gate and the risk owner's signature (and the owner's say-so).
 ///
 ///   Dry run on a local fork (no broadcast to the testnet):
 ///     anvil --fork-url https://rpc.testnet.chain.robinhood.com &
@@ -23,7 +25,7 @@ import {MockGate} from "../test/mocks/MockGate.sol";
 ///   Testnet (only after the owner's go; key from env, never in the repo):
 ///     TESTNET_GO=yes STOCKLINE_ATTESTATION_SIGNER=0x… forge script script/DeployTestnet.s.sol \
 ///       --rpc-url $ROBINHOOD_TESTNET_RPC_URL --broadcast --slow --private-key $TESTNET_DEPLOYER_KEY
-contract DeployTestnet is Script, StocklineDeploy, LocalMocks {
+contract DeployTestnet is Script, DnVaultDeploy, LocalMocks {
     function run() external {
         require(block.chainid == 46_630, "DeployTestnet is for Robinhood Chain testnet (46630) only");
         if (vm.isContext(VmSafe.ForgeContext.ScriptBroadcast) || vm.isContext(VmSafe.ForgeContext.ScriptResume)) {
@@ -47,11 +49,32 @@ contract DeployTestnet is Script, StocklineDeploy, LocalMocks {
         core = _finalize(c, core);
         core = _deployLens(core, stocks);
         StocklineFaucet faucet = _faucetAndGates(deployer, m);
+        DnDeployment memory dn = deployDnTestnet(c, core, stocks, ds);
         vm.stopBroadcast();
 
         _startBlock = vm.toString(startBlock);
         vm.serializeAddress("local-mocks", "faucet", address(faucet));
         _writeAddresses("46630", c, core, stocks, ds, "mocks", _mocksJson(m));
+        _writeDn("46630", dn);
+    }
+
+    /// @notice Phase 4 on testnet: mock venue (gated), caps 0. Operator and NAV signers from env (default: deployer;
+    /// a second signer only if `STOCKLINE_NAV_SIGNER_2` is set).
+    function deployDnTestnet(
+        CoreConfig memory c,
+        Core memory core,
+        StockConfig[] memory stocks,
+        StockDeployment[] memory ds
+    ) public returns (DnDeployment memory dn) {
+        address s2 = vm.envOr("STOCKLINE_NAV_SIGNER_2", address(0));
+        address[] memory signers = new address[](s2 == address(0) ? 1 : 2);
+        signers[0] = vm.envOr("STOCKLINE_NAV_SIGNER_1", c.deployer);
+        if (s2 != address(0)) signers[1] = s2;
+        dn = _deployDnVault(
+            _dnConfig(c, core, vm.envOr("STOCKLINE_DN_OPERATOR", c.deployer), signers, true, 0),
+            _dnSleeves(stocks, ds, new uint128[](stocks.length))
+        );
+        _gate(dn.adapter, c.deployer, vm.envOr("STOCKLINE_FEED_KEEPER", c.deployer), address(0));
     }
 
     function configForTestnet(address deployer, Mocks memory m) public view returns (CoreConfig memory c) {

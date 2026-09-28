@@ -40,6 +40,9 @@ Yield = lending APY on 90% of S + funding on S (positive when longs pay shorts) 
 | DN-R9 | Fees: 10% performance fee on net yield above a high-water mark, paid to `FeeSplitter`. No management fee at launch. |
 | DN-R10 | Roles: the strategy operator can only trade within limits (allowlisted DEX, venue, sleeves, bands). It cannot withdraw to arbitrary addresses. Perp venue withdrawals return only to the vault. |
 | DN-R11 | Dashboard in app: NAV per share history, yield split (lending / funding / buffer), current delta, margin ratio, perp venue exposure. |
+| DN-R12 | *(Phase 4 sim finding, task 13 §4.1)* While the stock feed session is closed the vault neither mints nor burns (deposits pause, instant withdrawals wait; requests are always accepted and settle after the reopen): spot would be marked at a frozen feed while the perp marks live (a +20% weekend move reads −14.5% NAV). |
+| DN-R13 | *(Proposal, sim §4.2)* The kill switch trigger (DN-R7) is configurable (window, hours); a 24 h average below −lending APY for 24 h keeps the −100% APR funding week inside the 2% bound, the 08 default (7-day / 72 h) does not. Risk owner picks. |
+| DN-R14 | *(Phase 4 task 14, invariant finding)* Between NAV reports the short leg is marked to the Chainlink price move since the report with the reported short sizes, so share prices stay hedged; a perp trade sent through the strategy makes the NAV stale until a report that has seen it (`tradeNonce`). |
 
 ## Weekend behavior
 

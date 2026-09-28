@@ -34,6 +34,10 @@ contract DeployMainnetForkTest is Phase0ForkBase, MainnetConfig {
     StockDeployment[] internal ds;
     Vm.Wallet internal signer;
     VerifyRoles internal verifier;
+    DnRoles internal dnRoles = DnRoles({
+        operator: makeAddr("kms.dnOperator"), navSigner1: makeAddr("kms.nav1"), navSigner2: makeAddr("kms.nav2")
+    });
+    DnDeployment internal dn;
 
     function setUp() public override {
         string memory rpc = vm.envOr("ROBINHOOD_RPC_URL", string(""));
@@ -66,6 +70,8 @@ contract DeployMainnetForkTest is Phase0ForkBase, MainnetConfig {
         }
         vm.startPrank(deployer);
         (Core memory core_, StockDeployment[] memory ds_) = _deployMainnet(c, s);
+        _assertDnRoles(c, dnRoles);
+        dn = _deployMainnetDn(c, core_, s, ds_, dnRoles);
         vm.stopPrank();
         core = core_;
         for (uint256 i; i < ds_.length; i++) {
@@ -139,6 +145,7 @@ contract DeployMainnetForkTest is Phase0ForkBase, MainnetConfig {
         d.backstopConverter = address(core.backstopConverter);
         d.vaultFactory = c.vaultFactory;
         d.adapterFactory = c.adapterFactory;
+        d.dn = VerifyRoles.DnAddrs(address(dn.vault), address(dn.strategy), address(dn.nav), dn.adapter);
         d.stocks = new VerifyRoles.StockAddrs[](ds.length);
         for (uint256 i; i < ds.length; i++) {
             d.stocks[i] = VerifyRoles.StockAddrs(
@@ -154,7 +161,7 @@ contract DeployMainnetForkTest is Phase0ForkBase, MainnetConfig {
 
     function _expected() internal view returns (VerifyRoles.Expected memory) {
         return VerifyRoles.Expected({
-            roles: roles, deployer: deployer, swapTarget: c.swapTarget, timelockDelay: MAINNET_TIMELOCK
+            dn: dnRoles, roles: roles, deployer: deployer, swapTarget: c.swapTarget, timelockDelay: MAINNET_TIMELOCK
         });
     }
 

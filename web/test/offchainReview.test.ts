@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {BaseError, encodeErrorResult, type Abi, type AbiParameter} from "viem";
-import {collateralTokenAbi, feeConverterAbi, feeSplitterAbi, marketHoursAbi, stocklineLiquidatorAbi, stocklineOracleAbi, stocklineRouterAbi, stockWrapperAbi} from "@stockline/sdk";
+import {collateralTokenAbi, deltaNeutralVaultAbi, feeConverterAbi, feeSplitterAbi, marketHoursAbi, navOracleAbi, stocklineLiquidatorAbi, stocklineOracleAbi, stocklineRouterAbi, stockWrapperAbi, strategyManagerAbi} from "@stockline/sdk";
 import {explainError} from "@/lib/errors";
 import {contentSecurityPolicy, securityHeaders} from "@/lib/csp";
 import {MAX_KEYS, POST as analytics, GET as analyticsCounts} from "@/app/api/analytics/route";
@@ -32,6 +32,9 @@ describe("OFF-14 the revert decoder covers every Stockline custom error", () => 
     ["liquidator", stocklineLiquidatorAbi as Abi],
     ["FeeSplitter", feeSplitterAbi as Abi],
     ["FeeConverter", feeConverterAbi as Abi],
+    ["DeltaNeutralVault", deltaNeutralVaultAbi as Abi],
+    ["StrategyManager", strategyManagerAbi as Abi],
+    ["NavOracle", navOracleAbi as Abi],
   ];
   it("OFF_14 every error decodes by name (never raw hex), including the fee contracts'", () => {
     let n = 0;
@@ -44,7 +47,20 @@ describe("OFF-14 the revert decoder covers every Stockline custom error", () => 
         n++;
       }
     }
-    expect(n).toBeGreaterThan(40);
+    expect(n).toBeGreaterThan(80);
+  });
+
+  it("OFF_14 USDG Earn errors have plain-language text, and exits are named as still working", () => {
+    const enc = (errorName: string) => {
+      const e = (deltaNeutralVaultAbi as Abi).find((x) => x.type === "error" && x.name === errorName) as unknown as {inputs: readonly AbiParameter[]};
+      return new Wrapped(encodeErrorResult({abi: deltaNeutralVaultAbi, errorName, args: e.inputs.map(zero)} as never));
+    };
+    expect(explainError(enc("NavStale"))).toMatch(/Request a withdrawal instead/);
+    expect(explainError(enc("DepositsPaused"))).toMatch(/Withdrawals and claims still work/);
+    expect(explainError(enc("ExceedsInstant"))).toMatch(/Request a withdrawal for the rest/);
+    expect(explainError(enc("CapExceeded"))).toMatch(/cap/);
+    expect(explainError(enc("MarketClosed"))).toMatch(/requests and claims still work/);
+    expect(explainError(enc("NotClaimable"))).toMatch(/isn't ready/);
   });
 
   it("OFF_14 fee-path errors have plain-language text", () => {

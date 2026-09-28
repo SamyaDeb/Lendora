@@ -2,7 +2,8 @@
 pragma solidity 0.8.26;
 
 import {Script} from "forge-std/Script.sol";
-import {StocklineDeploy} from "./StocklineDeploy.sol";
+import {DnVaultDeploy} from "./DnVaultDeploy.sol";
+import {ReceiptMarketDeploy} from "./ReceiptMarketDeploy.sol";
 import {IStocklineRouter} from "../src/interfaces/IStocklineRouter.sol";
 import {LocalMocks} from "./LocalMocks.sol";
 
@@ -14,7 +15,10 @@ import {LocalMocks} from "./LocalMocks.sol";
 ///     --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 ///
 /// Roles default to anvil's well-known accounts (addresses only; no keys in this repo) and can be overridden by env.
-contract DeployLocal is Script, StocklineDeploy, LocalMocks {
+/// Phase 4: the delta-neutral vault on the mock venue, written as `dnVault`. **Anvil only** gets non-zero caps (dev and
+/// e2e: $2M total, sleeves $1M / $500k / $500k); testnet and mainnet configs pass 0 (Q11). Operator: anvil #6; NAV
+/// signers: anvil #8 and #9 (the NAV reporter signs through the node's unlocked accounts; no key in the repo).
+contract DeployLocal is Script, DnVaultDeploy, ReceiptMarketDeploy, LocalMocks {
     function run() external {
         require(block.chainid == 31_337, "DeployLocal is for anvil only");
         address deployer = msg.sender;
@@ -26,8 +30,14 @@ contract DeployLocal is Script, StocklineDeploy, LocalMocks {
             StockDeployment[] memory ds,
             Mocks memory m
         ) = deployAll(deployer);
+        DnDeployment memory dn = deployDn(c, core, stocks, ds, m);
+        ReceiptDeployment memory rNvda = deployReceipt(c, core, stocks[1], ds[1]);
         vm.stopBroadcast();
         _writeAddresses("31337", c, core, stocks, ds, "mocks", _mocksJson(m));
+        _writeDn("31337", dn);
+        vm.writeJson(
+            _receiptJson("31337", "NVDA", rNvda), "../packages/sdk/addresses.json", ".chains.31337.stocks.NVDA.receipt"
+        );
     }
 
     function localConfig(address deployer, Mocks memory m) public view returns (CoreConfig memory c) {
@@ -59,6 +69,62 @@ contract DeployLocal is Script, StocklineDeploy, LocalMocks {
             swapTarget: address(m.dex),
             swapMode: IStocklineRouter.SwapMode.Approve
         });
+    }
+
+    /// @notice Phase 4 on anvil: mock venue funded for PnL, dev caps.
+    function deployDn(
+        CoreConfig memory c,
+        Core memory core,
+        StockConfig[] memory stocks,
+        StockDeployment[] memory ds,
+        Mocks memory m
+    ) public returns (DnDeployment memory dn) {
+        address[] memory signers = new address[](2);
+        signers[0] = vm.envOr("STOCKLINE_NAV_SIGNER_1", address(0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f));
+        signers[1] = vm.envOr("STOCKLINE_NAV_SIGNER_2", address(0xa0Ee7A142d267C1f36714E4a8F75612F20a79720));
+        uint128[] memory caps = new uint128[](3);
+        caps[0] = 1_000_000e6;
+        caps[1] = 500_000e6;
+        caps[2] = 500_000e6;
+        address operator = vm.envOr("STOCKLINE_DN_OPERATOR", address(0x976EA74026E726554dB657fA54763abd0C3a0aa9));
+        dn = _deployDnVault(_dnConfig(c, core, operator, signers, true, 2_000_000e6), _dnSleeves(stocks, ds, caps));
+        m.usdg.mint(dn.adapter, 10_000_000e6); // venue liquidity for positive PnL
+    }
+
+    /// @notice G5 (A3) stage 1 for NVDA on anvil: oracle, market, USDG vault with caps 0 (listing is the curator's
+    /// timelocked step, as on mainnet).
+    function deployReceipt(CoreConfig memory c, Core memory core, StockConfig memory s, StockDeployment memory d)
+        public
+        returns (ReceiptDeployment memory)
+    {
+        return _deployReceiptMarket(
+            c.deployer,
+            ReceiptConfig({
+                ticker: s.ticker,
+                stockToken: s.token,
+                feed: s.feed,
+                wrapper: address(d.wrapper),
+                rVault: d.vault,
+                sigmaWad: s.sigmaWad,
+                morpho: c.morpho,
+                irm: c.irm,
+                usdg: c.usdg,
+                usdgFeed: c.usdgFeed,
+                vaultFactory: c.vaultFactory,
+                adapterFactory: c.adapterFactory,
+                marketHours: address(core.marketHours),
+                timelock: address(core.timelock),
+                owner: c.owner,
+                curator: c.curator,
+                guardian: c.guardian,
+                allocator: c.allocator,
+                guardKeeper: c.guardKeeper,
+                feeSplitter: address(core.feeSplitter),
+                sequencerFeed: c.sequencerFeed,
+                issuerRegistry: c.issuerRegistry,
+                timelockDelay: c.timelockDelay
+            })
+        );
     }
 
     function localStocks(Mocks memory m) public pure returns (StockConfig[] memory s) {

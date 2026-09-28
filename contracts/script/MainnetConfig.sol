@@ -3,6 +3,7 @@ pragma solidity 0.8.26;
 
 import {Vm} from "forge-std/Vm.sol";
 import {ForkConfig} from "./ForkConfig.sol";
+import {DnVaultDeploy} from "./DnVaultDeploy.sol";
 import {IStocklineRouter} from "../src/interfaces/IStocklineRouter.sol";
 
 /// @notice Safe views the mainnet checks read (owner count and threshold).
@@ -19,7 +20,7 @@ interface ISafeMin {
 /// UniversalRouter from `packages/sdk/external-addresses.json` (Phase 0 verified), 48h timelocks, vault caps at 25% of
 /// the D8 targets, D8 per-address and global caps, 10-risk oracle parameters, `sequencerFeed = address(0)`, and every
 /// role from env with **no default** (A27 must not carry over). Nothing here broadcasts.
-abstract contract MainnetConfig is ForkConfig {
+abstract contract MainnetConfig is ForkConfig, DnVaultDeploy {
     Vm private constant VM_M = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     uint256 internal constant MAINNET_TIMELOCK = 48 hours;
@@ -45,6 +46,24 @@ abstract contract MainnetConfig is ForkConfig {
         address backstopReserve;
         address feeKeeper;
         address attestationSigner;
+    }
+
+    /// @notice Phase 4 keys (KMS): the delta-neutral strategy operator (rebalancer) and the two NAV report signers
+    /// (DN-R4). Distinct from each other and from the nine core roles (MN-R8).
+    struct DnRoles {
+        address operator;
+        address navSigner1;
+        address navSigner2;
+    }
+
+    /// @notice Phase 4 roles from `STOCKLINE_DN_OPERATOR`, `STOCKLINE_NAV_SIGNER_1`, `STOCKLINE_NAV_SIGNER_2`
+    /// (required).
+    function dnRolesFromEnv() public view returns (DnRoles memory) {
+        return DnRoles({
+            operator: VM_M.envAddress("STOCKLINE_DN_OPERATOR"),
+            navSigner1: VM_M.envAddress("STOCKLINE_NAV_SIGNER_1"),
+            navSigner2: VM_M.envAddress("STOCKLINE_NAV_SIGNER_2")
+        });
     }
 
     /// @notice Roles from `STOCKLINE_*` env vars; each one is required (an unset var reverts).
@@ -165,6 +184,44 @@ abstract contract MainnetConfig is ForkConfig {
             );
             require(s[i].perAddressCapUsd > 0, string.concat("MN-R3: ", s[i].ticker, " per-address cap is 0"));
         }
+    }
+
+    /// @notice MN-R8: the Phase 4 keys are non-zero, not the deployer, distinct from each other and from every core
+    /// role.
+    function _assertDnRoles(CoreConfig memory c, DnRoles memory r) internal pure {
+        address[3] memory dn = [r.operator, r.navSigner1, r.navSigner2];
+        string[3] memory dnNames = ["dnOperator", "navSigner1", "navSigner2"];
+        (string[9] memory names, address[9] memory a) = _roleList(c);
+        for (uint256 i; i < 3; i++) {
+            require(dn[i] != address(0), string.concat("MN-R8: role ", dnNames[i], " is address(0)"));
+            require(dn[i] != c.deployer, string.concat("MN-R8: role ", dnNames[i], " is the deployer"));
+            for (uint256 j = i + 1; j < 3; j++) {
+                require(
+                    dn[i] != dn[j], string.concat("MN-R8: roles ", dnNames[i], " and ", dnNames[j], " are the same")
+                );
+            }
+            for (uint256 k; k < 9; k++) {
+                require(dn[i] != a[k], string.concat("MN-R8: role ", dnNames[i], " equals core role ", names[k]));
+            }
+        }
+    }
+
+    /// @notice Phase 4 on 4663 (MN-R7): the vault, strategy and NAV oracle, **no venue adapter** (no live adapter is
+    /// verified: task 12 `[VERIFY]` items) and every cap at 0 until the sim gate passes and the risk owner signs.
+    function _deployMainnetDn(
+        CoreConfig memory c,
+        Core memory core,
+        StockConfig[] memory s,
+        StockDeployment[] memory ds,
+        DnRoles memory r
+    ) internal returns (DnDeployment memory) {
+        address[] memory signers = new address[](2);
+        signers[0] = r.navSigner1;
+        signers[1] = r.navSigner2;
+        return
+            _deployDnVault(
+                _dnConfig(c, core, r.operator, signers, false, 0), _dnSleeves(s, ds, new uint128[](s.length))
+            );
     }
 
     /// @notice D8 cap targets (USD) of `forkStocks()`, in the same order: SPY $1M, NVDA $1M, AAPL $250k.

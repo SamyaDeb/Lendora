@@ -15,6 +15,10 @@ import {ICollateralToken} from "../src/interfaces/ICollateralToken.sol";
 import {StocklineOracleBase} from "../src/oracles/StocklineOracleBase.sol";
 import {StocklineLiquidator} from "../src/StocklineLiquidator.sol";
 import {FeeConverter} from "../src/fees/FeeConverter.sol";
+import {DeltaNeutralVault} from "../src/vault/DeltaNeutralVault.sol";
+import {StrategyManager} from "../src/vault/StrategyManager.sol";
+import {NavOracle} from "../src/vault/NavOracle.sol";
+import {IStrategyManager} from "../src/interfaces/IStrategyManager.sol";
 import {VaultV2Ids} from "../src/libraries/VaultV2Ids.sol";
 import {
     IVaultV2Min,
@@ -60,6 +64,14 @@ contract VerifyRoles is Script, MainnetConfig {
         address vaultFactory;
         address adapterFactory;
         StockAddrs[] stocks;
+        DnAddrs dn; // Phase 4 (zero if the entry has no `dnVault`)
+    }
+
+    struct DnAddrs {
+        address vault;
+        address strategy;
+        address navOracle;
+        address perpAdapter;
     }
 
     struct Expected {
@@ -67,6 +79,7 @@ contract VerifyRoles is Script, MainnetConfig {
         address deployer;
         address swapTarget;
         uint256 timelockDelay;
+        DnRoles dn;
     }
 
     struct Check {
@@ -90,7 +103,8 @@ contract VerifyRoles is Script, MainnetConfig {
             roles: mainnetRolesFromEnv(),
             deployer: vm.envAddress("STOCKLINE_DEPLOYER"),
             swapTarget: vm.envOr("STOCKLINE_SWAP_TARGET", _ext("uniswap.universalRouter")),
-            timelockDelay: vm.envOr("STOCKLINE_TIMELOCK_DELAY", MAINNET_TIMELOCK)
+            timelockDelay: vm.envOr("STOCKLINE_TIMELOCK_DELAY", MAINNET_TIMELOCK),
+            dn: d.dn.vault == address(0) ? DnRoles(address(0), address(0), address(0)) : dnRolesFromEnv()
         });
         Check[] memory cs = verify(d, e);
         uint256 failed = printTable(cs);
@@ -111,6 +125,14 @@ contract VerifyRoles is Script, MainnetConfig {
         d.backstopConverter = vm.parseJsonAddress(j, ".backstopConverter");
         d.vaultFactory = vm.parseJsonAddress(j, ".vaultV2Factory");
         d.adapterFactory = vm.parseJsonAddress(j, ".adapterFactory");
+        if (vm.keyExistsJson(j, ".dnVault")) {
+            d.dn = DnAddrs({
+                vault: vm.parseJsonAddress(j, ".dnVault.vault"),
+                strategy: vm.parseJsonAddress(j, ".dnVault.strategy"),
+                navOracle: vm.parseJsonAddress(j, ".dnVault.navOracle"),
+                perpAdapter: vm.parseJsonAddress(j, ".dnVault.perpAdapter")
+            });
+        }
         string[] memory tickers = vm.parseJsonKeys(j, ".stocks");
         d.stocks = new StockAddrs[](tickers.length);
         for (uint256 i; i < tickers.length; i++) {
@@ -128,7 +150,7 @@ contract VerifyRoles is Script, MainnetConfig {
 
     /// @notice Every check, in table order. View only.
     function verify(Deployment memory d, Expected memory e) public view returns (Check[] memory) {
-        Out memory o = Out(new Check[](128 + 64 * d.stocks.length), 0);
+        Out memory o = Out(new Check[](160 + 72 * d.stocks.length), 0);
         _roles(o, e);
         _timelock(o, d, e);
         _core(o, d, e);
@@ -136,6 +158,7 @@ contract VerifyRoles is Script, MainnetConfig {
         for (uint256 i; i < d.stocks.length; i++) {
             _stock(o, d, e, d.stocks[i]);
         }
+        if (d.dn.vault != address(0)) _dn(o, d, e);
         Check[] memory cs = o.checks;
         uint256 n = o.n;
         assembly ("memory-safe") {
@@ -443,6 +466,50 @@ contract VerifyRoles is Script, MainnetConfig {
             }
         }
         return keccak256(code) == keccak256(pinned);
+    }
+
+    /// @dev Phase 4 (MN-R7, MN-R8): every vault role, caps 0, no mock venue on 4663.
+    function _dn(Out memory o, Deployment memory d, Expected memory e) internal view {
+        DeltaNeutralVault v = DeltaNeutralVault(d.dn.vault);
+        StrategyManager sm = StrategyManager(d.dn.strategy);
+        NavOracle no = NavOracle(d.dn.navOracle);
+        _eq(o, "DN vault: owner == timelock", v.owner(), d.timelock);
+        _eq(o, "DN vault: guardian", v.guardian(), e.roles.guardian);
+        _eq(o, "DN vault: fee recipient == FeeSplitter (DN-R9)", v.feeRecipient(), d.feeSplitter);
+        _eq(o, "DN vault: attestations from the router", address(v.ATTESTATION_SOURCE()), d.router);
+        _eq(o, "DN vault: MarketHours", address(v.MARKET_HOURS()), d.marketHours);
+        _eq(o, "DN vault: strategy", v.strategy(), d.dn.strategy);
+        _eq(o, "DN vault: NAV oracle", address(v.navOracle()), d.dn.navOracle);
+        _add(o, "DN vault: total cap 0 (MN-R7, Q11)", v.totalCap() == 0, vm.toString(v.totalCap()));
+        _eq(o, "DN strategy: owner == timelock", sm.owner(), d.timelock);
+        _eq(o, "DN strategy: operator (MN-R8)", sm.operator(), e.dn.operator);
+        _eq(o, "DN strategy: guardian", sm.guardian(), e.roles.guardian);
+        _eq(o, "DN strategy: vault", sm.VAULT(), d.dn.vault);
+        _eq(o, "DN strategy: adapter", sm.adapter(), d.dn.perpAdapter);
+        _add(
+            o,
+            "DN strategy: swap target in Transfer mode (Q4)",
+            sm.swapModes(e.swapTarget) == IStrategyManager.SwapMode.Transfer,
+            ""
+        );
+        bool capsZero = sm.sleeveCount() == d.stocks.length;
+        for (uint256 i; i < sm.sleeveCount(); i++) {
+            IStrategyManager.Sleeve memory sl = sm.sleeve(i);
+            capsZero = capsZero && sl.capUsdg == 0 && sl.rVault == d.stocks[i].vault;
+        }
+        _add(o, "DN strategy: one sleeve per stock, every sleeve cap 0 (MN-R7)", capsZero, "");
+        _eq(o, "DN NAV oracle: owner == timelock", no.owner(), d.timelock);
+        _add(o, "DN NAV oracle: signer 1 allowed", no.isSigner(e.dn.navSigner1), vm.toString(e.dn.navSigner1));
+        _add(o, "DN NAV oracle: signer 2 allowed", no.isSigner(e.dn.navSigner2), vm.toString(e.dn.navSigner2));
+        _add(o, "DN NAV oracle: closed max age <= 15 min (DN-R5)", no.maxAgeClosed() <= 15 minutes, "");
+        if (block.chainid == 4663) {
+            _add(
+                o,
+                "DN: no perp adapter on 4663 until a live one is verified (MN-R7)",
+                d.dn.perpAdapter == address(0),
+                ""
+            );
+        }
     }
 
     function _eq(Out memory o, string memory name, address got, address want) internal pure {

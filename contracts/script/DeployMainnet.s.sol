@@ -15,6 +15,8 @@ import {MainnetConfig} from "./MainnetConfig.sol";
 ///   export STOCKLINE_OWNER=… STOCKLINE_CURATOR=… STOCKLINE_GUARDIAN=… STOCKLINE_ALLOCATOR=…
 ///   export STOCKLINE_GUARD_KEEPER=… STOCKLINE_TREASURY=… STOCKLINE_BACKSTOP_RESERVE=…
 ///   export STOCKLINE_FEE_KEEPER=… STOCKLINE_ATTESTATION_SIGNER=…
+///   export STOCKLINE_DN_OPERATOR=… STOCKLINE_NAV_SIGNER_1=… STOCKLINE_NAV_SIGNER_2=…   (Phase 4, caps 0,
+/// MN-R7/R8)
 ///   I_HAVE_THE_OWNERS_GO=1 forge script script/DeployMainnet.s.sol --rpc-url $ROBINHOOD_RPC_URL \
 ///     --broadcast --slow --verify --sender <fresh deployer> <hardware-wallet or remote-signer flags>
 ///
@@ -28,13 +30,18 @@ contract DeployMainnet is Script, MainnetConfig {
         CoreConfig memory c = mainnetCoreConfig(deployer, mainnetRolesFromEnv());
         StockConfig[] memory stocks = mainnetStocks();
         _assertMainnetConfig(c, stocks, d8Targets());
+        DnRoles memory dr = dnRolesFromEnv();
+        _assertDnRoles(c, dr);
 
         vm.startBroadcast(deployer);
         (Core memory core, StockDeployment[] memory ds) = _deployMainnet(c, stocks);
+        DnDeployment memory dn = _deployMainnetDn(c, core, stocks, ds, dr);
         vm.stopBroadcast();
 
+        string memory path = string.concat("deployments/", vm.toString(block.chainid), ".json");
         string memory json = _chainJson("4663-deploy", c, core, stocks, ds, "deployBlock", vm.toString(block.number));
-        vm.writeJson(json, string.concat("deployments/", vm.toString(block.chainid), ".json"));
+        vm.writeJson(json, path);
+        vm.writeJson(_dnJson("4663-deploy", dn), path, ".dnVault");
     }
 
     /// @notice MN-R4: chain 4663 only, and only with `I_HAVE_THE_OWNERS_GO=1`. Public so tests can prove the refusal.

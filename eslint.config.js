@@ -10,6 +10,7 @@ export default tseslint.config(
       "**/node_modules/**",
       "**/.next/**",
       "**/.next-live/**",
+      "**/.next-lh/**",
       "**/e2e/.report/**",
       "**/e2e/.results/**",
       "**/.ponder/**",

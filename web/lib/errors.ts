@@ -1,6 +1,7 @@
 import {BaseError, decodeErrorResult, type Hex} from "viem";
 import {
   collateralTokenAbi,
+  deltaNeutralVaultAbi,
   erc20Abi,
   feeConverterAbi,
   feeSplitterAbi,
@@ -8,10 +9,12 @@ import {
   marketHoursAbi,
   mockStockTokenAbi,
   morphoAbi,
+  navOracleAbi,
   stocklineLiquidatorAbi,
   stocklineOracleAbi,
   stocklineRouterAbi,
   stockWrapperAbi,
+  strategyManagerAbi,
   vaultV2FullAbi,
 } from "@stockline/sdk";
 import {guardReasonText} from "./guard";
@@ -32,6 +35,9 @@ export const abis = [
   stocklineLiquidatorAbi,
   feeSplitterAbi,
   feeConverterAbi,
+  deltaNeutralVaultAbi,
+  strategyManagerAbi,
+  navOracleAbi,
   mockStockTokenAbi,
   erc20Abi,
   morphoAbi,
@@ -87,7 +93,23 @@ function fromName(name: string, args: readonly unknown[] = []): string {
     case "SlippageTooLoose":
       return "The conversion would sell more than 1% below the oracle price, so it was refused (FE-R4).";
     case "MarketClosed":
-      return "The stock market session is closed; this action waits for the next session.";
+      return "The stock market session is closed; this action waits for the next session. Withdrawal requests and claims still work.";
+    // USDG Earn (DN-R1…R14): entries are gated, exits never are.
+    case "AttestationRequired":
+      return "Deposits need a compliance check first. Retry from the app.";
+    case "NavStale":
+      return "The vault's price data is being refreshed, so it can't mint or burn shares right now. Request a withdrawal instead, or retry in a few minutes.";
+    case "DepositsPaused":
+      return "Deposits are paused. Withdrawals and claims still work.";
+    case "CapExceeded":
+      return "That would go over the vault's cap. Deposit less, or wait until the cap rises.";
+    case "ExceedsInstant":
+      return "That's more than the vault's cash buffer holds right now. Request a withdrawal for the rest; it's paid within 72 hours or at the next US market open.";
+    case "NotClaimable":
+      return "That withdrawal request isn't ready to claim yet.";
+    case "QueueOverdue":
+    case "BufferBreached":
+      return "The vault keeps its cash for withdrawals first; the strategy can't take it now.";
     default:
       return `The transaction would fail (${name}).`;
   }

@@ -40,6 +40,10 @@ contract DeployMainnetTest is Test, MainnetConfig, LocalMocks {
     MockPayFirstSwap internal dex;
     Vm.Wallet internal signer;
     VerifyRoles internal verifier;
+    DnRoles internal dnRoles = DnRoles({
+        operator: makeAddr("kms.dnOperator"), navSigner1: makeAddr("kms.nav1"), navSigner2: makeAddr("kms.nav2")
+    });
+    DnDeployment internal dn;
 
     address internal lender = makeAddr("lender");
     address internal alice = makeAddr("alice");
@@ -71,6 +75,8 @@ contract DeployMainnetTest is Test, MainnetConfig, LocalMocks {
         for (uint256 i; i < ds_.length; i++) {
             ds.push(ds_[i]);
         }
+        _assertDnRoles(c, dnRoles);
+        dn = _deployMainnetDn(c, core_, s, ds_, dnRoles);
         verifier = new VerifyRoles();
         _fundDex();
     }
@@ -367,6 +373,77 @@ contract DeployMainnetTest is Test, MainnetConfig, LocalMocks {
         _applyMainnetRoles(x, r);
     }
 
+    // ------------------------------------------------------------------ MN-R7, MN-R8: Phase 4 on the mainnet config
+
+    function test_MN_R7_dnVaultShipsWithCapsZeroAndNoVenue() public view {
+        assertEq(dn.vault.totalCap(), 0);
+        assertEq(dn.adapter, address(0), "no venue adapter until one is verified");
+        for (uint256 i; i < 3; i++) {
+            assertEq(dn.strategy.sleeve(i).capUsdg, 0);
+        }
+        assertEq(dn.vault.owner(), address(core.timelock));
+        assertEq(dn.strategy.operator(), dnRoles.operator);
+        assertEq(dn.nav.perpValue(), 0);
+        assertEq(dn.vault.maxDeposit(alice), 0);
+    }
+
+    function test_MN_R7_refusesAMockVenueOrANonZeroCapOn4663() public {
+        vm.chainId(4663);
+        address[] memory signers = new address[](2);
+        signers[0] = dnRoles.navSigner1;
+        signers[1] = dnRoles.navSigner2;
+        DnConfig memory dc = _dnConfig(c, core, dnRoles.operator, signers, true, 0);
+        DnSleeveConfig[] memory sl = _dnSleeves(stocks, ds, new uint128[](3));
+        vm.expectRevert("MN-R7: no mock perp venue on 4663");
+        this.deployDnExternal(dc, sl);
+        dc.mockVenue = false;
+        dc.totalCap = 1;
+        vm.expectRevert("MN-R7: DN vault total cap must be 0 on 4663");
+        this.deployDnExternal(dc, sl);
+        dc.totalCap = 0;
+        sl[1].capUsdg = 1;
+        vm.expectRevert("MN-R7: DN sleeve caps must be 0 on 4663");
+        this.deployDnExternal(dc, sl);
+    }
+
+    function deployDnExternal(DnConfig memory dc, DnSleeveConfig[] memory sl) external returns (DnDeployment memory) {
+        return _deployDnVault(dc, sl);
+    }
+
+    function test_MN_R8_dnRolesDistinctFromEachOtherAndTheCoreRoles() public {
+        DnRoles memory r = dnRoles;
+        r.navSigner2 = r.navSigner1;
+        vm.expectRevert("MN-R8: roles navSigner1 and navSigner2 are the same");
+        this.assertDnExternal(r);
+        r = dnRoles;
+        r.operator = roles.allocator;
+        vm.expectRevert("MN-R8: role dnOperator equals core role allocator");
+        this.assertDnExternal(r);
+        r = dnRoles;
+        r.navSigner1 = address(0);
+        vm.expectRevert("MN-R8: role navSigner1 is address(0)");
+        this.assertDnExternal(r);
+        r = dnRoles;
+        r.navSigner2 = address(this);
+        vm.expectRevert("MN-R8: role navSigner2 is the deployer");
+        this.assertDnExternal(r);
+    }
+
+    function assertDnExternal(DnRoles memory r) external view {
+        _assertDnRoles(c, r);
+    }
+
+    function test_MN_R8_verifyRolesFlagsADnCapOrOperatorDrift() public {
+        vm.prank(address(core.timelock));
+        dn.vault.setTotalCap(1);
+        VerifyRoles.Expected memory e = _expected();
+        e.dn.operator = makeAddr("someone");
+        VerifyRoles.Check[] memory cs = verifier.verify(_deployment(), e);
+        assertTrue(_failed(cs, "DN vault: total cap 0 (MN-R7, Q11)"));
+        assertTrue(_failed(cs, "DN strategy: operator (MN-R8)"));
+        assertFalse(_failed(cs, "DN vault: owner == timelock"));
+    }
+
     function _rehearsalStocks() internal view returns (StockConfig[] memory s) {
         s = new StockConfig[](3);
         s[0] = StockConfig("SPY", address(m.tokens[0]), address(m.feeds[0]), 0.17e18, 1_000_000, 75_000);
@@ -387,6 +464,7 @@ contract DeployMainnetTest is Test, MainnetConfig, LocalMocks {
         d.backstopConverter = address(core.backstopConverter);
         d.vaultFactory = m.vaultFactory;
         d.adapterFactory = m.adapterFactory;
+        d.dn = VerifyRoles.DnAddrs(address(dn.vault), address(dn.strategy), address(dn.nav), dn.adapter);
         d.stocks = new VerifyRoles.StockAddrs[](ds.length);
         for (uint256 i; i < ds.length; i++) {
             d.stocks[i] = VerifyRoles.StockAddrs(
@@ -402,7 +480,11 @@ contract DeployMainnetTest is Test, MainnetConfig, LocalMocks {
 
     function _expected() internal view returns (VerifyRoles.Expected memory) {
         return VerifyRoles.Expected({
-            roles: roles, deployer: address(this), swapTarget: address(dex), timelockDelay: MAINNET_TIMELOCK
+            dn: dnRoles,
+            roles: roles,
+            deployer: address(this),
+            swapTarget: address(dex),
+            timelockDelay: MAINNET_TIMELOCK
         });
     }
 
