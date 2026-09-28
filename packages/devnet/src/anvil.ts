@@ -178,7 +178,17 @@ export async function connectWallet(url: string, privateKey: Hex): Promise<Anvil
     d,
     stop: () => {},
     async send(_from, to, data) {
-      const hash = await wallet.sendTransaction({account, to, data, chain});
+      // Load-balanced RPCs can answer gas estimation from a node that has not seen our previous transaction yet
+      // (approve → borrow), which looks like a revert: retry a few times before treating it as one.
+      let hash: Hex | undefined;
+      for (let attempt = 1; !hash; attempt++) {
+        try {
+          hash = await wallet.sendTransaction({account, to, data, chain});
+        } catch (e) {
+          if (attempt >= 4) throw new Error(`tx would revert: ${await revertReason(client, account.address, to, data)}`, {cause: e});
+          await new Promise((res) => setTimeout(res, 2000));
+        }
+      }
       const r = await client.waitForTransactionReceipt({hash, pollingInterval: 250, timeout: 120_000});
       if (r.status !== "success") throw new Error(`tx reverted ${hash}: ${await revertReason(client, account.address, to, data)}`);
       return r;

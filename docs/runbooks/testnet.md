@@ -52,13 +52,21 @@ and wallet, and a screenshot. Never share your seed phrase or private key; nobod
 liquidator, alerts, feed-mirror). Health: `/ready` (indexer), `/health` (others). Keepers run with
 `DRY_RUN=false KEEPER_SIGNER=env-key` on testnet only after the go; keys come from the secret store.
 
+**Deployed 2026-09-28** (owner's go): 349 transactions, 0 failed, deployer `0x3394d7Be60302c9649c6E5A3c7fC7b989f521348`,
+addresses in `packages/sdk/addresses.json["46630"]` (router owner = 24h timelock, attestation signer = the compliance
+key). Smoke flows on testnet: 13/13 actions confirmed (lend, allocate, openShort, rescue addCollateral, repay,
+closeShort, borrow, repay all, withdrawCollateral, withdrawLend). Deployer balance after: ~0.0084 ETH.
+Lessons: pass `--gas-estimate-multiplier 200` (the L1 data fee counts inside the gas limit; the default 130% ran a
+seed transaction out of gas), keep > 1 GB free disk for forge's broadcast journal (`--resume` continues from it), and
+use a dedicated RPC (Alchemy/QuickNode) for services — the public endpoint is not archive.
+
 **Deploy** (after the owner's go; the script refuses without `TESTNET_GO=yes`):
 
 ```sh
 cd contracts
 TESTNET_GO=yes STOCKLINE_ATTESTATION_SIGNER=<compliance signer address> \
   forge script script/DeployTestnet.s.sol --rpc-url $ROBINHOOD_TESTNET_RPC_URL --broadcast --slow \
-  --private-key $TESTNET_DEPLOYER_KEY
+  --gas-estimate-multiplier 200 --private-key $TESTNET_DEPLOYER_KEY
 # then: commit packages/sdk/addresses.json["46630"], verify contracts on the explorer, start the services,
 TESTNET_GO=yes SMOKE_KEY=$TESTNET_DEPLOYER_KEY PROXY_SECRET=$PROXY_SECRET pnpm --filter @stockline/devnet drive smoke \
   --rpc $ROBINHOOD_TESTNET_RPC_URL --compliance <COMPLIANCE_URL>

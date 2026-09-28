@@ -78,9 +78,9 @@ testers) are pending; the tooling for them is in place.
 | 4 · Compliance signer, geo-block CP-R1…R4 | Done (sanctions provider pending) | `compliance/test/compliance.test.ts` |
 | 5 · Web app APP-R1…R11 | Done | `web/e2e/flows.spec.ts` (10), `web/lighthouse/results.md` (96 / 91) |
 | 6 · Alerts APP-R8 | Done | `keepers/test/alerts.test.ts` (delivery ~0.5 s after the block) |
-| 7 · Testnet readiness | Done up to the go | `DeployTestnet.s.sol`, faucet, feed mirror, `infra/`, `runbooks/testnet.md`, `runbooks/testnet-dry-run.md` |
+| 7 · Testnet readiness | **Deployed on 46630 (2026-09-28)**; smoke 13/13 on testnet | `packages/sdk/addresses.json["46630"]`, `runbooks/testnet.md` |
 | Exit · 06/07 acceptance | 5 of 7 met; 2 pending testnet (7-day reconcile, 20 testers) | [06](06-web-app.md), [07](07-short-interest.md) |
-| Exit · 2 clean testnet weekends | Pending (go + 2 weekends) | weekend watch in `runbooks/testnet.md` |
+| Exit · 2 clean testnet weekends | Pending (services + 2 weekends from 2026-10-02) | weekend watch in `runbooks/testnet.md`, monitor `GET /weekends` |
 | Exit · 20 external testers | Pending (owner recruits) | tester kit in `runbooks/testnet.md` |
 
 ### Remediation status (2026-09-27 → 2026-09-28)

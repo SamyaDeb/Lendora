@@ -223,6 +223,10 @@ export class ChainDriver {
   /** Install the driver's compliance signer on the router (owner = timelock, impersonated on anvil). */
   async useAttestationSigner(): Promise<`0x${string}`> {
     this.signer = privateKeyToAccount(this.opts.attestationKey ?? generatePrivateKey());
+    // Live chains (testnet): the deployment already installed the compliance key; the owner (a timelock) cannot be
+    // impersonated there, so only anvil needs the owner call below.
+    const current = await this.a.client.readContract({address: this.d.router!, abi: stocklineRouterAbi, functionName: "attestationSigner"});
+    if (current.toLowerCase() === this.signer.address.toLowerCase()) return this.signer.address;
     const owner = await this.a.client.readContract({address: this.d.router!, abi: stocklineRouterAbi, functionName: "owner"});
     await this.a.send(owner, this.d.router!, this.call(stocklineRouterAbi, "setAttestationSigner", [this.signer.address]));
     return this.signer.address;
@@ -234,7 +238,7 @@ export class ChainDriver {
     if (!this.signer) await this.useAttestationSigner();
     const expiry = (await this.now()) + ttl;
     const signature = await this.signer!.signTypedData({
-      domain: attestationDomain(31337, this.d.router!),
+      domain: attestationDomain(await this.a.client.getChainId(), this.d.router!), // 31337 on anvil, 46630 on testnet
       types: attestationTypes,
       primaryType: "Attestation",
       message: {user, expiry},
