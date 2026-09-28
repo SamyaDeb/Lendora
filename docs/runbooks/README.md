@@ -4,28 +4,34 @@ One page per P0/P1 alert of the ops monitor ([10 "Monitoring and paging"](../prd
 MON-R1…R20), plus the operational procedures they share. Every page has the same shape: **trigger → impact → first 5
 minutes → decision tree → exact commands → who signs → comms → post-mortem**.
 
-| Alert (rule) | Sev | Runbook | Rehearsed on anvil |
-|---|---|---|---|
-| `BAD_DEBT` (MON-R1) | P0 | [bad-debt.md](bad-debt.md) | detection: monitor test; response: delist + `repay` ([runbooks.test.ts](../../packages/devnet/test/runbooks.test.ts)) |
-| `MISSED_LIQUIDATION` (MON-R2) | P0 | [missed-liquidation.md](missed-liquidation.md) | detection + standard liquidation: monitor test |
-| `BACKING_SHORTFALL` (MON-R3) | P0 | [wrapper-backing-shortfall.md](wrapper-backing-shortfall.md) | detection (`adminBurn`): monitor test; delist: runbooks test |
-| `CLUSDG_BACKING` (MON-R4) | P0 | [usdg-freeze.md](usdg-freeze.md) | detection (USDG wipe): monitor test; delist: runbooks test |
-| `ORACLE_STALE` / `FEED_REJECTED` (MON-R5/R6) | P1 | [oracle-stale-or-rejected.md](oracle-stale-or-rejected.md) | detection: monitor test; re-anchor through the timelock: runbooks test |
-| `GUARD_TRIPPED` / `PULL_NOT_EFFECTIVE` (MON-R7/R11) | P1 | [guard-tripped.md](guard-tripped.md) | manual trip → pull → clear: runbooks + monitor tests |
-| issuer pause / blocklist (`GUARD_TRIPPED` TOKEN_PAUSED, WRAPPER_BLOCKED) | P1 | [issuer-pause-or-blocklist.md](issuer-pause-or-blocklist.md) | pause → USDG exit → unpause: runbooks test |
-| `L2_GAP` (MON-R8) | P1 | [sequencer-l2-gap.md](sequencer-l2-gap.md) | detection: monitor test |
-| `KEEPER_DOWN` (MON-R9) | P1 | [keeper-down.md](keeper-down.md) | detection: monitor test |
-| `LOW_GAS` / `LOW_GAS_CRITICAL` (MON-R15) | P1 / P0 | [low-gas.md](low-gas.md) | detection (configured and measured burn): monitor test |
-| `DIRECT_BORROW` (MON-R10) | P1 | [direct-borrow.md](direct-borrow.md) | detection: monitor test; global cap through the timelock: runbooks test |
-| `CALENDAR_RUNWAY` (MON-R13) | P2 | [calendar-push.md](calendar-push.md) | detection: monitor test; event push through the timelock: runbooks test |
-| multiplier change (`GUARD_TRIPPED` MULTIPLIER) | P1 | [multiplier-change.md](multiplier-change.md) | latch → confirm through the timelock: runbooks test |
-| `TIMELOCK_SCHEDULED` / `TIMELOCK_EXECUTED` (`_UNTRACKED`) / `ROLE_CHANGED` (MON-R16…R18) | P1 / P0 | [governance-change.md](governance-change.md) | detection through the real timelock (tracked and untracked), `SetIsSentinel`: monitor test |
-| `LIQUIDATION_UNPROFITABLE` (MON-R19) | P1 | [missed-liquidation.md](missed-liquidation.md) | detection (HF < 1, DEX route 20% worse): monitor test |
-| `FEE_NOT_DISTRIBUTED` (MON-R20) | P2 | [keeper-down.md](keeper-down.md) | detection (fee shares waiting), resolved by `distribute`: monitor test |
+| Alert (rule) | Sev | Runbook | Rehearsed on anvil | Rehearsed on a fork of 46630 | Drilled on testnet |
+|---|---|---|---|---|---|
+| `BAD_DEBT` (MON-R1) | P0 | [bad-debt.md](bad-debt.md) | detection: monitor test; response: delist + `repay` ([runbooks.test.ts](../../packages/devnet/test/runbooks.test.ts)) | – | ⏳ needs "go testnet" |
+| `MISSED_LIQUIDATION` (MON-R2) | P0 | [missed-liquidation.md](missed-liquidation.md) | detection + standard liquidation: monitor test | – | ⏳ needs "go testnet" |
+| `BACKING_SHORTFALL` (MON-R3) | P0 | [wrapper-backing-shortfall.md](wrapper-backing-shortfall.md) | detection (`adminBurn`): monitor test; delist: runbooks test | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #11: P0 tabletop, adminBurn → delist) | ⏳ needs "go testnet" |
+| `CLUSDG_BACKING` (MON-R4) | P0 | [usdg-freeze.md](usdg-freeze.md) | detection (USDG wipe): monitor test; delist: runbooks test | – | ⏳ needs "go testnet" |
+| `ORACLE_STALE` / `FEED_REJECTED` (MON-R5/R6) | P1 | [oracle-stale-or-rejected.md](oracle-stale-or-rejected.md) | detection: monitor test; re-anchor through the timelock: runbooks test | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #8: `resetReferences`) | ⏳ needs "go testnet" |
+| `GUARD_TRIPPED` / `PULL_NOT_EFFECTIVE` (MON-R7/R11) | P1 | [guard-tripped.md](guard-tripped.md) | manual trip → pull → clear: runbooks + monitor tests | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #5) | ⏳ needs "go testnet" |
+| issuer pause / blocklist (`GUARD_TRIPPED` TOKEN_PAUSED, WRAPPER_BLOCKED) | P1 | [issuer-pause-or-blocklist.md](issuer-pause-or-blocklist.md) | pause → USDG exit → unpause: runbooks test | – | ⏳ needs "go testnet" |
+| `L2_GAP` (MON-R8) | P1 | [sequencer-l2-gap.md](sequencer-l2-gap.md) | detection: monitor test | – | ⏳ needs "go testnet" |
+| `KEEPER_DOWN` (MON-R9) | P1 | [keeper-down.md](keeper-down.md) | detection: monitor test | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #6: guardian deallocates by hand) | ⏳ needs "go testnet" |
+| `LOW_GAS` / `LOW_GAS_CRITICAL` (MON-R15) | P1 / P0 | [low-gas.md](low-gas.md) | detection (configured and measured burn): monitor test | – | ⏳ needs "go testnet" |
+| `DIRECT_BORROW` (MON-R10) | P1 | [direct-borrow.md](direct-borrow.md) | detection: monitor test; global cap through the timelock: runbooks test | – | ⏳ needs "go testnet" |
+| `CALENDAR_RUNWAY` (MON-R13) | P2 | [calendar-push.md](calendar-push.md) | detection: monitor test; event push through the timelock: runbooks test | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #9) | ⏳ needs "go testnet" |
+| multiplier change (`GUARD_TRIPPED` MULTIPLIER) | P1 | [multiplier-change.md](multiplier-change.md) | latch → confirm through the timelock: runbooks test | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #7) | ⏳ needs "go testnet" |
+| `TIMELOCK_SCHEDULED` / `TIMELOCK_EXECUTED` (`_UNTRACKED`) / `ROLE_CHANGED` (MON-R16…R18) | P1 / P0 | [governance-change.md](governance-change.md) | detection through the real timelock (tracked and untracked), `SetIsSentinel`: monitor test | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #10: decode + cancel) | ⏳ needs "go testnet" |
+| `LIQUIDATION_UNPROFITABLE` (MON-R19) | P1 | [missed-liquidation.md](missed-liquidation.md) | detection (HF < 1, DEX route 20% worse): monitor test | – | ⏳ needs "go testnet" |
+| `FEE_NOT_DISTRIBUTED` (MON-R20) | P2 | [keeper-down.md](keeper-down.md) | detection (fee shares waiting), resolved by `distribute`: monitor test | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #1–4: fee on through the 24h timelock, first distribution and conversion) | ⏳ needs "go testnet" |
 
 Rehearsals: `pnpm --filter @stockline/devnet test` (runbooks.test.ts, real TimelockController with the calldata from
-the SDK tool) and `pnpm --filter @stockline/keepers test` (monitor.test.ts). **Testnet drills** (Phase 3 exit, "runbooks
-drilled") are still to do; record them in the table with date and who ran them.
+the SDK tool) and `pnpm --filter @stockline/keepers test` (monitor.test.ts). **Fork rehearsal (Phase 3 task 11, no "go testnet"):**
+[fork-drills-46630.md](fork-drills-46630.md) — the fee turn-on and every mainnet-launch §0 drill (guard-tripped, oracle
+re-anchor, calendar-push, multiplier-change, keeper-down, governance-change, P0 tabletop: wrapper shortfall) ran on an
+anvil fork of 46630 against the real testnet deployment and its 24h timelocks, 8/8 passing
+(`FORK_DRILLS_46630=1 pnpm --filter @stockline/devnet exec vitest run test/forkDrills.test.ts`). **Testnet drills**
+(the same steps on 46630, with date, tx hashes and who ran each) wait for the owner's "go testnet"; the fee contracts
+are deployed there with `contracts/script/DeployTestnetFees.s.sol` (`TESTNET_GO=yes`). Weekend log:
+[testnet-weekends.md](testnet-weekends.md).
 
 Other runbooks: [list-stock.md](list-stock.md), [testnet.md](testnet.md), [testnet-dry-run.md](testnet-dry-run.md),
 [mainnet-launch.md](mainnet-launch.md).
@@ -33,7 +39,7 @@ Other runbooks: [list-stock.md](list-stock.md), [testnet.md](testnet.md), [testn
 ## Roles and who signs
 
 | Role | Holder (mainnet, [mainnet-launch.md](mainnet-launch.md)) | Can do, instantly | Cannot do |
-|---|---|---|---|
+|---|---|---|---|---|---|
 | Guardian | 2-of-4 multisig (Safe) | `oracle.trip/clear(MANUAL, DEVIATION, L2_GAP)`, `oracle.raiseBufferFloor`, vault sentinel: `deallocate`, decrease caps, `revoke` | Lower the floor, change params, touch the router |
 | Owner | 4-of-7 multisig → `TimelockController` (48h; 24h on testnet) | Everything below, after the delay | Anything instantly |
 | — via timelock | | router `delistMarket`, `setGlobalCap`, `setCapOverride`, `setAttestationSigner`, `setSwapTarget`, upgrade; oracle `clearMultiplierGuard`, `resetReferences`, `setParams`, `setBufferFloor`, `setSequencerFeed`; `MarketHours.replace*From` | |

@@ -52,6 +52,9 @@ export interface DriverOptions {
   /** Get attestations elsewhere (e.g. the compliance service on testnet) instead of signing them here. */
   attestationProvider?: (user: `0x${string}`) => Promise<{expiry: bigint; signature: Hex}>;
   log?: (m: string) => void;
+  /** Mock operator and owner-side sender (anvil: the DeployLocal deployer; a 46630 fork: the testnet deployer, which
+   * gates every mock and holds the testnet roles). */
+  operator?: `0x${string}`;
 }
 
 /** Uniswap v3 tick of a stock(18 dp)/USDG(6 dp) pool (stock = token0) at a feed answer with 8 dp. */
@@ -69,6 +72,8 @@ export class ChainDriver {
   readonly prices: Record<string, bigint> = {...INITIAL_PRICES};
   private signer?: PrivateKeyAccount;
   private readonly log: (m: string) => void;
+  /** See `DriverOptions.operator`. */
+  readonly op: `0x${string}`;
 
   constructor(
     readonly a: Anvil,
@@ -76,6 +81,7 @@ export class ChainDriver {
   ) {
     this.d = a.d;
     this.log = opts.log ?? (() => {});
+    this.op = opts.operator ?? DEPLOYER;
   }
 
   get tickers(): string[] {
@@ -124,10 +130,10 @@ export class ChainDriver {
     for (const t of this.tickers) {
       const p = prices[t] ?? this.prices[t];
       this.prices[t] = p;
-      await this.a.send(DEPLOYER, m[`${t}_feed`], this.call(mockAggregatorAbi, "setAnswer", [p]));
+      await this.a.send(this.op, m[`${t}_feed`], this.call(mockAggregatorAbi, "setAnswer", [p]));
       await this.setDex(t, p);
     }
-    const r = await this.a.send(DEPLOYER, m.usdgFeed, this.call(mockAggregatorAbi, "setAnswer", [100_000_000n]));
+    const r = await this.a.send(this.op, m.usdgFeed, this.call(mockAggregatorAbi, "setAnswer", [100_000_000n]));
     await this.record("rounds", r, {detail: Object.fromEntries(this.tickers.map((t) => [t, this.prices[t].toString()]))});
   }
 
@@ -141,19 +147,19 @@ export class ChainDriver {
   async setDex(ticker: string, answer8: bigint): Promise<void> {
     const m = this.d.mocks!;
     const s = this.stock(ticker);
-    await this.a.send(DEPLOYER, m.swapAggregator, this.call(mockSwapAggregatorAbi, "setRate", [s.stockToken, this.d.usdg, (answer8 * 10n ** 6n) / 10n ** 8n]));
-    await this.a.send(DEPLOYER, m.swapAggregator, this.call(mockSwapAggregatorAbi, "setRate", [this.d.usdg, s.stockToken, (10n ** 8n * 10n ** 36n) / (answer8 * 10n ** 6n)]));
-    await this.a.send(DEPLOYER, m[`${ticker}_USDG_pool`], this.call(mockUniswapV3PoolAbi, "setTick", [tickForPrice(answer8)]));
+    await this.a.send(this.op, m.swapAggregator, this.call(mockSwapAggregatorAbi, "setRate", [s.stockToken, this.d.usdg, (answer8 * 10n ** 6n) / 10n ** 8n]));
+    await this.a.send(this.op, m.swapAggregator, this.call(mockSwapAggregatorAbi, "setRate", [this.d.usdg, s.stockToken, (10n ** 8n * 10n ** 36n) / (answer8 * 10n ** 6n)]));
+    await this.a.send(this.op, m[`${ticker}_USDG_pool`], this.call(mockUniswapV3PoolAbi, "setTick", [tickForPrice(answer8)]));
   }
 
   // ------------------------------------------------------------------ balances
 
   async mintStock(ticker: string, to: `0x${string}`, amount: bigint): Promise<void> {
-    await this.a.send(DEPLOYER, this.stock(ticker).stockToken, this.call(mockStockTokenAbi, "mint", [to, amount]));
+    await this.a.send(this.op, this.stock(ticker).stockToken, this.call(mockStockTokenAbi, "mint", [to, amount]));
   }
 
   async mintUsdg(to: `0x${string}`, amount: bigint): Promise<void> {
-    await this.a.send(DEPLOYER, this.d.usdg, this.call(mockUsdgAbi, "mint", [to, amount]));
+    await this.a.send(this.op, this.d.usdg, this.call(mockUsdgAbi, "mint", [to, amount]));
   }
 
   private async approve(token: `0x${string}`, owner: `0x${string}`, spender: `0x${string}`): Promise<void> {
@@ -338,14 +344,14 @@ export class ChainDriver {
 
   async poke(tickers = this.tickers): Promise<void> {
     for (const t of tickers) {
-      const r = await this.a.send(DEPLOYER, this.stock(t).oracle, this.call(stocklineOracleAbi, "poke"));
+      const r = await this.a.send(this.op, this.stock(t).oracle, this.call(stocklineOracleAbi, "poke"));
       await this.record("poke", r, {ticker: t});
     }
   }
 
   /** D4: the issuer pauses the Stock Token → the oracle's TOKEN_PAUSED reason; `poke()` latches and emits it. */
   async issuerPause(ticker: string, paused: boolean): Promise<void> {
-    const r = await this.a.send(DEPLOYER, this.stock(ticker).stockToken, this.call(mockStockTokenAbi, paused ? "pause" : "unpause"));
+    const r = await this.a.send(this.op, this.stock(ticker).stockToken, this.call(mockStockTokenAbi, paused ? "pause" : "unpause"));
     await this.record(paused ? "issuerPause" : "issuerUnpause", r, {ticker});
     await this.poke([ticker]);
   }
@@ -360,11 +366,11 @@ export class ChainDriver {
    * flag, poke, update the multiplier, unpause, fresh round, poke. */
   async multiplierChange(ticker: string, multiplierWad: bigint): Promise<void> {
     const token = this.stock(ticker).stockToken;
-    await this.a.send(DEPLOYER, token, this.call(mockStockTokenAbi, "pauseOracle"));
+    await this.a.send(this.op, token, this.call(mockStockTokenAbi, "pauseOracle"));
     await this.poke([ticker]);
-    const r = await this.a.send(DEPLOYER, token, this.call(mockStockTokenAbi, "setUIMultiplier", [multiplierWad]));
+    const r = await this.a.send(this.op, token, this.call(mockStockTokenAbi, "setUIMultiplier", [multiplierWad]));
     await this.record("multiplier", r, {ticker, detail: {multiplier: multiplierWad.toString()}});
-    await this.a.send(DEPLOYER, token, this.call(mockStockTokenAbi, "unpauseOracle"));
+    await this.a.send(this.op, token, this.call(mockStockTokenAbi, "unpauseOracle"));
     await this.poke([ticker]);
     await this.a.setTime((await this.now()) + 60n);
     await this.rounds();

@@ -21,6 +21,8 @@ import {privateKeyToAccount} from "viem/accounts";
 import {formatAbiItem} from "viem/utils";
 import {
   collateralTokenAbi,
+  feeConverterAbi,
+  feeSplitterAbi,
   getDeployment,
   mockSwapAggregatorAbi,
   morphoAbi,
@@ -120,7 +122,7 @@ export async function connectAnvil(url: string, stop: () => void = () => {}): Pr
   };
 }
 
-const decodeAbis = [stocklineRouterAbi, morphoAbi, stocklineOracleAbi, vaultV2FullAbi, stockWrapperAbi, collateralTokenAbi, mockSwapAggregatorAbi];
+const decodeAbis = [stocklineRouterAbi, morphoAbi, stocklineOracleAbi, vaultV2FullAbi, stockWrapperAbi, collateralTokenAbi, mockSwapAggregatorAbi, feeConverterAbi, feeSplitterAbi];
 
 /** Replays a reverted call (state is unchanged by a revert) and decodes the error against Stockline ABIs. */
 export async function revertReason(client: PublicClient, from: `0x${string}`, to: `0x${string}`, data: Hex): Promise<string> {

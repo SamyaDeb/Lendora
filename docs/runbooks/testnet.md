@@ -30,6 +30,7 @@ freeze from Friday 20:00 ET to Sunday 20:00 ET, like the real feeds.
 
 | # | Flow | Where |
 |---|---|---|
+| 0 | Open the app, pick a market from the list | `/markets` |
 | 1 | Lend a stock; see the variable APY and your `rSTOCK` balance | `/lend/NVDA` |
 | 2 | Withdraw part of your lend | `/lend/NVDA` → Withdraw |
 | 3 | Open a short: USDG collateral, borrow and sell NVDA; read the preview first (health factor now, at the next close, if the price rises 10%) | `/short/NVDA` |
@@ -41,6 +42,7 @@ freeze from Friday 20:00 ET to Sunday 20:00 ET, like the real feeds.
 | 9 | Set alerts (health factor, weekend warning) | `/alerts` |
 | 10 | Look at the short-interest dashboard and the API | `/short-interest`, `<API_URL>/v1/openapi.json` |
 | 11 | Hold a borrow over a weekend and watch the buffer ramp in on Friday afternoon (ET) | `/portfolio` |
+| 12 | After the fee is on (Phase 3): lender yield shown net of the 10% performance fee, in stock and USD; protocol revenue per day | `/lend/NVDA`, `/data` |
 
 **Reporting bugs.** Use the feedback form: `<FEEDBACK_FORM_URL>` (placeholder, owner to create). Include: what you
 did, what you expected, what happened, the transaction hash (from your wallet or the app's step list), your browser
