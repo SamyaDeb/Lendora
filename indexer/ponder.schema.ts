@@ -150,3 +150,44 @@ export const chainHead = onchainTable("chain_head", (t) => ({
   safeBlock: t.bigint().notNull(),
   finalizedBlock: t.bigint().notNull(),
 }));
+
+/**
+ * Protocol revenue per stock per UTC day (FE-R5): performance fee shares minted by the `rSTOCK` vault (Vault V2
+ * `AccrueInterest`), their value in stock (`feeAssets` = interest × fee, the vault's own math) and in USD at the
+ * oracle's feed price at that block (WAD).
+ */
+export const feeDay = onchainTable(
+  "fee_day",
+  (t) => ({
+    ticker: t.text().notNull(),
+    day: t.bigint().notNull(),
+    interestAssets: t.bigint().notNull(),
+    feeShares: t.bigint().notNull(),
+    feeAssets: t.bigint().notNull(),
+    feeUsd: t.bigint().notNull(),
+    accruals: t.integer().notNull(),
+  }),
+  (t) => ({pk: primaryKey({columns: [t.ticker, t.day]})}),
+);
+
+/** Every fee movement (FE-R5): `accrual` (vault → splitter), `distribution` (splitter → recipient),
+ * `conversion` (converter → USDG → destination). `usd` is WAD at the block's oracle prices. */
+export const feeEvent = onchainTable(
+  "fee_event",
+  (t) => ({
+    id: t.text().primaryKey(),
+    kind: t.text().notNull(),
+    ticker: t.text(),
+    token: t.hex().notNull(),
+    account: t.hex(),
+    shares: t.bigint(),
+    assets: t.bigint(),
+    usdg: t.bigint(),
+    usd: t.bigint().notNull(),
+    blockNumber: t.bigint().notNull(),
+    logIndex: t.integer().notNull(),
+    timestamp: t.bigint().notNull(),
+    txHash: t.hex().notNull(),
+  }),
+  (t) => ({kindTimeIdx: index().on(t.kind, t.timestamp)}),
+);

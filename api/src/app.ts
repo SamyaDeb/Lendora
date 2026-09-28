@@ -347,6 +347,74 @@ export function createApp(deps: AppDeps) {
     },
   );
 
+  // ---------------------------------------------------------------- protocol revenue (FE-R5)
+
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/v1/protocol/revenue",
+      tags: ["protocol"],
+      summary: "Performance fees per stock per day, in Stock Token units and USD; distributions and conversions (FE-R5)",
+      request: {query: S.RevenueQuery},
+      responses: {200: json(S.RevenueResponse, "Revenue"), ...errors},
+    }),
+    async (c) => {
+      const q = c.req.valid("query");
+      const DAY = 86_400n;
+      const dayOf = (s: string) => BigInt(Date.parse(`${s}T00:00:00Z`) / 1000);
+      const today = (BigInt(Math.floor(Date.now() / 1000)) / DAY) * DAY;
+      const to = q.to ? dayOf(q.to) : today;
+      const from = q.from ? dayOf(q.from) : to - 89n * DAY;
+      if (from > to) throw new HttpError(400, "from is after to");
+      if (to - from > 3660n * DAY) throw new HttpError(400, "range above 10 years");
+      const [rows, totals, head] = await Promise.all([db.feeDays(from, to), db.feeTotals(from, to + DAY), db.head()]);
+      const units = (x: unknown) => formatUnits(BigInt(String(x)), 18);
+      const days = rows.map((r) => ({
+        day: iso(Number(r.day)).slice(0, 10),
+        symbol: String(r.ticker),
+        interest: units(r.interest_assets),
+        fee: units(r.fee_assets),
+        feeUsd: units(r.fee_usd),
+        accruals: Number(r.accruals),
+        raw: {interestAssets: String(r.interest_assets), feeShares: String(r.fee_shares), feeAssets: String(r.fee_assets), feeUsdWad: String(r.fee_usd)},
+      }));
+      const by = new Map<string, {feeShares: bigint; feeAssets: bigint; feeUsd: bigint}>();
+      let usd = 0n;
+      for (const r of rows) {
+        const t = String(r.ticker);
+        const a = by.get(t) ?? {feeShares: 0n, feeAssets: 0n, feeUsd: 0n};
+        a.feeShares += BigInt(String(r.fee_shares));
+        a.feeAssets += BigInt(String(r.fee_assets));
+        a.feeUsd += BigInt(String(r.fee_usd));
+        by.set(t, a);
+        usd += BigInt(String(r.fee_usd));
+      }
+      const kind = (k: string) => totals.find((t) => t.kind === k);
+      const dist = kind("distribution");
+      const conv = kind("conversion");
+      const e = envelope(head);
+      asOfHeaders(c, e);
+      return c.json(
+        {
+          ...e,
+          from: iso(Number(from)),
+          to: iso(Number(to + DAY - 1n)),
+          rateKind: "variable" as const,
+          data: {
+            days,
+            totals: {
+              feeUsd: units(usd),
+              bySymbol: [...by.entries()].map(([symbol, a]) => ({symbol, fee: units(a.feeAssets), feeUsd: units(a.feeUsd), raw: {feeShares: a.feeShares.toString(), feeAssets: a.feeAssets.toString()}})),
+            },
+            distributed: {count: Number(dist?.n ?? 0), usd: units(dist?.usd ?? 0)},
+            converted: {count: Number(conv?.n ?? 0), usdg: formatUnits(BigInt(String(conv?.usdg ?? 0)), 6), usd: units(conv?.usd ?? 0)},
+          },
+        },
+        200,
+      );
+    },
+  );
+
   app.openapi(createRoute({method: "get", path: "/v1/terms", tags: ["status"], summary: "Data terms of use (SI-R14)", responses: {200: json(S.TermsResponse, "Terms")}}), (c) =>
     c.json(TERMS, 200),
   );

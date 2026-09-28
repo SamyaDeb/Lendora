@@ -461,6 +461,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/protocol/revenue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Performance fees per stock per day, in Stock Token units and USD; distributions and conversions (FE-R5) */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description First UTC day (default: 90 days ago) */
+                    from?: string;
+                    /** @description Last UTC day, inclusive (default: today) */
+                    to?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Revenue */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RevenueResponse"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rate limited (SI-R10) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Indexer not ready */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/terms": {
         parameters: {
             query?: never;
@@ -1331,6 +1408,141 @@ export interface components {
                         mask: string;
                     };
                 }[];
+            };
+        };
+        RevenueResponse: {
+            /**
+             * @description Block the data is as of (SI-R13)
+             * @example 1000000000000000000
+             */
+            asOfBlock: string;
+            /**
+             * @description ISO 8601 UTC
+             * @example 2026-10-01T16:00:00.000Z
+             */
+            asOfTime: string;
+            /** @description asOfBlock ≤ the chain's finalized block (SI-R3) */
+            confirmed: boolean;
+            /** @description asOfBlock ≤ the chain's safe block */
+            safe: boolean;
+            scope: string;
+            /**
+             * @description ISO 8601 UTC
+             * @example 2026-10-01T16:00:00.000Z
+             */
+            from: string;
+            /**
+             * @description ISO 8601 UTC
+             * @example 2026-10-01T16:00:00.000Z
+             */
+            to: string;
+            /**
+             * @description Historical, variable; not a promise of future revenue (CP-R7)
+             * @enum {string}
+             */
+            rateKind: "variable";
+            data: {
+                days: {
+                    /**
+                     * @description UTC day, YYYY-MM-DD
+                     * @example 2026-10-01
+                     */
+                    day: string;
+                    symbol: string;
+                    /**
+                     * @description Borrow interest reaching rSTOCK lenders before the fee, in Stock Token units
+                     * @example 1234.56
+                     */
+                    interest: string;
+                    /**
+                     * @description Performance fee (interest × fee), in Stock Token units
+                     * @example 1234.56
+                     */
+                    fee: string;
+                    /**
+                     * @description Fee in USD at the oracle feed price of each accrual block
+                     * @example 1234.56
+                     */
+                    feeUsd: string;
+                    accruals: number;
+                    raw: {
+                        /**
+                         * @description Integer as a decimal string (raw onchain units)
+                         * @example 1000000000000000000
+                         */
+                        interestAssets: string;
+                        /**
+                         * @description Integer as a decimal string (raw onchain units)
+                         * @example 1000000000000000000
+                         */
+                        feeShares: string;
+                        /**
+                         * @description Integer as a decimal string (raw onchain units)
+                         * @example 1000000000000000000
+                         */
+                        feeAssets: string;
+                        /**
+                         * @description Integer as a decimal string (raw onchain units)
+                         * @example 1000000000000000000
+                         */
+                        feeUsdWad: string;
+                    };
+                }[];
+                totals: {
+                    /**
+                     * @description Decimal string
+                     * @example 1234.56
+                     */
+                    feeUsd: string;
+                    bySymbol: {
+                        symbol: string;
+                        /**
+                         * @description Decimal string
+                         * @example 1234.56
+                         */
+                        fee: string;
+                        /**
+                         * @description Decimal string
+                         * @example 1234.56
+                         */
+                        feeUsd: string;
+                        raw: {
+                            /**
+                             * @description Integer as a decimal string (raw onchain units)
+                             * @example 1000000000000000000
+                             */
+                            feeShares: string;
+                            /**
+                             * @description Integer as a decimal string (raw onchain units)
+                             * @example 1000000000000000000
+                             */
+                            feeAssets: string;
+                        };
+                    }[];
+                };
+                /** @description FeeSplitter payouts (FE-R2) */
+                distributed: {
+                    count: number;
+                    /**
+                     * @description Decimal string
+                     * @example 1234.56
+                     */
+                    usd: string;
+                };
+                /** @description FeeConverter sales to USDG (FE-R4) */
+                converted: {
+                    count: number;
+                    /**
+                     * @description Decimal string
+                     * @example 1234.56
+                     */
+                    usdg: string;
+                    /**
+                     * @description Decimal string
+                     * @example 1234.56
+                     */
+                    usd: string;
+                };
             };
         };
         TermsResponse: {

@@ -192,3 +192,36 @@ export const CreateKeyBody = z.object({message: z.string().max(4000), signature:
 export const CreateKeyResponse = z.object({id: z.string(), key: z.string().openapi({description: "Shown once; store it"}), address: z.string(), tier: z.literal("keyed")}).openapi("CreateKeyResponse");
 export const KeysResponse = z.object({address: z.string(), keys: z.array(z.object({id: z.string(), label: z.string().nullable(), createdAt: Time, revokedAt: Time.nullable()}))}).openapi("KeysResponse");
 export const ErrorResponse = z.object({error: z.string()}).openapi("Error");
+
+/** FE-R5 protocol revenue. Stock amounts are Stock Token units (1 wSTOCK = 1 raw Stock Token, LM-R1). */
+const RevenueDay = z.object({
+  day: z.string().openapi({description: "UTC day, YYYY-MM-DD", example: "2026-10-01"}),
+  symbol: z.string(),
+  interest: Dec.openapi({description: "Borrow interest reaching rSTOCK lenders before the fee, in Stock Token units"}),
+  fee: Dec.openapi({description: "Performance fee (interest × fee), in Stock Token units"}),
+  feeUsd: Dec.openapi({description: "Fee in USD at the oracle feed price of each accrual block"}),
+  accruals: z.number().int(),
+  raw: z.object({interestAssets: Int, feeShares: Int, feeAssets: Int, feeUsdWad: Int}),
+});
+
+const RevenueBySymbol = z.object({symbol: z.string(), fee: Dec, feeUsd: Dec, raw: z.object({feeShares: Int, feeAssets: Int})});
+
+export const RevenueResponse = z
+  .object({
+    ...EnvelopeSchema,
+    from: Time,
+    to: Time,
+    rateKind: z.literal("variable").openapi({description: "Historical, variable; not a promise of future revenue (CP-R7)"}),
+    data: z.object({
+      days: z.array(RevenueDay),
+      totals: z.object({feeUsd: Dec, bySymbol: z.array(RevenueBySymbol)}),
+      distributed: z.object({count: z.number().int(), usd: Dec}).openapi({description: "FeeSplitter payouts (FE-R2)"}),
+      converted: z.object({count: z.number().int(), usdg: Dec, usd: Dec}).openapi({description: "FeeConverter sales to USDG (FE-R4)"}),
+    }),
+  })
+  .openapi("RevenueResponse");
+
+export const RevenueQuery = z.object({
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().openapi({description: "First UTC day (default: 90 days ago)", example: "2026-10-01"}),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().openapi({description: "Last UTC day, inclusive (default: today)", example: "2026-10-31"}),
+});

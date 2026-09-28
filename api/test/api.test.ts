@@ -1,10 +1,10 @@
 import {readFileSync} from "node:fs";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import WebSocket from "ws";
-import {parseUnits} from "viem";
+import {encodeFunctionData, parseAbiItem, parseUnits, zeroAddress} from "viem";
 import {privateKeyToAccount, generatePrivateKey} from "viem/accounts";
 import {createSiweMessage} from "viem/siwe";
-import {api as sdkApi, shortInterestLensAbi, stocklineRouterAbi} from "@stockline/sdk";
+import {api as sdkApi, feeSplitterAbi, shortInterestLensAbi, stocklineRouterAbi} from "@stockline/sdk";
 import {USERS} from "@stockline/devnet";
 import {startStack, type Stack} from "./harness.js";
 
@@ -244,6 +244,41 @@ describe("public API on the indexed seed week (SI-R10…R14)", () => {
       for (const i of instances) await i.close(); // before Redis goes away
       redis.stop();
     }
+  });
+
+  it("FE-R5 acceptance: /protocol/revenue fee shares = the sum of onchain fee transfers (vault mints to the FeeSplitter)", async () => {
+    const splitter = s.anvil.d.feeSplitter!;
+    const transfer = parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 value)");
+    const onchain: Record<string, bigint> = {};
+    for (const [t, st] of Object.entries(s.anvil.d.stocks)) {
+      const logs = await s.anvil.client.getLogs({address: st.vault, event: transfer, args: {from: zeroAddress, to: splitter}, fromBlock: 0n});
+      onchain[t] = logs.reduce((acc, l) => acc + l.args.value!, 0n);
+    }
+    const total = Object.values(onchain).reduce((a, b) => a + b, 0n);
+    expect(total > 0n, "the seed week accrued fees").toBe(true);
+    const body = (await getJson("/v1/protocol/revenue?from=2026-01-01&to=2027-12-31")) as unknown as {
+      rateKind: string;
+      data: {days: {symbol: string; raw: {feeShares: string; feeAssets: string; interestAssets: string}}[]; totals: {feeUsd: string; bySymbol: {symbol: string; raw: {feeShares: string}}[]}};
+    };
+    expect(body.rateKind).toBe("variable"); // CP-R7
+    for (const b of body.data.totals.bySymbol) expect(BigInt(b.raw.feeShares), b.symbol).toBe(onchain[b.symbol]);
+    expect(body.data.totals.bySymbol.reduce((a, b) => a + BigInt(b.raw.feeShares), 0n)).toBe(total);
+    for (const d of body.data.days) {
+      // fee = 10% of interest, rounded down per accrual (FE-R1)
+      const i = BigInt(d.raw.interestAssets);
+      const f = BigInt(d.raw.feeAssets);
+      expect(f <= i / 10n && f + 50n >= i / 10n, `${d.symbol} fee ~ 10% of interest`).toBe(true);
+    }
+    expect(Number(body.data.totals.feeUsd)).toBeGreaterThan(0);
+
+    // A distribution is indexed with its USD value; the endpoint reports it.
+    const before = (await getJson("/v1/protocol/revenue?from=2026-01-01&to=2027-12-31")) as unknown as {data: {distributed: {count: number}}};
+    await s.anvil.send(USERS.erin, splitter, encodeFunctionData({abi: feeSplitterAbi, functionName: "distribute", args: [s.anvil.d.stocks.NVDA.vault]}));
+    await s.sync();
+    const after = (await getJson("/v1/protocol/revenue?from=2026-01-01&to=2027-12-31")) as unknown as {data: {distributed: {count: number; usd: string}}};
+    expect(after.data.distributed.count).toBe(before.data.distributed.count + 2); // treasury + backstop converters
+    expect(Number(after.data.distributed.usd)).toBeGreaterThan(0);
+    expect((await get("/v1/protocol/revenue?from=2026-02-01&to=2026-01-01")).status).toBe(400);
   });
 
   it("OpenAPI 3.1 is served, matches api/openapi.json, and the SDK's typed client reads the API", async () => {

@@ -1,6 +1,8 @@
 import {createConfig} from "ponder";
 import {
   adaptiveCurveIrmAbi,
+  feeConverterAbi,
+  feeSplitterAbi,
   mockSwapAggregatorAbi,
   morphoEventsAbi,
   scaledUiAmountAbi,
@@ -14,12 +16,14 @@ import {networkConfig} from "./lib/network.js";
 /**
  * SI-R1: Morpho Blue events filtered to Stockline market ids, the AdaptiveCurveIrm rate updates of those markets,
  * Vault V2 (`rSTOCK`) events, router events, oracle `GuardChanged`, Stock Token multiplier updates (the wrapper's
- * multiplier passes the token's through, LM-R3) and DEX swaps for daysToCover. Everything from `@stockline/sdk`.
+ * multiplier passes the token's through, LM-R3) and DEX swaps for daysToCover. Phase 3 (FE-R5): `FeeSplitter` and
+ * `FeeConverter` events for protocol revenue. Everything from `@stockline/sdk`.
  */
 const n = networkConfig();
 const ids = n.tickers.map((t) => n.d.stocks[t].marketId);
 const chain = "stockline" as const;
 const startBlock = n.startBlock;
+const converters = [n.d.treasuryConverter, n.d.backstopConverter].filter((x): x is `0x${string}` => Boolean(x));
 
 export default createConfig({
   database: process.env.DATABASE_URL ? {kind: "postgres", connectionString: process.env.DATABASE_URL} : {kind: "pglite"},
@@ -50,6 +54,10 @@ export default createConfig({
       address: n.dexAddresses.length ? n.dexAddresses : ["0x000000000000000000000000000000000000dEaD"],
       startBlock,
     },
+    // FE-R5. Deployments from before Phase 3 (testnet 46630 today) have neither: a placeholder address keeps the
+    // handlers typed and never matches a log.
+    FeeSplitter: {chain, abi: feeSplitterAbi, address: n.d.feeSplitter ?? "0x000000000000000000000000000000000000dEaD", startBlock},
+    FeeConverter: {chain, abi: feeConverterAbi, address: converters.length ? converters : ["0x000000000000000000000000000000000000dEaD"], startBlock},
   },
   blocks: {
     Tick: {chain, startBlock, interval: n.tickInterval},

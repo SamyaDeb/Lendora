@@ -16,6 +16,7 @@ export type HistoryPoint = components["schemas"]["HistoryPoint"];
 export type Event = components["schemas"]["Event"];
 export type Position = components["schemas"]["Position"];
 export type StatusResponse = components["schemas"]["StatusResponse"];
+export type RevenueResponse = components["schemas"]["RevenueResponse"];
 
 export class ApiError extends Error {
   constructor(
@@ -63,6 +64,8 @@ export function createClient(baseUrl: string, opts: ClientOptions = {}) {
       unwrap(c.GET("/v1/markets/{symbol}/events", {params: {path: {symbol}, query}})),
     positions: (address: string) => unwrap(c.GET("/v1/positions/{address}", {params: {path: {address}}})),
     status: () => unwrap(c.GET("/v1/status")),
+    /** FE-R5: protocol revenue per stock per day (UTC days `YYYY-MM-DD`, default the last 90). */
+    revenue: (query: {from?: string; to?: string} = {}) => unwrap(c.GET("/v1/protocol/revenue", {params: {query}})),
     terms: () => unwrap(c.GET("/v1/terms")),
     nonce: () => unwrap(c.GET("/v1/auth/nonce")),
     createKey: (message: string, signature: string, label?: string) => unwrap(c.POST("/v1/auth/keys", {body: {message, signature, label}})),

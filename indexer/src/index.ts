@@ -1,5 +1,6 @@
 import {ponder, type Context} from "ponder:registry";
-import {dexVolume, eventFeed, market, position} from "ponder:schema";
+import {dexVolume, eventFeed, feeDay, feeEvent, market, position} from "ponder:schema";
+import {stocklineOracleAbi, vaultV2FullAbi} from "@stockline/sdk";
 import {addFlow, net, writeHead, writeSnapshot} from "./snapshot.js";
 
 /**
@@ -261,6 +262,73 @@ ponder.on("Vault:ForceDeallocate", async ({event, context}) => {
 ponder.on("Vault:SetPerformanceFee", async ({event, context}) => {
   const t = vaultTicker(event.log.address);
   await updateMarket(context, t, event.block, () => ({performanceFee: event.args.newPerformanceFee}));
+});
+
+// ------------------------------------------------------------------ Fees (FE-R5)
+
+const WAD = 10n ** 18n;
+const DAY = 86_400n;
+
+/** Feed price of `ticker`'s stock (8 dp) at `block`: USD per raw Stock Token = per wSTOCK (D1). */
+async function stockAnswerAt(context: Context, ticker: string, blockNumber: bigint): Promise<bigint> {
+  const [answer] = await context.client.readContract({address: net.d.stocks[ticker].oracle, abi: stocklineOracleAbi, functionName: "stockAnswer", blockNumber});
+  return answer;
+}
+
+/** USD (WAD) of `shares` of `ticker`'s vault at `block`: shares → wSTOCK (vault rate) → feed price. */
+async function sharesUsdAt(context: Context, ticker: string, shares: bigint, blockNumber: bigint): Promise<{assets: bigint; usd: bigint}> {
+  const [assets, answer] = await Promise.all([
+    context.client.readContract({address: net.d.stocks[ticker].vault, abi: vaultV2FullAbi, functionName: "convertToAssets", args: [shares], blockNumber}),
+    stockAnswerAt(context, ticker, blockNumber),
+  ]);
+  return {assets, usd: (assets * answer) / 10n ** BigInt(net.feedDecimals)};
+}
+
+function feeEventRow(e: {block: Block; log: Log; transaction: Tx}) {
+  return {id: `${e.transaction.hash}-${e.log.logIndex}`, blockNumber: e.block.number, logIndex: e.log.logIndex, timestamp: e.block.timestamp, txHash: e.transaction.hash};
+}
+
+// Vault V2 mints the performance fee as shares on every accrual; `feeAssets` = interest × fee, rounded down exactly
+// like `accrueInterestView` (the fee is read at the block, so a timelocked fee change is picked up).
+ponder.on("Vault:AccrueInterest", async ({event, context}) => {
+  const {previousTotalAssets, newTotalAssets, performanceFeeShares} = event.args;
+  if (performanceFeeShares === 0n) return;
+  const t = vaultTicker(event.log.address);
+  const bn = event.block.number;
+  const [fee, recipient, answer] = await Promise.all([
+    context.client.readContract({address: event.log.address, abi: vaultV2FullAbi, functionName: "performanceFee", blockNumber: bn}),
+    context.client.readContract({address: event.log.address, abi: vaultV2FullAbi, functionName: "performanceFeeRecipient", blockNumber: bn}),
+    stockAnswerAt(context, t, bn),
+  ]);
+  const interest = zeroFloorSub(newTotalAssets, previousTotalAssets);
+  const feeAssets = (interest * BigInt(fee)) / WAD;
+  const feeUsd = (feeAssets * answer) / 10n ** BigInt(net.feedDecimals);
+  const day = (event.block.timestamp / DAY) * DAY;
+  const prev = await context.db.find(feeDay, {ticker: t, day});
+  const next = {
+    interestAssets: (prev?.interestAssets ?? 0n) + interest,
+    feeShares: (prev?.feeShares ?? 0n) + performanceFeeShares,
+    feeAssets: (prev?.feeAssets ?? 0n) + feeAssets,
+    feeUsd: (prev?.feeUsd ?? 0n) + feeUsd,
+    accruals: (prev?.accruals ?? 0) + 1,
+  };
+  await context.db.insert(feeDay).values({ticker: t, day, ...next}).onConflictDoUpdate(next);
+  await context.db.insert(feeEvent).values({...feeEventRow(event), kind: "accrual", ticker: t, token: event.log.address, account: recipient, shares: performanceFeeShares, assets: feeAssets, usdg: null, usd: feeUsd}).onConflictDoNothing();
+});
+
+ponder.on("FeeSplitter:Paid", async ({event, context}) => {
+  const {token, account, amount} = event.args;
+  const t = vaultTicker(token);
+  const v = t ? await sharesUsdAt(context, t, amount, event.block.number) : {assets: null, usd: 0n};
+  await context.db.insert(feeEvent).values({...feeEventRow(event), kind: "distribution", ticker: t ?? null, token, account, shares: t ? amount : null, assets: v.assets, usdg: t ? null : amount, usd: v.usd}).onConflictDoNothing();
+});
+
+ponder.on("FeeConverter:Converted", async ({event, context}) => {
+  const {vault, shares, stockIn, usdgOut, destination} = event.args;
+  const t = vaultTicker(vault);
+  const [usdgAnswer] = await context.client.readContract({address: net.d.stocks[t!].oracle, abi: stocklineOracleAbi, functionName: "usdgAnswer", blockNumber: event.block.number});
+  const usd = (usdgOut * 10n ** 12n * usdgAnswer) / 10n ** BigInt(net.feedDecimals); // USDG 6 dp → WAD at the USDG/USD feed
+  await context.db.insert(feeEvent).values({...feeEventRow(event), kind: "conversion", ticker: t ?? null, token: vault, account: destination, shares, assets: stockIn, usdg: usdgOut, usd}).onConflictDoNothing();
 });
 
 // ------------------------------------------------------------------ Router (RT-R6 events)
