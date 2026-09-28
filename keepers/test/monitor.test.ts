@@ -2,7 +2,7 @@ import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {createServer, type Server} from "node:http";
 import pg from "pg";
 import {encodeFunctionData, maxUint256, type Hex} from "viem";
-import {erc20Abi, marketHoursAbi, mockStockTokenAbi, mockUsdgAbi, morphoAbi, stockWrapperAbi, vaultV2Abi} from "@stockline/sdk";
+import {erc20Abi, feeSplitterAbi, marketHoursAbi, mockStockTokenAbi, mockSwapAggregatorAbi, mockUsdgAbi, morphoAbi, saltOf, stockWrapperAbi, timelockAbi, timelockOperation, vaultV2Abi, vaultV2FullAbi} from "@stockline/sdk";
 import {DEPLOYER, SEED_WED} from "@stockline/devnet";
 import {startStack, type Stack} from "@stockline/api/harness";
 import {reconcile} from "@stockline/indexer/reconcile";
@@ -10,6 +10,7 @@ import {startIndexer, type IndexerHandle} from "@stockline/indexer/harness";
 import {Health} from "../src/common/health.js";
 import {marketParams} from "../src/common/market.js";
 import {FakePager, IndexerBorrowers, Monitor, MonitorStore, closuresAround, monitorApp, type RuleId, type TickResult} from "../src/monitor/index.js";
+import {mockAggregatorQuoter} from "../src/monitor/quoter.js";
 
 const E18 = 10n ** 18n;
 const E6 = 10n ** 6n;
@@ -23,7 +24,7 @@ const call = (abi: readonly unknown[], functionName: string, args: readonly unkn
  * truncated calendar, a stopped indexer process and a real reconciliation diff from a vault donation), plus the weekend
  * log over a full closure. Only the pager is a test double (it records instead of calling PagerDuty).
  */
-describe("ops monitor (MON-R1…R15)", () => {
+describe("ops monitor (MON-R1…R20)", () => {
   let s: Stack;
   let pool: pg.Pool;
   let store: MonitorStore;
@@ -103,6 +104,8 @@ describe("ops monitor (MON-R1…R15)", () => {
         l2ClearAfterSec: 1200n,
         renotifyMs: {P0: 3600_000, P1: 3600_000, P2: 3600_000},
         reconcileEveryMs: 0,
+        quoter: mockAggregatorQuoter(s.anvil.client, s.config.d.mocks!.swapAggregator), // MON-R19
+        feeStuckForSec: 6n * H, // MON-R20: 8 days in production; 6h keeps the indexer in step with the walk
         reconcile: async () => {
           const r = await reconcile({pool, schema: s.indexer.viewsSchema, client: s.anvil.client, d: s.config.d, pager: {page: async () => {}}});
           return {block: r.block, diffs: r.diffs.length};
@@ -484,6 +487,129 @@ describe("ops monitor (MON-R1…R15)", () => {
     const inc = await monitorApp(store, new Health(60_000), [], [pager]).request("/incidents");
     expect(inc.status).toBe(200);
   }, 300_000);
+
+  /** Advance chain time to `to` in steps under the L2 gap threshold, with fresh rounds every 12h (no stale feed). */
+  async function passTime(to: bigint) {
+    for (let t = (await s.drv.now()) + 12n * H; t < to; t += 12n * H) {
+      await walk(t);
+      await s.drv.rounds();
+    }
+    await walk(to);
+    await s.drv.rounds();
+  }
+
+  it("MON_R16 TIMELOCK_SCHEDULED, MON_R17 TIMELOCK_EXECUTED (and _UNTRACKED P0), MON_R18 ROLE_CHANGED through the real TimelockController", async () => {
+    const d = s.config.d;
+    await tick(); // the governance cursor exists (first run starts at the head)
+    const tl = d.timelock;
+    const delay = await s.anvil.client.readContract({address: tl, abi: timelockAbi, functionName: "getMinDelay"});
+    // A: a router parameter (unchanged value); B: a vault role change (a new sentinel), both through the timelock.
+    const a = timelockOperation(d, {kind: "router.setGlobalCap", cap: 4_000_000n * E6}, {delay, salt: saltOf("mon a")});
+    const sentinel = "0x5700000000000000000000000000000000000a0b" as const;
+    const bData = call(vaultV2FullAbi, "setIsSentinel", [sentinel, true]);
+    const bSalt = saltOf("mon b");
+    const zero = `0x${"0".repeat(64)}` as Hex;
+    const t0 = count("TIMELOCK_SCHEDULED", "trigger");
+    await s.anvil.send(DEPLOYER, tl, a.scheduleCalldata);
+    await s.anvil.send(DEPLOYER, tl, call(timelockAbi, "schedule", [d.stocks.NVDA.vault, 0n, bData, zero, bSalt, delay]));
+    await tick();
+    expect(count("TIMELOCK_SCHEDULED", "trigger") - t0).toBe(2);
+    const sched = pager.of("TIMELOCK_SCHEDULED", "trigger").slice(-2);
+    expect(sched[0].severity).toBe("P1");
+    expect(sched[0].details.req).toBe("MON-R16");
+    expect(sched[0].title).toContain("router.setGlobalCap(4000000000000)"); // decoded by the SDK
+    expect(sched[1].title).toContain("vault:NVDA.setIsSentinel(");
+    await tick();
+    expect(count("TIMELOCK_SCHEDULED", "trigger") - t0, "deduped").toBe(2);
+
+    // A second monitor started after the schedule never paged it: executions it sees are P0 (no time to react).
+    const pager2 = new FakePager();
+    const store2 = new MonitorStore(pool, `monitor2_${Date.now()}`);
+    await store2.migrate();
+    const late = new Monitor(s.anvil.client, d, store2, [pager2], new IndexerBorrowers(pool, s.indexer.viewsSchema), {now: () => clock.t, reconcileEveryMs: 0, log: () => {}});
+    await late.tick();
+
+    await passTime((await s.drv.now()) + delay + 60n);
+    const e0 = count("TIMELOCK_EXECUTED", "trigger");
+    const r0 = count("ROLE_CHANGED", "trigger");
+    await s.anvil.send(DEPLOYER, tl, a.executeCalldata);
+    await s.anvil.send(DEPLOYER, tl, call(timelockAbi, "execute", [d.stocks.NVDA.vault, 0n, bData, zero, bSalt]));
+    await tick();
+    await late.tick();
+    expect(count("TIMELOCK_EXECUTED", "trigger") - e0).toBe(2);
+    expect(count("TIMELOCK_EXECUTED_UNTRACKED", "trigger")).toBe(0);
+    expect(pager2.of("TIMELOCK_EXECUTED_UNTRACKED", "trigger").length).toBe(2);
+    expect(pager2.of("TIMELOCK_EXECUTED_UNTRACKED", "trigger")[0].severity).toBe("P0");
+    expect(count("ROLE_CHANGED", "trigger") - r0, "SetIsSentinel").toBe(1);
+    const role = pager.of("ROLE_CHANGED", "trigger").at(-1)!;
+    expect(role.severity).toBe("P0");
+    expect(role.title).toBe("vault:NVDA: SetIsSentinel");
+    expect(role.details.req).toBe("MON-R18");
+
+    // Event rules resolve by time (72h / 24h); the provider keeps the history.
+    const rs = count("TIMELOCK_SCHEDULED", "resolve");
+    const re = count("TIMELOCK_EXECUTED", "resolve");
+    const rr = count("ROLE_CHANGED", "resolve");
+    clock.t += 73 * 3600_000;
+    await tick();
+    expect(count("TIMELOCK_SCHEDULED", "resolve") - rs).toBe(2);
+    expect(count("TIMELOCK_EXECUTED", "resolve") - re).toBe(2);
+    expect(count("ROLE_CHANGED", "resolve") - rr).toBe(1);
+    // Clean up the extra sentinel (the vault owner is the timelock: impersonated here), then let that page resolve.
+    await s.anvil.send(tl, d.stocks.NVDA.vault, call(vaultV2FullAbi, "setIsSentinel", [sentinel, false]));
+    await tick();
+    clock.t += 25 * 3600_000;
+    await tick();
+  }, 600_000);
+
+  it("MON_R19 LIQUIDATION_UNPROFITABLE: a liquidatable position whose seized collateral buys less than the debt on the DEX", async () => {
+    const d = s.config.d;
+    const dave = "0x5700000000000000000000000000000000000a0c" as const;
+    await s.drv.rounds();
+    const good = s.drv.prices.NVDA;
+    const debtUsdg = (10n * good) / 100n; // 10 NVDA at the feed price, USDG 6 dp
+    // Proceeds go to dave (compound = false); only the collateral backs the debt: 1.75 D × 0.77 / D ≈ HF 1.35.
+    await s.drv.openShort("NVDA", dave, (debtUsdg * 7n) / 4n, 10n * E18);
+    await firesAndResolves(
+      "LIQUIDATION_UNPROFITABLE",
+      async () => {
+        await s.drv.rounds({NVDA: (good * 145n) / 100n}); // +45%: HF ≈ 0.93, collateral still > debt × LIF
+        await s.anvil.send(DEPLOYER, d.mocks!.swapAggregator, call(mockSwapAggregatorAbi, "setFeeBps", [2_000n])); // the route costs 20%
+      },
+      () => s.anvil.send(DEPLOYER, d.mocks!.swapAggregator, call(mockSwapAggregatorAbi, "setFeeBps", [0n])).then(() => {}),
+    );
+    const p = pager.of("LIQUIDATION_UNPROFITABLE", "trigger").at(-1)!;
+    expect(p.subject).toBe(`NVDA:${dave.toLowerCase()}`);
+    expect(p.severity).toBe("P1");
+    expect(p.runbook).toBe("docs/runbooks/missed-liquidation.md");
+    expect(BigInt(String(p.details.stockForSeized)) < BigInt(String(p.details.repaidStock))).toBe(true);
+    await s.drv.rounds({NVDA: good}); // back to healthy: MISSED_LIQUIDATION (if it fired) resolves too
+    await s.drv.repay("NVDA", dave);
+    await tick();
+  }, 300_000);
+
+  it("MON_R20 FEE_NOT_DISTRIBUTED: > $1k of fee shares wait in the FeeSplitter for the window (8 days; 6h here), then distribute", async () => {
+    const d = s.config.d;
+    const nvda = d.stocks.NVDA;
+    // Real rNVDA shares in the splitter (as fees are): ~7 NVDA ≈ $1.6k. After the 50/50 split each converter
+    // holds < $1k, so nothing else watches.
+    await s.anvil.send(lender, nvda.vault, call(erc20Abi, "transfer", [d.feeSplitter!, 7n * E18]));
+    const t0 = count("FEE_NOT_DISTRIBUTED", "trigger");
+    await tick();
+    expect(count("FEE_NOT_DISTRIBUTED", "trigger") - t0, "not before the window").toBe(0);
+    await passTime((await s.drv.now()) + 6n * H + 60n);
+    await tick();
+    expect(count("FEE_NOT_DISTRIBUTED", "trigger") - t0).toBe(1);
+    const p = pager.of("FEE_NOT_DISTRIBUTED", "trigger").at(-1)!;
+    expect(p.subject).toBe("feeSplitter:NVDA");
+    expect(p.severity).toBe("P2");
+    expect(BigInt(String(p.details.valueUsdg))).toBeGreaterThan(1_000_000_000n);
+    const r0 = count("FEE_NOT_DISTRIBUTED", "resolve");
+    await s.anvil.send(lender, d.feeSplitter!, call(feeSplitterAbi, "distribute", [nvda.vault]));
+    await tick();
+    expect(count("FEE_NOT_DISTRIBUTED", "resolve") - r0).toBe(1);
+    expect(count("FEE_NOT_DISTRIBUTED", "trigger") - t0).toBe(1);
+  }, 600_000);
 
   it("MON quiet again: after the scenarios every rule is resolved", async () => {
     await s.drv.rounds();

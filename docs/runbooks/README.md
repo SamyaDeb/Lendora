@@ -1,7 +1,7 @@
 # Runbooks
 
 One page per P0/P1 alert of the ops monitor ([10 "Monitoring and paging"](../prd/10-risk-compliance.md#monitoring-and-paging),
-MON-R1…R15), plus the operational procedures they share. Every page has the same shape: **trigger → impact → first 5
+MON-R1…R20), plus the operational procedures they share. Every page has the same shape: **trigger → impact → first 5
 minutes → decision tree → exact commands → who signs → comms → post-mortem**.
 
 | Alert (rule) | Sev | Runbook | Rehearsed on anvil |
@@ -19,6 +19,9 @@ minutes → decision tree → exact commands → who signs → comms → post-mo
 | `DIRECT_BORROW` (MON-R10) | P1 | [direct-borrow.md](direct-borrow.md) | detection: monitor test; global cap through the timelock: runbooks test |
 | `CALENDAR_RUNWAY` (MON-R13) | P2 | [calendar-push.md](calendar-push.md) | detection: monitor test; event push through the timelock: runbooks test |
 | multiplier change (`GUARD_TRIPPED` MULTIPLIER) | P1 | [multiplier-change.md](multiplier-change.md) | latch → confirm through the timelock: runbooks test |
+| `TIMELOCK_SCHEDULED` / `TIMELOCK_EXECUTED` (`_UNTRACKED`) / `ROLE_CHANGED` (MON-R16…R18) | P1 / P0 | [governance-change.md](governance-change.md) | detection through the real timelock (tracked and untracked), `SetIsSentinel`: monitor test |
+| `LIQUIDATION_UNPROFITABLE` (MON-R19) | P1 | [missed-liquidation.md](missed-liquidation.md) | detection (HF < 1, DEX route 20% worse): monitor test |
+| `FEE_NOT_DISTRIBUTED` (MON-R20) | P2 | [keeper-down.md](keeper-down.md) | detection (fee shares waiting), resolved by `distribute`: monitor test |
 
 Rehearsals: `pnpm --filter @stockline/devnet test` (runbooks.test.ts, real TimelockController with the calldata from
 the SDK tool) and `pnpm --filter @stockline/keepers test` (monitor.test.ts). **Testnet drills** (Phase 3 exit, "runbooks

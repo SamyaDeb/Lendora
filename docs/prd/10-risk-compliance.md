@@ -59,7 +59,7 @@ flagged to the owner before any cap change.
 
 ## Monitoring and paging
 
-Implemented by the ops monitor `keepers/src/monitor/` (remediation task 3): read-only, restart-safe (incidents, duration
+Implemented by the ops monitor `keepers/src/monitor/` (remediation task 3; MON-R16…R20 Phase 3 task 5): read-only, restart-safe (incidents, duration
 watches, event cursor and the weekend log live in Postgres), deduped by `(rule, subject)` with re-notification (P0
 15 min, P1 1h, P2 6h) and a resolve notification. Pagers: PagerDuty Events v2, Opsgenie, Telegram, signed webhook.
 Tests: [`keepers/test/monitor.test.ts`](../../keepers/test/monitor.test.ts) (each rule fires once and resolves once on
@@ -82,6 +82,11 @@ anvil from real chain conditions).
 | MON-R13 | `CALENDAR_RUNWAY` | < 7 days of sessions stored, or an earnings window within 30 days not pushed | P2 | [calendar-push](../runbooks/calendar-push.md) |
 | MON-R14 | `INDEXER_LAG` | Indexed head > 20 blocks behind, or an SI-R5 reconciliation diff (run inside the monitor) | P2 | [keeper-down](../runbooks/keeper-down.md) |
 | MON-R15 | `LOW_GAS` / `LOW_GAS_CRITICAL` | A keeper signer's ETH lasts < 3 days (P1) / < 1 day (P0) at max(configured `GAS_BURN_WEI_PER_DAY`, burn measured over the last day, ≥ 1h window; a top-up restarts it) | P1 / P0 | [low-gas](../runbooks/low-gas.md) |
+| MON-R16 | `TIMELOCK_SCHEDULED` | Any `CallScheduled` / `Cancelled` on the Stockline `TimelockController`, or a Vault V2 curator `Submit` / `Revoke`; the call decoded by the SDK (`decodeStocklineCall`) in the page. Auto-resolves after 72h | P1 | [governance-change](../runbooks/governance-change.md) |
+| MON-R17 | `TIMELOCK_EXECUTED` / `TIMELOCK_EXECUTED_UNTRACKED` | `CallExecuted` / vault `Accept`; **P0** (`_UNTRACKED`) when the monitor never saw the matching schedule (nobody had the delay to react). Auto-resolves after 24h | P1 / P0 | [governance-change](../runbooks/governance-change.md) |
+| MON-R18 | `ROLE_CHANGED` | Ownership, curator, sentinel, allocator, oracle guardian/keeper, attestation signer, router implementation, converter keeper/destination, fee recipients, timelock roles or min delay change on any Stockline contract | P0 | [governance-change](../runbooks/governance-change.md) |
+| MON-R19 | `LIQUIDATION_UNPROFITABLE` | A position with HF < 1 whose seized collateral (debt × LIF at the oracle price) buys less than the debt on the best DEX route now (mock aggregator on anvil/testnet, Uniswap v3 QuoterV2 on 4663) | P1 | [missed-liquidation](../runbooks/missed-liquidation.md) |
+| MON-R20 | `FEE_NOT_DISTRIBUTED` | `rSTOCK` fee shares worth > $1k (oracle value) in the `FeeSplitter` or a `FeeConverter` for > 8 days (FE-R4) | P2 | [keeper-down](../runbooks/keeper-down.md) |
 
 **Weekend log.** For every closure ≥ 24h and every market the monitor records, once, the ramp-in start, full buffer,
 close, first fresh round and ramp-out, plus guard trips/clears from the ramp start to 24h after the reopen, and serves

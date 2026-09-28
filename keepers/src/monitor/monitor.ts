@@ -4,6 +4,8 @@ import {
   WAD,
   aggregatorV3Abi,
   collateralTokenAbi,
+  feeConverterAbi,
+  vaultV2FullAbi,
   currentDebt,
   erc20Abi,
   eventWindowsByTickerData,
@@ -24,9 +26,12 @@ import type {Page, PageAction, Pager, Severity} from "./pager.js";
 import {FEED_REJECT_BITS, REASONS, RULES, reasonNames, type Observation, type RuleId} from "./rules.js";
 import type {Incident, MonitorStore} from "./store.js";
 import {closureForEvent, recordMilestones} from "./weekend.js";
+import {GovernanceWatch} from "./governance.js";
+import type {DexQuoter} from "./quoter.js";
+import {planLiquidation} from "../liquidator/liquidator.js";
 
 /**
- * Operator monitor (docs/prd/10 "Monitoring and paging", MON-R1…R14; LM-R8, LM-R33, CL-R6, OR-R6, LM-R31, SI-R5).
+ * Operator monitor (docs/prd/10 "Monitoring and paging", MON-R1…R20; LM-R8, LM-R33, CL-R6, OR-R6, LM-R31, SI-R5).
  * Read-only: it never sends a transaction, so it has no dry-run mode. Each tick it scans new Morpho and oracle events
  * (cursor in Postgres), reads every market, and turns what it sees into observations; the `MonitorStore` dedupes them
  * into incidents by `(rule, subject)`, re-notifies on an interval per severity and sends a resolve when the condition
@@ -86,6 +91,11 @@ export interface MonitorOptions {
   /** MON-R14 SI-R5 hook: runs the reconciliation (returns its diff count) at most every `reconcileEveryMs`. */
   reconcile?: () => Promise<{block: bigint; diffs: number}>;
   reconcileEveryMs: number;
+  /** MON-R19: best-route quote for the liquidation profitability check (none: the rule is off). */
+  quoter?: DexQuoter;
+  /** MON-R20: a fee balance above this (USDG raw, oracle value) for `feeStuckForSec` (8 days) pages. */
+  feeStuckUsdg: bigint;
+  feeStuckForSec: bigint;
   /** First run without a cursor scans this many blocks back. */
   eventLookbackBlocks: bigint;
   logChunkBlocks: bigint;
@@ -109,6 +119,8 @@ export const defaultMonitorOptions: MonitorOptions = {
   gasLowDays: 3,
   gasCriticalDays: 1,
   reconcileEveryMs: 24 * 3600_000,
+  feeStuckUsdg: 1_000_000_000n,
+  feeStuckForSec: 8n * 86_400n,
   eventLookbackBlocks: 1000n,
   logChunkBlocks: 5000n,
   now: Date.now,
@@ -133,6 +145,7 @@ export class Monitor {
   private lastReconcileAt = 0;
   /** MON-R15: balance samples per watched address over the last day (memory; a restart re-measures). */
   private readonly gasSamples = new Map<string, {at: number; balance: bigint}[]>();
+  private readonly governance: GovernanceWatch;
 
   constructor(
     private readonly client: PublicClient,
@@ -145,6 +158,7 @@ export class Monitor {
   ) {
     this.o = {...defaultMonitorOptions, ...opts, renotifyMs: {...defaultMonitorOptions.renotifyMs, ...opts.renotifyMs}};
     this.l2 = new L2GapDetector(client, this.o.l2GapSec, this.o.l2ClearAfterSec);
+    this.governance = new GovernanceWatch(client, d, store, this.o.logChunkBlocks);
     for (const [t, s] of Object.entries(d.stocks)) {
       this.tickerByMarket.set(s.marketId.toLowerCase(), t);
       this.tickerByOracle.set(s.oracle.toLowerCase(), t);
@@ -191,6 +205,8 @@ export class Monitor {
     await section("calendar", () => this.calendarRunway(block.timestamp, obs));
     await section("indexer", () => this.indexerLag(block.number, obs));
     await section("gas", () => this.gasRunway(obs));
+    await section("governance", () => this.governance.scan(block.number, obs)); // MON-R16…R18
+    await section("fees", () => this.feeBalances(obs)); // MON-R20
 
     for (const o of obs) await this.apply(o, block.number, block.timestamp);
     const pages = await this.notify(block.number);
@@ -318,6 +334,51 @@ export class Monitor {
       const borrowed = currentDebt(st, pos.borrowShares);
       const hf = borrowed === 0n ? null : healthFactorAt(stockMarketState(st), {collateral: pos.collateral, borrowed}, st.now);
       obs.push({rule: "MISSED_LIQUIDATION", subject: subj, active: hf !== null && hf < WAD, title: `${ticker} position ${address} liquidatable and not liquidated`, details: {ticker, borrower: address, hf: hf?.toString() ?? null, collateral: pos.collateral.toString(), borrowed: borrowed.toString()}});
+      if (this.o.quoter) await this.liquidationProfit(subj, ticker, address, hf !== null && hf < WAD, pos, borrowed, obs);
+    }
+  }
+
+  /**
+   * MON-R19: a liquidatable position whose seized collateral (USDG, debt × LIF at the oracle price) buys less than the
+   * debt on the best DEX route right now, i.e. liquidating loses money after the incentive: nobody will do it
+   * (missed-liquidation runbook). Resolves when the route pays again or the position is gone.
+   */
+  private async liquidationProfit(subj: string, ticker: string, address: `0x${string}`, liquidatable: boolean, pos: {collateral: bigint; borrowShares: bigint}, borrowed: bigint, obs: Observation[]): Promise<void> {
+    let active = false;
+    let details: Record<string, unknown> = {ticker, borrower: address};
+    if (liquidatable) {
+      const s = this.d.stocks[ticker];
+      const [price, answer] = await Promise.all([
+        this.client.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "price"}),
+        this.client.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "stockAnswer"}),
+      ]);
+      const plan = planLiquidation({borrower: address, collateral: pos.collateral, borrowShares: pos.borrowShares, borrowed}, price, BigInt(s.lltv), answer[0], 8, 0n);
+      if (plan) {
+        const out = await this.o.quoter!.stockOut(s.stockToken, this.d.usdg, plan.expectedSeized);
+        active = out < plan.expectedRepaid;
+        details = {...details, quoter: this.o.quoter!.name, seizedUsdg: plan.expectedSeized.toString(), repaidStock: plan.expectedRepaid.toString(), stockForSeized: out.toString(), badDebt: plan.badDebt};
+      }
+    }
+    obs.push({rule: "LIQUIDATION_UNPROFITABLE", subject: subj, active, title: `${ticker} position ${address}: liquidation unprofitable at the current DEX price`, details});
+  }
+
+  /** MON-R20 (FE-R4): `rSTOCK` fee shares waiting in the splitter or a converter, valued at the oracle price. */
+  private async feeBalances(obs: Observation[]): Promise<void> {
+    const conv = this.d.treasuryConverter ?? this.d.backstopConverter;
+    if (!this.d.feeSplitter || !conv) return;
+    const holders: [string, `0x${string}`][] = [["feeSplitter", this.d.feeSplitter]];
+    if (this.d.treasuryConverter) holders.push(["treasuryConverter", this.d.treasuryConverter]);
+    if (this.d.backstopConverter) holders.push(["backstopConverter", this.d.backstopConverter]);
+    for (const [t, s] of Object.entries(this.d.stocks)) {
+      for (const [name, holder] of holders) {
+        const shares = await this.client.readContract({address: s.vault, abi: erc20Abi, functionName: "balanceOf", args: [holder]});
+        let value = 0n;
+        if (shares > 0n) {
+          const stock = await this.client.readContract({address: s.vault, abi: vaultV2FullAbi, functionName: "previewRedeem", args: [shares]});
+          [value] = await this.client.readContract({address: conv, abi: feeConverterAbi, functionName: "quote", args: [s.vault, stock]});
+        }
+        obs.push({rule: "FEE_NOT_DISTRIBUTED", subject: `${name}:${t}`, active: value > this.o.feeStuckUsdg, title: `${t} fees above $${Number(this.o.feeStuckUsdg) / 1e6} waiting in ${name} for 8 days`, details: {ticker: t, holder: name, shares: shares.toString(), valueUsdg: value.toString()}});
+      }
     }
   }
 
@@ -407,9 +468,10 @@ export class Monitor {
       if (!meta.autoResolveSec) await this.store.resolve(o.rule, o.subject, block);
       return;
     }
-    if (meta.forBlocks !== undefined || meta.forSec !== undefined) {
+    const forSec = o.rule === "FEE_NOT_DISTRIBUTED" ? this.o.feeStuckForSec : meta.forSec;
+    if (meta.forBlocks !== undefined || forSec !== undefined) {
       const w = await this.store.watch(o.rule, o.subject, block, ts);
-      if (block - w.sinceBlock < (meta.forBlocks ?? 0n) || ts - w.sinceTs < (meta.forSec ?? 0n)) return;
+      if (block - w.sinceBlock < (meta.forBlocks ?? 0n) || ts - w.sinceTs < (forSec ?? 0n)) return;
     }
     const opened = await this.store.open({
       rule: o.rule,

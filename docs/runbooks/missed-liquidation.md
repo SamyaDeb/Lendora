@@ -1,7 +1,10 @@
-# Runbook · Missed liquidation (`MISSED_LIQUIDATION`, MON-R2, P0)
+# Runbook · Missed liquidation (`MISSED_LIQUIDATION`, MON-R2, P0; `LIQUIDATION_UNPROFITABLE`, MON-R19, P1)
 
 **Trigger.** A position has HF < 1.0 (SDK `healthFactorAt` at the current buffer, i.e. what Morpho sees through
 `price()`) for more than 2 blocks. Subject `<ticker>:<borrower>`. Resolves when the position is healthy or has no debt.
+`LIQUIDATION_UNPROFITABLE` (MON-R19) fires earlier, on the first tick at HF < 1, when the seized collateral (debt ×
+LIF at the oracle price) buys less stock than the debt on the best DEX route now: no rational liquidator will act,
+so expect `MISSED_LIQUIDATION` next. Same response; the fallback liquidator also skips it unless `minProfit` is 0.
 
 **Impact.** Every block the position stays unliquidated it can slide further under water; if the collateral falls
 below the debt the next liquidation realizes bad debt ([bad-debt.md](bad-debt.md)). Usually means third-party

@@ -101,6 +101,19 @@ export class MonitorStore {
       ticker text not null, close_ts numeric not null, reopen_ts numeric not null, kind text not null, seq text not null,
       block numeric not null, ts numeric not null, detail jsonb not null default '{}',
       primary key (ticker, close_ts, kind, seq))`);
+    await this.pool.query(`create table if not exists ${this.s}.scheduled_op (key text primary key, seen_at timestamptz not null default now())`);
+  }
+
+  // ------------------------------------------------------------------ governance (MON-R16, MON-R17)
+
+  /** Records that the monitor saw (and paged) the scheduling of `key` (timelock id or vault submit). */
+  async markScheduled(key: string): Promise<void> {
+    await this.pool.query(`insert into ${this.s}.scheduled_op (key) values ($1) on conflict do nothing`, [key]);
+  }
+
+  async wasScheduled(key: string): Promise<boolean> {
+    const {rows} = await this.pool.query(`select 1 from ${this.s}.scheduled_op where key = $1`, [key]);
+    return rows.length > 0;
   }
 
   // ------------------------------------------------------------------ incidents

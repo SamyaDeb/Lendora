@@ -1,7 +1,7 @@
 import type {Severity} from "./pager.js";
 
 /**
- * The operator alert rules of docs/prd/10 "Monitoring and paging", one requirement ID each (MON-R1…R14). State rules
+ * The operator alert rules of docs/prd/10 "Monitoring and paging", one requirement ID each (MON-R1…R20). State rules
  * fire while their condition holds (after `forBlocks` / `forSec` if set) and resolve when it stops; event rules
  * (a log was seen) fire once per subject and resolve after `autoResolveSec` (the page stays in the provider's history;
  * the runbook drives the follow-up).
@@ -22,7 +22,13 @@ export type RuleId =
   | "CALENDAR_RUNWAY"
   | "INDEXER_LAG"
   | "LOW_GAS"
-  | "LOW_GAS_CRITICAL";
+  | "LOW_GAS_CRITICAL"
+  | "TIMELOCK_SCHEDULED"
+  | "TIMELOCK_EXECUTED"
+  | "TIMELOCK_EXECUTED_UNTRACKED"
+  | "ROLE_CHANGED"
+  | "LIQUIDATION_UNPROFITABLE"
+  | "FEE_NOT_DISTRIBUTED";
 
 export interface RuleMeta {
   req: string;
@@ -59,6 +65,14 @@ export const RULES: Record<RuleId, RuleMeta> = {
   // Keeper signer ETH below N days of burn (Phase 2 testnet: one operator key pays every keeper).
   LOW_GAS: {req: "MON-R15", severity: "P1", runbook: rb("low-gas.md")},
   LOW_GAS_CRITICAL: {req: "MON-R15", severity: "P0", runbook: rb("low-gas.md")},
+  // Phase 3 (mainnet): governance and economics. Event rules resolve by time; the provider keeps the history.
+  TIMELOCK_SCHEDULED: {req: "MON-R16", severity: "P1", runbook: rb("governance-change.md"), autoResolveSec: 72 * 3600},
+  TIMELOCK_EXECUTED: {req: "MON-R17", severity: "P1", runbook: rb("governance-change.md"), autoResolveSec: 24 * 3600},
+  // Executed without the monitor having paged its schedule: nobody had the delay to react.
+  TIMELOCK_EXECUTED_UNTRACKED: {req: "MON-R17", severity: "P0", runbook: rb("governance-change.md"), autoResolveSec: 24 * 3600},
+  ROLE_CHANGED: {req: "MON-R18", severity: "P0", runbook: rb("governance-change.md"), autoResolveSec: 24 * 3600},
+  LIQUIDATION_UNPROFITABLE: {req: "MON-R19", severity: "P1", runbook: rb("missed-liquidation.md")},
+  FEE_NOT_DISTRIBUTED: {req: "MON-R20", severity: "P2", runbook: rb("keeper-down.md"), forSec: 8n * 86_400n},
 };
 
 /** Oracle guard reason bits (StocklineOracleBase), by name. */
