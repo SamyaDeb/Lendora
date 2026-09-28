@@ -55,7 +55,7 @@ export function DepositForm({f}: {f: DepositFlow}) {
         <span className="text-dim">Fee:</span> {FEE_LINE} <span className="text-dim">Withdrawals:</span> {WITHDRAW_RULE}
       </p>
       <NeedFunds token="USDG" show={Boolean(u && u.usdgBalance === 0)} />
-      <VaultGate pinned={f.pinned}>
+      <VaultGate pinned={f.pinned} address={f.address}>
         <div className="space-y-2">
           <Button size="lg" variant="supply" className="w-full" disabled={Boolean(f.blocker) || f.steps.busy} onClick={() => setReview(true)} data-testid="deposit-submit">
             Review deposit

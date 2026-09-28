@@ -48,7 +48,7 @@ export function WithdrawForm({f}: {f: WithdrawFlow}) {
       )}
       <AmountInput label="Amount to withdraw" value={f.amount} onChange={f.setAmount} decimals={6} unit="USDG" usdPrice={1} max={u ? BigInt(Math.floor(u.value * 1e6)) : undefined} maxLabel="Your balance" testId="withdraw-amount" disabled={!f.address} />
       {pv && f.assets > 0 ? <WithdrawSplit pv={pv} asOf={o?.asOf.time} fetchedAt={f.fetchedAt} /> : <p className="text-[13px] text-muted">Instant up to the cash buffer{o ? ` (${num(o.instantCapacity, 0)} USDG now)` : ""}; more is queued for up to 72 hours or until the next US market open.</p>}
-      <VaultGate pinned={f.pinned}>
+      <VaultGate pinned={f.pinned} address={f.address}>
         <div className="space-y-2">
           <Button size="lg" variant="secondary" className="w-full" disabled={Boolean(f.blocker) || f.steps.busy} onClick={() => setReview(true)} data-testid="withdraw-submit">
             Review withdrawal

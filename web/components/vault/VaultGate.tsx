@@ -3,8 +3,8 @@ import type {ReactNode} from "react";
 import {NeedFunds, WalletGate} from "@/components/stock/WalletGate";
 
 /** WalletGate, except for a preview-pinned wallet (no real wallet behind it, so nothing to connect or switch). */
-export function VaultGate({pinned, children}: {pinned: boolean; children: ReactNode}) {
-  return pinned ? <>{children}</> : <WalletGate>{children}</WalletGate>;
+export function VaultGate({pinned, address, children}: {pinned: boolean; address?: string; children: ReactNode}) {
+  return pinned && address ? <>{children}</> : <WalletGate>{children}</WalletGate>;
 }
 
 export {NeedFunds};
