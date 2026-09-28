@@ -101,7 +101,9 @@ echo "[dev] wrote $DEV/env"
 
 if [ "$SEED" = 1 ]; then
   echo "[dev] seeding a week of activity (chain driver)"
-  pnpm --silent --filter @stockline/devnet drive seed --rpc "$RPC" >"$DEV/logs/seed.log" 2>&1
+  # Same key as the compliance service, so the seed's own attestations don't replace the router's trusted signer.
+  ATTESTATION_SIGNER_KEY="$(cat "$DEV/compliance.key")" \
+    pnpm --silent --filter @stockline/devnet drive seed --rpc "$RPC" >"$DEV/logs/seed.log" 2>&1
   tail -1 "$DEV/logs/seed.log"
 fi
 
