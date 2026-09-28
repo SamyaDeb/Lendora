@@ -14,7 +14,7 @@ import {buildSwap} from "@/lib/swap";
 import {guardReasonList, tokenPaused} from "@/lib/guard";
 import {num, wad} from "@/lib/format";
 import {useRestricted} from "@/app/providers";
-import {AmountInput, parseAmount} from "./AmountInput";
+import {AmountInput, parseAmount} from "./ui";
 import {Empty, HealthFactor, Notice, Skeleton, Stat, StepList} from "./ui";
 import {FaucetButton} from "./FaucetButton";
 

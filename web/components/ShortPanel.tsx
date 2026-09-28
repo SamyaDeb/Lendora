@@ -14,7 +14,7 @@ import {compliance} from "@/lib/compliance";
 import {buildSwap} from "@/lib/swap";
 import {guardReasonList} from "@/lib/guard";
 import {track} from "@/lib/analytics";
-import {AmountInput, parseAmount} from "./AmountInput";
+import {AmountInput, parseAmount} from "./ui";
 import {PreviewPanel} from "./PreviewPanel";
 import {GuardBanner, Notice, StepList} from "./ui";
 

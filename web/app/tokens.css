@@ -1,0 +1,127 @@
+/*
+ * Lendora design tokens: the single source for color, type, radius, elevation and motion.
+ * Every value is taken from the Lendora landing page (client/app/globals.css) or derived from it; see the notes.
+ * Contrast (WCAG 2.x) is measured on --surface #1f1b33; every text token is ≥ 4.5:1 there.
+ * One theme (dark), as on the landing page.
+ */
+
+/* Registered so the session accent can transition (the weekend-mode moment, 600 ms). */
+@property --accent-live {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #5b63ff;
+}
+@property --session-glow {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(91, 99, 255, 0);
+}
+
+:root {
+  color-scheme: dark;
+
+  /* ---- Surfaces (landing: --mk-bg, card gradient ends, --menu-bg) ---- */
+  --bg: #0b0a18;
+  --surface: #1f1b33;
+  --surface-raised: #2a2545;
+  --surface-sunken: #15122a; /* inputs and table headers: between --bg and --surface */
+  --overlay: #17124a; /* menus, toasts, sheets header (landing --menu-bg) */
+  --scrim: rgba(8, 6, 28, 0.72); /* landing --ink-950 */
+
+  /* ---- Lines (landing: --line, --field-line, card hover) ---- */
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.22);
+  --border-hover: rgba(255, 255, 255, 0.24);
+
+  /* ---- Text (landing: --text, --text-dim, --card-desc) ---- */
+  --text: #ffffff; /* 15.6:1 */
+  --text-dim: rgba(255, 255, 255, 0.84); /* 12.0:1 */
+  --text-muted: rgba(255, 255, 255, 0.62); /* 7.1:1 */
+
+  /* ---- Brand (landing: --accent, --hero-blue, violet ramp, --focus) ---- */
+  --accent: #5b63ff; /* fills and borders only (3.7:1 as text) */
+  --accent-strong: #2d42fc; /* primary button fill; white text 6.4:1 */
+  --accent-text: #a99cf6; /* 6.9:1, between violet-400 #8d7ff2 and violet-200 #cfc9fa */
+  --focus: #c4bbff;
+  --violet-400: #8d7ff2;
+  --violet-200: #cfc9fa;
+
+  /* ---- Semantic ---- */
+  --supply: #59d97a; /* lent / earning. Landing --up. 9.2:1 */
+  --borrow: #f2a0c9; /* borrowed / shorted. Landing join-button gradient start. 8.4:1 */
+  --weekend: #a99cf6; /* closed-market mode: the landing's lavender glow. 6.9:1 */
+  --caution: #f2c14e; /* at risk. Derived: landing illustration orange #f5891a moved toward yellow so it never
+                         reads as --borrow. 9.9:1 */
+  --danger: #ff7a86; /* liquidatable / failed. Landing --down. 6.6:1 */
+  --success: #59d97a; /* = --supply (the landing's single positive color) */
+
+  /* Tinted fills for badges and notices (color at 12–16% over the surface) */
+  --supply-soft: rgba(89, 217, 122, 0.12);
+  --borrow-soft: rgba(242, 160, 201, 0.12);
+  --weekend-soft: rgba(169, 156, 246, 0.14);
+  --caution-soft: rgba(242, 193, 78, 0.12);
+  --danger-soft: rgba(255, 122, 134, 0.13);
+  --accent-soft: rgba(91, 99, 255, 0.14);
+
+  /* ---- Session (market open / weekend); transitions in 600 ms, see globals.css ---- */
+  --accent-live: var(--accent);
+  --session-glow: rgba(91, 99, 255, 0);
+
+  /* ---- Type (landing: Instrument Sans only; --font set by next/font on <html>) ---- */
+  --font: var(--font-instrument), "Instrument Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --track-display: -0.045em; /* landing section titles */
+  --track-title: -0.03em; /* landing card titles */
+  --track-body: -0.02em; /* landing body copy */
+  --track-num: -0.01em; /* landing stat numbers */
+
+  /* ---- Radius hierarchy (landing: 6 inputs, 10–11 buttons/tabs, 17–20 cards, 25–32 feature cards) ---- */
+  --r-xs: 6px; /* inputs, table rows, small chips */
+  --r-sm: 10px; /* buttons, tabs, icon tiles */
+  --r-md: 17px; /* panels, cards */
+  --r-lg: 25px; /* sheets, modals */
+  --r-pill: 999px;
+
+  /* ---- Elevation (landing: inset 1px lines, featured glow, toast shadow) ---- */
+  --ring: inset 0 0 0 1px var(--border);
+  --ring-hover: inset 0 0 0 1px var(--border-hover);
+  --shadow-pop: 0 16px 40px rgba(8, 6, 28, 0.45);
+  --glow-accent: 0 0 34px rgba(95, 109, 251, 0.28);
+
+  /* ---- Motion (landing easings; durations capped for app use) ---- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* landing reveal */
+  --ease-inout: cubic-bezier(0.7, 0, 0.2, 1); /* landing ticker and headline roll */
+  --dur-fast: 150ms; /* hover, press */
+  --dur-base: 200ms; /* page fade, tab cross-fade */
+  --dur-num: 400ms; /* number tickers, bars */
+  --dur-session: 600ms; /* weekend-mode transition */
+
+  /* ---- Backgrounds ---- */
+  /* Landing --dark-bg (horizontal indigo swell), 9 of its 49 stops: the curve is smooth enough to resample. */
+  --shell-swell: linear-gradient(
+    90deg,
+    rgb(13 12 17) 0%,
+    rgb(14 12 24) 10%,
+    rgb(18 13 35) 23%,
+    rgb(20 13 44) 35%,
+    rgb(23 14 53) 50%,
+    rgb(20 13 44) 65%,
+    rgb(18 13 35) 77%,
+    rgb(14 12 24) 90%,
+    rgb(13 12 17) 100%
+  );
+  /* Landing hero's left violet glow rgba(76,66,222,.72) at ~15%, top-left only, so tables never sit on it. */
+  --shell-glow: radial-gradient(ellipse 60% 420px at 0% 0%, rgba(76, 66, 222, 0.16), rgba(76, 66, 222, 0) 70%);
+  /* Landing --noise (feTurbulence) for dithering the gradients. */
+  --noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n' x='0' y='0' width='100%25' height='100%25'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='.33 .33 .33 0 0 .33 .33 .33 0 0 .33 .33 .33 0 0 0 0 0 0 1'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+}
+
+/* Weekend mode: the accent and the shell glow shift to the landing's lavender. */
+:root[data-session="weekend"] {
+  --accent-live: var(--weekend);
+  --session-glow: rgba(169, 156, 246, 0.22);
+}
+:root[data-session="ramping"] {
+  --accent-live: var(--weekend);
+  --session-glow: rgba(169, 156, 246, 0.12);
+}

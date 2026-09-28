@@ -1,112 +1,175 @@
 @import "tailwindcss";
+@import "./tokens.css";
 
-/* Design tokens. Colors meet WCAG AA contrast on their backgrounds in both themes (APP-R9). */
-@theme {
-  --color-bg: #f7f8fa;
-  --color-surface: #ffffff;
-  --color-line: #dfe3ea;
-  --color-ink: #111827;
-  --color-muted: #4b5563;
-  --color-accent: #0f6e5c;
-  --color-accent-ink: #ffffff;
-  --color-safe: #11683f;
-  --color-warn: #8a5300;
-  --color-danger: #b42318;
-  --color-safe-bg: #e6f4ec;
-  --color-warn-bg: #fdf1dc;
-  --color-danger-bg: #fdeceb;
-  --color-info-bg: #e8eefb;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #0d1117;
-    --color-surface: #151b23;
-    --color-line: #2a313c;
-    --color-ink: #e6edf3;
-    --color-muted: #a3adb9;
-    --color-accent: #3fbfa2;
-    --color-accent-ink: #06201a;
-    --color-safe: #4ccd87;
-    --color-warn: #f0b44c;
-    --color-danger: #ff8a80;
-    --color-safe-bg: #10291c;
-    --color-warn-bg: #2d2210;
-    --color-danger-bg: #331614;
-    --color-info-bg: #16213a;
-  }
+/* Tailwind theme mapped onto the Lendora tokens (tokens.css is the only source of values). */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-raised: var(--surface-raised);
+  --color-sunken: var(--surface-sunken);
+  --color-overlay: var(--overlay);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-fg: var(--text);
+  --color-dim: var(--text-dim);
+  --color-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-text: var(--accent-text);
+  --color-live: var(--accent-live);
+  --color-supply: var(--supply);
+  --color-borrow: var(--borrow);
+  --color-weekend: var(--weekend);
+  --color-caution: var(--caution);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-supply-soft: var(--supply-soft);
+  --color-borrow-soft: var(--borrow-soft);
+  --color-weekend-soft: var(--weekend-soft);
+  --color-caution-soft: var(--caution-soft);
+  --color-danger-soft: var(--danger-soft);
+  --color-accent-soft: var(--accent-soft);
+  --font-sans: var(--font);
+  --font-mono: var(--font-mono);
+  --radius-xs: var(--r-xs);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --ease-out: var(--ease-out);
+  --ease-inout: var(--ease-inout);
 }
 
 html {
-  background: var(--color-bg);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  transition:
+    --accent-live var(--dur-session) var(--ease-out),
+    --session-glow var(--dur-session) var(--ease-out);
 }
 body {
   min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.4;
+  letter-spacing: var(--track-body);
+}
+
+/* App shell background: the landing's dark swell + a faint violet glow + a session glow, dithered with its noise.
+   Fixed behind everything; data surfaces are solid on top of it. */
+.shell-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 50% 260px at 50% 0%, var(--session-glow), transparent 75%),
+    var(--shell-glow),
+    var(--shell-swell);
+}
+.shell-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--noise);
+  mix-blend-mode: soft-light;
+  opacity: 0.12;
+}
+
+.num,
+.tabular {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--track-num);
 }
 input[type="range"],
 input[type="checkbox"],
 input[type="radio"] {
-  accent-color: var(--color-accent);
-}
-.num {
-  font-variant-numeric: tabular-nums;
+  accent-color: var(--accent);
 }
 :focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 6px;
 }
-.card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: 0.75rem;
+::selection {
+  background: rgba(91, 99, 255, 0.45);
 }
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.9rem;
-  font-weight: 600;
-  font-size: 0.9rem;
-  background: var(--color-accent);
-  color: var(--color-accent-ink);
-  min-height: 2.5rem;
+
+/* ---- Surfaces ---- */
+.panel {
+  background: var(--surface);
+  border-radius: var(--r-md);
+  box-shadow: var(--ring);
 }
-.btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+.panel-raised {
+  background: var(--surface-raised);
+  border-radius: var(--r-md);
+  box-shadow: var(--ring);
 }
-.btn-ghost {
-  background: transparent;
-  color: var(--color-ink);
-  border: 1px solid var(--color-line);
+
+/* ---- Display type (landing section titles, scaled for an app) ---- */
+.t-display {
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1.12;
+  font-weight: 400;
+  letter-spacing: var(--track-display);
 }
-.input {
-  width: 100%;
-  border: 1px solid var(--color-line);
-  background: var(--color-surface);
-  border-radius: 0.5rem;
-  padding: 0.55rem 0.7rem;
-  min-height: 2.5rem;
+.t-title {
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 400;
+  letter-spacing: var(--track-title);
 }
+.t-label {
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--text-muted);
+  letter-spacing: -0.005em;
+}
+
+/* ---- Skeleton: a quiet pulse on placeholders only (never on data), off with reduced motion ---- */
 .skeleton {
-  background: linear-gradient(90deg, var(--color-line), var(--color-surface), var(--color-line));
-  background-size: 200% 100%;
-  animation: shimmer 1.2s infinite;
-  border-radius: 0.375rem;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: var(--r-xs);
+  animation: sk-pulse 1.6s ease-in-out infinite;
 }
-@keyframes shimmer {
-  to {
-    background-position: -200% 0;
+@keyframes sk-pulse {
+  50% {
+    opacity: 0.55;
   }
 }
+
+/* ---- Press feedback shared by buttons and clickable rows ---- */
+.pressable {
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast),
+    box-shadow var(--dur-fast),
+    color var(--dur-fast),
+    filter var(--dur-fast);
+}
+.pressable:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Hide number input spinners on amount fields */
+.no-spin::-webkit-outer-spin-button,
+.no-spin::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  html {
+    transition: none;
+  }
   .skeleton {
     animation: none;
+  }
+  .pressable,
+  .pressable:active {
+    transition: none;
+    transform: none !important;
   }
 }

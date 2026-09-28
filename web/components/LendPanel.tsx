@@ -10,7 +10,7 @@ import {deadline, useChainMarket, useWriter} from "@/lib/hooks";
 import {useSteps, type Step} from "@/lib/tx";
 import {num, pct, wad} from "@/lib/format";
 import {tokenPaused} from "@/lib/guard";
-import {AmountInput, parseAmount} from "./AmountInput";
+import {AmountInput, parseAmount} from "./ui";
 import {Notice, Skeleton, Stat, StepList} from "./ui";
 
 /** 06 `/lend/[symbol]`: deposit / withdraw through the router into `rSTOCK` (US-L1, US-L3, LM-R22). */
