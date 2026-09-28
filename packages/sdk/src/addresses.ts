@@ -21,6 +21,23 @@ export interface StockDeployment {
   /** Absolute cap in raw wSTOCK units at listing (decimal string). */
   capAssets: string;
   perAddressCapUsd: number;
+  /** G5 receipt market (05 §3, A3): `rSTOCK` collateral, USDG loan, supplied by a Stockline USDG Vault V2. Present once
+   * `ListReceiptMarket` ran (stage 1); it lends only after the curator's timelocked listing raised its caps. */
+  receipt?: ReceiptMarketDeployment;
+}
+
+export interface ReceiptMarketDeployment {
+  /** `ReceiptCollateralOracle` (owner = timelock). */
+  oracle: Address;
+  /** USDG Vault V2 supplying the market (liquidity adapter = the market). */
+  usdgVault: Address;
+  /** Its `MorphoMarketV1AdapterV2`. */
+  usdgAdapter: Address;
+  /** Morpho Blue market id (USDG / rSTOCK). */
+  marketId: Hex32;
+  adapterMarketCapId: Hex32;
+  /** 62.5% at launch. */
+  lltv: number | string;
 }
 
 export interface Roles {

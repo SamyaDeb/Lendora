@@ -70,6 +70,12 @@ Lenders can post `rNVDA` to borrow USDG. This uses a second Morpho market per st
 | CL-R11 | Seized `rNVDA` can be redeemed by liquidators for `wNVDA` up to vault liquidity. The sim must show liquidations stay profitable when the NVDA vault is at `U_MAX`. |
 | CL-R12 | The app shows the recursion risk: `rNVDA` value falls if NVDA falls *and* if the lending vault can't return liquidity. |
 
+**Build status (Phase 4 session, A3):** stage 1 (`script/ListReceiptMarket.s.sol`: oracle, market, USDG Vault V2 with
+caps 0, no role kept) and the timelocked listing (SDK `receipt.list`, six curator actions) are built and tested on
+anvil and a 4663 fork; CL-R10 is enforced by the script and the SDK on 4663; CL-R11 liquidation and redeem tested.
+Runbook: [`list-receipt-market.md`](../runbooks/list-receipt-market.md). Indexer/API/web support behind
+`NEXT_PUBLIC_FEATURE_RECEIPT_MARKET`: see the Phase 4 status table in [11](11-milestones.md).
+
 ## 4. StocklineRouter
 
 The router is stateless between transactions (it holds configuration, never user balances). Users grant it Morpho

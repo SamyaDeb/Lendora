@@ -25,13 +25,17 @@
  *   These print `submitCalldata` (curator → vault), the timelocked `data` (anyone → vault after the delay) and
  *   `revokeCalldata` (curator or guardian sentinel → vault, veto).
  *
+ * G5 receipt market listing (A3; list-receipt-market.md), six curator actions on the receipt USDG vault:
+ *   receipt.list                     ticker=NVDA capUsdg=250000 [launchTs=<unix>]  (CL-R10: 4663 needs launchTs,
+ *                                    refused before launch + 30 days)
+ *
  * `sdk:<fromTs>` takes the sessions (or the ticker's event windows) from packages/sdk/data/calendar.json whose
  * open/start is at or after `fromTs`, i.e. what `gen:sessions` produced.
  */
 import {eventWindowsByTickerData, feedSessions} from "../src/calendar/schedule.js";
 import {getDeployment, parseDeploymentKey, type Address} from "../src/addresses.js";
 import {saltOf, timelockOperation, type OracleParamsInput, type TimelockAction} from "../src/timelock.js";
-import {vaultCuratorOperation} from "../src/vaultTimelock.js";
+import {receiptListingOperations, vaultCuratorOperation} from "../src/vaultTimelock.js";
 
 const argv = process.argv.slice(2);
 const flag = (name: string, dflt: string) => {
@@ -114,6 +118,20 @@ function action(): TimelockAction {
 const network = flag("network", "31337");
 const d = getDeployment(parseDeploymentKey(network));
 if (!d) throw new Error(`no deployment for ${network} in addresses.json`);
+if (kind === "receipt.list") {
+  const chainId = network === "fork-4663" ? 4663 : Number(network);
+  const capUsdg = BigInt(need("capUsdg")) * 10n ** 6n;
+  const ops = receiptListingOperations(d, need("ticker"), capUsdg, {chainId, launchTs: kv.launchTs ? Number(kv.launchTs) : undefined});
+  const wait = network === "46630" ? "24h" : "48h";
+  console.log(
+    JSON.stringify(
+      {network, ticker: kv.ticker, capUsdgRaw: capUsdg.toString(), operations: ops, steps: [`1. curator → vault ${ops[0].vault}: each submitCalldata (6)`, `2. after the vault timelock (${wait})`, "3. anyone → vault: each data (6)", "veto before 3: curator or guardian → vault: revokeCalldata"]},
+      null,
+      2,
+    ),
+  );
+  process.exit(0);
+}
 if (kind?.startsWith("vault.")) {
   const va =
     kind === "vault.setPerformanceFeeRecipient"
