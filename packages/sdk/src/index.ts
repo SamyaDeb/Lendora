@@ -26,3 +26,4 @@ export * from "./reads.js";
 export * from "./timelock.js";
 export * from "./vaultTimelock.js";
 export * from "./decodeCall.js";
+export * from "./redact.js";

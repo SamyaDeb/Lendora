@@ -1,7 +1,7 @@
 import {getExternal} from "@stockline/sdk";
 import {loadConfig} from "../common/config.js";
 import {chainFor, publicClient} from "../common/chain.js";
-import {DryRunSender, envKeySender, rpcUnlockedSender, type TxSender} from "../common/signer.js";
+import {senderFromConfig, type TxSender} from "../common/signer.js";
 import {Health} from "../common/health.js";
 import {runLoop} from "../common/loop.js";
 import {GuardKeeper, poolsFor} from "./guard.js";
@@ -9,12 +9,8 @@ import {GuardKeeper, poolsFor} from "./guard.js";
 const cfg = loadConfig();
 const client = publicClient(cfg.rpcUrl, cfg.deploymentKey);
 const chain = chainFor(cfg.deploymentKey);
-const sender: TxSender =
-  cfg.signer === "env-key"
-    ? envKeySender(client, cfg.rpcUrl, chain)
-    : cfg.signer === "rpc-unlocked"
-      ? rpcUnlockedSender(client, cfg.rpcUrl, chain, cfg.unlockedAddress ?? cfg.deployment.roles.guardKeeper)
-      : new DryRunSender(cfg.deployment.roles.guardKeeper);
+// OFF-4: one sender factory for every signing keeper (env key, remote KMS signer, anvil-unlocked, dry run).
+const sender: TxSender = senderFromConfig(cfg, client, chain, process.env, cfg.deployment.roles.guardKeeper);
 const health = new Health(cfg.maxStaleMs);
 health.serve(cfg.healthPort);
 const pools = poolsFor(cfg.deployment, cfg.deploymentKey === "fork-4663" ? getExternal(4663) : undefined);

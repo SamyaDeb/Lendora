@@ -1,12 +1,41 @@
 import {BaseError, decodeErrorResult, type Hex} from "viem";
-import {erc20Abi, mockStockTokenAbi, morphoAbi, stocklineRouterAbi, stockWrapperAbi, vaultV2FullAbi} from "@stockline/sdk";
+import {
+  collateralTokenAbi,
+  erc20Abi,
+  feeConverterAbi,
+  feeSplitterAbi,
+  marketAdapterAbi,
+  marketHoursAbi,
+  mockStockTokenAbi,
+  morphoAbi,
+  stocklineLiquidatorAbi,
+  stocklineOracleAbi,
+  stocklineRouterAbi,
+  stockWrapperAbi,
+  vaultV2FullAbi,
+} from "@stockline/sdk";
 import {guardReasonText} from "./guard";
 
 /**
- * APP-R3: every simulation or transaction failure is shown in plain language. Custom errors are decoded against the
- * router, Morpho, Vault V2, wrapper and token ABIs; Morpho's string errors are mapped too.
+ * APP-R3: every simulation or transaction failure is shown in plain language. Custom errors are decoded against every
+ * Stockline ABI (router, wrapper, clUSDG, oracle, MarketHours, liquidator, FeeSplitter, FeeConverter; OFF-14) plus
+ * Morpho, Vault V2 and its adapter, and the token ABIs; Morpho's string errors are mapped too.
  */
-const abis = [stocklineRouterAbi, vaultV2FullAbi, stockWrapperAbi, mockStockTokenAbi, erc20Abi, morphoAbi];
+export const abis = [
+  stocklineRouterAbi,
+  vaultV2FullAbi,
+  marketAdapterAbi,
+  stockWrapperAbi,
+  collateralTokenAbi,
+  stocklineOracleAbi,
+  marketHoursAbi,
+  stocklineLiquidatorAbi,
+  feeSplitterAbi,
+  feeConverterAbi,
+  mockStockTokenAbi,
+  erc20Abi,
+  morphoAbi,
+];
 
 const MORPHO_STRINGS: Record<string, string> = {
   "insufficient collateral": "Not enough collateral for this borrow at the current oracle price. Add collateral or borrow less.",
@@ -51,6 +80,14 @@ function fromName(name: string, args: readonly unknown[] = []): string {
     case "RelativeCapExceeded":
     case "AbsoluteCapExceeded":
       return "The vault is at its supply cap.";
+    case "Unauthorized":
+    case "OwnableUnauthorizedAccount":
+    case "NotKeeper":
+      return "This action is reserved to a Stockline role (owner, guardian or keeper); your wallet cannot run it.";
+    case "SlippageTooLoose":
+      return "The conversion would sell more than 1% below the oracle price, so it was refused (FE-R4).";
+    case "MarketClosed":
+      return "The stock market session is closed; this action waits for the next session.";
     default:
       return `The transaction would fail (${name}).`;
   }

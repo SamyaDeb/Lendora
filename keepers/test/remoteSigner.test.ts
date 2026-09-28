@@ -50,6 +50,18 @@ describe("remote transaction signer (keepers, KMS bridge)", () => {
     await expect(failing.send(a.d.usdg, data, "x")).rejects.toThrow(/remote signer 503/);
   });
 
+  it("OFF_2 OFF_3 refuses a remote that raised the fee, times out a hung remote, and respects the gas cap", async () => {
+    const pricier = remoteTxSender(a.client, anvilChain, "u", addr, undefined, fakeKms(key, (tx) => ({...tx, maxFeePerGas: ((tx as {maxFeePerGas?: bigint}).maxFeePerGas ?? 0n) * 10n}) as typeof tx));
+    await expect(pricier.send(a.d.usdg, data, "x")).rejects.toThrow(/different transaction/);
+    const hung = ((_u: string, init: {signal: AbortSignal}) =>
+      new Promise((_res, rej) => init.signal.addEventListener("abort", () => rej(init.signal.reason)))) as unknown as typeof fetch;
+    const t0 = Date.now();
+    await expect(remoteTxSender(a.client, anvilChain, "u", addr, undefined, hung, {timeoutMs: 300}).send(a.d.usdg, data, "x")).rejects.toThrow(/timeout|aborted/i);
+    expect(Date.now() - t0).toBeLessThan(5_000);
+    const capped = remoteTxSender(a.client, anvilChain, "u", addr, undefined, fakeKms(key), {maxFeePerGas: 1n});
+    await expect(capped.send(a.d.usdg, data, "x")).rejects.toThrow(/above the cap/);
+  });
+
   it("config: KEEPER_SIGNER=remote needs the URL and the address; unknown signers are refused", () => {
     const c = loadConfig({DEPLOYMENT_KEY: "31337", DRY_RUN: "false", KEEPER_SIGNER: "remote", KEEPER_REMOTE_SIGNER_URL: "https://kms", KEEPER_ADDRESS: addr});
     expect(c.signer).toBe("remote");

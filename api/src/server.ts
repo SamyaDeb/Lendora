@@ -6,7 +6,7 @@ import {createApp} from "./app.js";
 import type {ApiConfig} from "./config.js";
 import {IndexerDb} from "./db.js";
 import {ApiKeys, MemoryNonceStore, RedisNonceStore} from "./keys.js";
-import {MemoryLimiter, RedisLimiter, type Limiter} from "./limits.js";
+import {ipFromForwardedFor, MemoryLimiter, RedisLimiter, type Limiter} from "./limits.js";
 import {RpcChainReader} from "./chain.js";
 import {MemoryFanout, RedisFanout, StreamPublisher, StreamServer, type Fanout} from "./stream.js";
 
@@ -46,12 +46,12 @@ export async function startApi(config: ApiConfig): Promise<RunningApi> {
   const clientIp = (req: IncomingMessage) => {
     if (config.trustProxy) {
       const xff = req.headers["x-forwarded-for"];
-      const first = (Array.isArray(xff) ? xff[0] : xff)?.split(",")[0]?.trim();
-      if (first) return first;
+      const ip = ipFromForwardedFor(Array.isArray(xff) ? xff.join(",") : xff, config.trustedProxyHops); // OFF-7
+      if (ip) return ip;
     }
     return req.socket.remoteAddress ?? "unknown";
   };
-  const stream = new StreamServer({db, fanout, limiter, keys, d: config.d, freeWs: config.freeWs, keyedWs: config.keyedWs, clientIp});
+  const stream = new StreamServer({db, fanout, limiter, keys, d: config.d, freeWs: config.freeWs, keyedWs: config.keyedWs, freeRpm: config.freeRpm, clientIp});
   const publisher = new StreamPublisher(db, fanout, config.d, config.streamPollMs);
   publisher.start();
 

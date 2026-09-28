@@ -8,8 +8,7 @@ import {
   marketHoursAbi,
   shortInterestFields,
   stocklineOracleAbi,
-  stockWrapperAbi,
-} from "@stockline/sdk";
+  stockWrapperAbi, safeErrorLine} from "@stockline/sdk";
 import {networkConfig} from "../lib/network.js";
 
 export const net = networkConfig();
@@ -62,7 +61,7 @@ async function reads(context: Context, ticker: string, block: Block) {
   } catch (e) {
     const prev = await context.db.find(latestSnapshot, {ticker});
     if (!prev) {
-      if (!unavailable.has(ticker)) console.warn(`[indexer] ${ticker}: no historical state at block ${block.number}; snapshots start when reads succeed (${String(e).split("\n")[0]})`);
+      if (!unavailable.has(ticker)) console.warn(`[indexer] ${ticker}: no historical state at block ${block.number}; snapshots start when reads succeed (${safeErrorLine(e, process.env)})`);
       unavailable.add(ticker);
       return undefined;
     }

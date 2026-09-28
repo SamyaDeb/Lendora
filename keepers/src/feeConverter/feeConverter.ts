@@ -1,5 +1,5 @@
 import {encodeAbiParameters, encodeFunctionData, parseAbiItem, type Hex, type PublicClient} from "viem";
-import {erc20Abi, feeConverterAbi, feeSplitterAbi, isUsRegularHours, marketHoursAbi, stocklineOracleAbi, vaultV2FullAbi, type ChainDeployment} from "@stockline/sdk";
+import {erc20Abi, feeConverterAbi, feeSplitterAbi, isUsRegularHours, marketHoursAbi, stocklineOracleAbi, vaultV2FullAbi, type ChainDeployment, safeErrorLine} from "@stockline/sdk";
 import type {TxSender} from "../common/signer.js";
 import type {Health} from "../common/health.js";
 
@@ -161,7 +161,7 @@ export class FeeConverterBot {
         this.health?.ok(key, block.number);
       } catch (e) {
         this.health?.fail(key, e);
-        this.log(`[fee-converter] ${ticker} error: ${String(e)}`);
+        this.log(`[fee-converter] ${ticker} error: ${safeErrorLine(e, process.env)}`);
       }
     }
     return plans;

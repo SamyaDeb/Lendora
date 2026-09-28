@@ -2,7 +2,8 @@
 #   docker build -f infra/Dockerfile -t stockline-svc .
 #   docker run -e SERVICE=api … stockline-svc
 # SERVICE: indexer | api | compliance | allocator | guard | liquidator | alerts | feed-mirror | monitor | reconcile
-FROM node:22-alpine AS deps
+# OFF-15: base image pinned by digest (node v22.23.3, Alpine 3.24; 2026-09-28). Bump the digest deliberately.
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS deps
 RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
 WORKDIR /app
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc* ./
@@ -23,7 +24,7 @@ COPY compliance compliance
 COPY keepers keepers
 RUN pnpm --filter @stockline/sdk build
 
-FROM node:22-alpine AS runtime
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS runtime
 RUN corepack enable && corepack prepare pnpm@10.19.0 --activate && addgroup -S app && adduser -S app -G app
 WORKDIR /app
 COPY --from=build /app /app

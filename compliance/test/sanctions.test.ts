@@ -4,7 +4,7 @@ import {afterAll, afterEach, beforeAll, describe, expect, it} from "vitest";
 import type {PublicClient} from "viem";
 import {createComplianceApp} from "../src/app.js";
 import {DenyListScreen, StaticRangeReputation} from "../src/checks.js";
-import {assertStartupConfig} from "../src/server.js";
+import {assertStartupConfig, intEnv} from "../src/server.js";
 import {ComplianceService, type Terms, type TermsStore} from "../src/service.js";
 import {ChainalysisScreen, LayeredScreen, ScreenUnavailable, sanctionsFromEnv, TrmScreen} from "../src/sanctions/index.js";
 
@@ -218,5 +218,27 @@ describe("CP-R3 / CP-R4 a provider outage fails the entry closed and touches no 
     }
     // Exits (repay, close, withdraw, unwrap) have no compliance endpoint at all; CP_R4 in compliance.test.ts runs them
     // on anvil with no attestation signer and the guard tripped.
+  });
+});
+
+describe("OFF-16 compliance CORS and env", () => {
+  it("OFF_16 without ALLOWED_ORIGINS no cross-origin caller is allowed off anvil; the listed origin is", async () => {
+    const svc = {signerAddress: "0x0", sanctionsProvider: "deny-list"} as unknown as ComplianceService;
+    const terms: Terms = {version: "t", text: "", hash: "0x"};
+    const pre = (app: ReturnType<typeof createComplianceApp>, origin: string) =>
+      app.request(new Request("http://x/health", {headers: {origin}}));
+    const closed = createComplianceApp(svc, terms, {trustProxy: false, attestRpm: 5, allowedOrigins: []});
+    expect((await pre(closed, "https://evil.example")).headers.get("access-control-allow-origin")).toBeNull();
+    const listed = createComplianceApp(svc, terms, {trustProxy: false, attestRpm: 5, allowedOrigins: ["https://app.stockline.xyz"]});
+    expect((await pre(listed, "https://app.stockline.xyz")).headers.get("access-control-allow-origin")).toBe("https://app.stockline.xyz");
+    expect((await pre(listed, "https://evil.example")).headers.get("access-control-allow-origin")).not.toBe("https://evil.example");
+    const local = createComplianceApp(svc, terms, {trustProxy: false, attestRpm: 5, allowedOrigins: [], corsAnyOrigin: true});
+    expect((await pre(local, "http://localhost:3000")).headers.get("access-control-allow-origin")).toBe("*");
+  });
+
+  it("OFF_5 ATTEST_RPM and PORT are validated", () => {
+    expect(intEnv({}, "ATTEST_RPM", 20, 1, 10_000)).toBe(20);
+    expect(() => intEnv({ATTEST_RPM: "lots"}, "ATTEST_RPM", 20, 1, 10_000)).toThrow(/ATTEST_RPM must be an integer/);
+    expect(() => intEnv({ATTEST_RPM: "0"}, "ATTEST_RPM", 20, 1, 10_000)).toThrow(/ATTEST_RPM/);
   });
 });

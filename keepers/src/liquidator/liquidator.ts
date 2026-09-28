@@ -4,8 +4,7 @@ import {
   stocklineLiquidatorAbi,
   stocklineOracleAbi,
   type ChainDeployment,
-  type StockDeployment,
-} from "@stockline/sdk";
+  type StockDeployment, safeErrorLine} from "@stockline/sdk";
 import type {TxSender} from "../common/signer.js";
 import type {Health} from "../common/health.js";
 import {marketParams, type MarketParams} from "../common/market.js";
@@ -222,7 +221,7 @@ export class LiquidatorBot {
         this.health?.ok(ticker, block.number);
       } catch (e) {
         this.health?.fail(ticker, e);
-        this.log(`[liquidator] ${ticker} error: ${String(e)}`);
+        this.log(`[liquidator] ${ticker} error: ${safeErrorLine(e, process.env)}`);
       }
     }
     return done;

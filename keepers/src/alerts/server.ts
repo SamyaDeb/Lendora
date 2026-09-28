@@ -1,3 +1,4 @@
+import {safeErrorLine} from "@stockline/sdk";
 import {Hono} from "hono";
 import type {PublicClient} from "viem";
 import {isAddress} from "viem";
@@ -10,7 +11,7 @@ export function alertsApp(store: SettingsStore, client: PublicClient, health: He
   const app = new Hono();
   app.onError((err, c) => {
     if (err instanceof SettingsError) return c.json({error: err.message}, err.status);
-    console.error(`[alerts] ${String(err)}`);
+    console.error(`[alerts] ${safeErrorLine(err, process.env)}`); // OFF-1
     return c.json({error: "internal error"}, 500);
   });
   app.get("/health", (c) => {

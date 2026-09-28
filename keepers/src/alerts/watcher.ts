@@ -9,8 +9,7 @@ import {
   nextEvent,
   readMarket,
   stockMarketState,
-  type ChainDeployment,
-} from "@stockline/sdk";
+  type ChainDeployment, safeErrorLine} from "@stockline/sdk";
 import type {Health} from "../common/health.js";
 import type {SettingsStore, StoredSettings} from "./settings.js";
 import type {Alert, Transport} from "./transports.js";
@@ -142,7 +141,7 @@ export class AlertWatcher {
         await t.send(target, a);
         delivered++;
       } catch (e) {
-        this.log(`[alerts] ${t.channel} ${a.kind} ${a.ticker} failed: ${String(e).split("\n")[0]}`);
+        this.log(`[alerts] ${t.channel} ${a.kind} ${a.ticker} failed: ${safeErrorLine(e, process.env)}`);
       }
     }
     if (delivered === 0) {

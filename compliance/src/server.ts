@@ -33,6 +33,15 @@ function signerFromEnv(env: NodeJS.ProcessEnv): TypedDataSigner {
   return envKeyTypedDataSigner("COMPLIANCE_SIGNER", env);
 }
 
+/** OFF-5: a bounded integer env var; a bad value fails startup with its name (before: `NaN`). */
+export function intEnv(env: NodeJS.ProcessEnv, name: string, dflt: number, min: number, max: number): number {
+  const v = env[name];
+  if (v === undefined || v === "") return dflt;
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < min || n > max) throw new Error(`${name} must be an integer between ${min} and ${max} (got "${v}")`);
+  return n;
+}
+
 /** Minimum `PROXY_SECRET` length off anvil (CP-R8). */
 export const MIN_PROXY_SECRET = 32;
 
@@ -90,11 +99,12 @@ export async function startCompliance(env: NodeJS.ProcessEnv = process.env, o: C
     trustProxy: env.TRUST_PROXY === "true",
     proxySecret: env.PROXY_SECRET || undefined,
     devDefaultCountry: key === 31337 ? env.DEV_DEFAULT_COUNTRY || undefined : undefined,
-    attestRpm: Number(env.ATTEST_RPM ?? 20),
+    attestRpm: intEnv(env, "ATTEST_RPM", 20, 1, 10_000),
     allowedOrigins: (env.ALLOWED_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean),
+    corsAnyOrigin: key === 31337,
   });
   const server = await new Promise<Server>((resolve) => {
-    const s = serve({fetch: app.fetch, port: Number(env.PORT ?? 42071), hostname: env.HOST ?? "0.0.0.0"}, () => resolve(s as Server));
+    const s = serve({fetch: app.fetch, port: intEnv(env, "PORT", 42071, 0, 65_535), hostname: env.HOST ?? "0.0.0.0"}, () => resolve(s as Server));
   });
   const port = (server.address() as AddressInfo).port;
   return {

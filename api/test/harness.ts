@@ -57,6 +57,7 @@ export async function startStack(o: StackOptions = {}): Promise<Stack> {
     keyedWs: 10,
     maxKeysPerAddress: 5,
     trustProxy: true,
+    trustedProxyHops: 1,
     siweDomain: "localhost",
     streamPollMs: 100,
     ...o.api,

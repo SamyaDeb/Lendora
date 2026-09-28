@@ -3,11 +3,11 @@ import {cors} from "hono/cors";
 import type {Context} from "hono";
 import type {HttpBindings} from "@hono/node-server";
 import {formatUnits} from "viem";
-import {HF_MIN_OPEN_WAD, U_MAX_WAD, nextClosure, nextEvent} from "@stockline/sdk";
+import {HF_MIN_OPEN_WAD, U_MAX_WAD, nextClosure, nextEvent, safeErrorLine} from "@stockline/sdk";
 import type {ApiConfig} from "./config.js";
 import type {IndexerDb, EventCursor} from "./db.js";
 import type {Limiter} from "./limits.js";
-import {clientKey} from "./limits.js";
+import {clientKey, ipFromForwardedFor} from "./limits.js";
 import type {ApiKeys} from "./keys.js";
 import {HttpError} from "./errors.js";
 import type {ChainReader} from "./chain.js";
@@ -22,7 +22,7 @@ import * as S from "./schemas.js";
 export type AppConfig = Pick<
   ApiConfig,
   "chainId" | "key" | "d" | "freeRpm" | "keyedRpm" | "trustProxy" | "siweDomain" | "freeWs" | "keyedWs"
->;
+> & {trustedProxyHops?: number};
 
 export interface AppDeps {
   db: IndexerDb;
@@ -42,10 +42,10 @@ export const TERMS = {
 };
 const TERMS_URL = "/v1/terms";
 
-export function clientIp(c: Context<Env>, trustProxy: boolean): string {
+export function clientIp(c: Context<Env>, trustProxy: boolean, hops = 1): string {
   if (trustProxy) {
-    const xff = c.req.header("x-forwarded-for");
-    if (xff) return xff.split(",")[0].trim();
+    const ip = ipFromForwardedFor(c.req.header("x-forwarded-for"), hops); // OFF-7: the hop our edge added
+    if (ip) return ip;
   }
   return c.env?.incoming?.socket?.remoteAddress ?? "unknown";
 }
@@ -83,7 +83,7 @@ export function createApp(deps: AppDeps) {
 
   app.onError((err, c) => {
     if (err instanceof HttpError) return c.json({error: err.message}, err.status);
-    console.error(`[api] ${c.req.method} ${c.req.path}: ${String(err)}`);
+    console.error(`[api] ${c.req.method} ${c.req.path}: ${safeErrorLine(err, process.env)}`); // OFF-1
     return c.json({error: "internal error"}, 500);
   });
 
@@ -103,18 +103,25 @@ export function createApp(deps: AppDeps) {
   app.use("/v1/*", async (c, next) => {
     c.header("X-Data-Terms", TERMS_URL);
     if (c.req.method === "OPTIONS") return next();
-    const key = c.req.header("x-api-key") ?? c.req.query("apiKey");
+    // OFF-8: HTTP takes the key from the header only (a `?apiKey=` lands in access logs, proxies and Referer); the
+    // WebSocket upgrade still accepts it in the URL because browsers cannot set headers there.
+    const key = c.req.header("x-api-key");
     let rl: string;
     let limit: number;
     if (key) {
       const k = await keys.resolve(key);
-      if (!k) return c.json({error: "invalid or revoked API key"}, 401);
+      if (!k) {
+        // OFF-9: a wrong key costs the caller's free-tier budget, so random keys cannot bypass the IP limit (DB lookups).
+        const r = await limiter.hit(clientKey(clientIp(c, config.trustProxy, config.trustedProxyHops)), config.freeRpm);
+        if (!r.allowed) return c.json({error: "rate limit exceeded"}, 429);
+        return c.json({error: "invalid or revoked API key"}, 401);
+      }
       c.set("keyId", k.id);
       c.set("address", k.address);
       rl = `key:${k.id}`;
       limit = config.keyedRpm;
     } else {
-      rl = clientKey(clientIp(c, config.trustProxy));
+      rl = clientKey(clientIp(c, config.trustProxy, config.trustedProxyHops));
       limit = config.freeRpm;
     }
     const r = await limiter.hit(rl, limit);

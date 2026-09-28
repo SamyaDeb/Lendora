@@ -3,6 +3,7 @@ import {cors} from "hono/cors";
 import type {HttpBindings} from "@hono/node-server";
 import {z} from "zod";
 import {isAddress, type Address} from "viem";
+import {safeErrorLine} from "@stockline/sdk";
 import {Denied, type ComplianceService, type Terms} from "./service.js";
 import {HeaderGeoResolver} from "./checks.js";
 
@@ -27,6 +28,8 @@ export interface AppOptions {
   /** Attestation requests per minute, counted separately per client IP and per wallet (CP-R8). */
   attestRpm: number;
   allowedOrigins: string[];
+  /** Local anvil only: with no `ALLOWED_ORIGINS`, answer CORS for any origin. Elsewhere no origin is allowed then. */
+  corsAnyOrigin?: boolean;
 }
 
 const addr = z.string().refine((a) => isAddress(a), "invalid address");
@@ -58,10 +61,12 @@ export function createComplianceApp(svc: ComplianceService, terms: Terms, o: App
     return c.env?.incoming?.socket?.remoteAddress ?? "unknown";
   };
 
-  app.use("*", cors({origin: o.allowedOrigins.length ? o.allowedOrigins : "*", allowHeaders: ["Content-Type"], allowMethods: ["GET", "POST", "OPTIONS"]}));
+  // OFF-16: browsers reach compliance through the web app's same-origin proxy; direct cross-origin calls are allowed
+  // only from `ALLOWED_ORIGINS` (before: "*" whenever it was unset, on every network).
+  app.use("*", cors({origin: o.allowedOrigins.length ? o.allowedOrigins : o.corsAnyOrigin ? "*" : () => null, allowHeaders: ["Content-Type"], allowMethods: ["GET", "POST", "OPTIONS"]}));
   app.onError((err, c) => {
     if (err instanceof Denied) return c.json({code: err.code, error: err.message}, 403);
-    console.error(`[compliance] ${c.req.method} ${c.req.path}: ${String(err)}`);
+    console.error(`[compliance] ${c.req.method} ${c.req.path}: ${safeErrorLine(err, process.env)}`); // OFF-1
     return c.json({error: "internal error"}, 500);
   });
   app.get("/health", (c) => c.json({ok: true, signer: svc.signerAddress, sanctions: svc.sanctionsProvider}));

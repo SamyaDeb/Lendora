@@ -23,6 +23,17 @@ export interface Limiter {
 
 export const clientKey = (ip: string) => `ip:${createHash("sha256").update(ip).digest("hex").slice(0, 24)}`;
 
+/**
+ * OFF-7: the client IP from `X-Forwarded-For` behind `hops` trusted proxies. Proxies append, so the client-controlled
+ * part is on the left and the address our own edge saw is `hops` from the right; taking the first entry (as before)
+ * let anyone pick their rate-limit bucket by sending `X-Forwarded-For: <random>`.
+ */
+export function ipFromForwardedFor(xff: string | undefined, hops: number): string | undefined {
+  const parts = (xff ?? "").split(",").map((p) => p.trim()).filter(Boolean);
+  if (!parts.length) return undefined;
+  return parts[Math.max(0, parts.length - Math.max(1, hops))];
+}
+
 export class MemoryLimiter implements Limiter {
   private readonly windows = new Map<string, {count: number; reset: number}>();
   private readonly conns = new Map<string, number>();

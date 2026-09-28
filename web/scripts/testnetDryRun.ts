@@ -95,6 +95,7 @@ const api = await startApi({
   keyedWs: 10,
   maxKeysPerAddress: 5,
   trustProxy: false,
+  trustedProxyHops: 1,
   siweDomain: "localhost",
   streamPollMs: 200,
 });

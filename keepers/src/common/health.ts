@@ -1,4 +1,5 @@
 import {createServer, type Server} from "node:http";
+import {safeErrorLine} from "@stockline/sdk";
 
 /** Per-market liveness for `/health` (LM-R33): last run time and block, last error. */
 export class Health {
@@ -6,6 +7,7 @@ export class Health {
   constructor(
     private readonly maxStaleMs: number,
     private readonly now: () => number = Date.now,
+    private readonly env: NodeJS.ProcessEnv = process.env,
   ) {}
 
   ok(market: string, block: bigint): void {
@@ -14,7 +16,8 @@ export class Health {
 
   fail(market: string, error: unknown): void {
     const prev = this.runs.get(market);
-    this.runs.set(market, {at: prev?.at ?? 0, block: prev?.block ?? 0n, error: String(error)});
+    // OFF-1: /health is unauthenticated; the error is one redacted line (viem errors carry the RPC URL and its key).
+    this.runs.set(market, {at: prev?.at ?? 0, block: prev?.block ?? 0n, error: safeErrorLine(error, this.env)});
   }
 
   report(): {healthy: boolean; markets: Record<string, {lastRunMsAgo: number; lastBlock: string; error?: string}>} {

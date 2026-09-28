@@ -175,11 +175,38 @@ describe("public API on the indexed seed week (SI-R10…R14)", () => {
     expect(list.address).toBe(account.address.toLowerCase());
     expect(list.keys.map((k) => k.id)).toEqual([id]);
     expect((await fetch(`${limited.url}/v1/auth/keys/${id}`, {method: "DELETE", headers: keyed})).status).toBe(200);
-    expect((await fetch(`${limited.url}/v1/terms`, {headers: keyed})).status).toBe(401);
+    expect((await fetch(`${limited.url}/v1/terms`, {headers: {"x-api-key": key, "x-forwarded-for": "203.0.113.11"}})).status).toBe(401);
+    expect((await fetch(`${limited.url}/v1/terms`, {headers: keyed})).status).toBe(429); // OFF-9: this IP's free budget is spent
     // Stored: key hash + address only (APP-R11: no IP column).
     const {rows} = await s.api.db.pool.query(`select * from "${s.config.apiSchema}".api_keys`);
     expect(Object.keys(rows[0]).sort()).toEqual(["address", "created_at", "id", "key_hash", "label", "revoked_at"]);
     expect(JSON.stringify(rows)).not.toContain(key);
+  });
+
+  it("OFF_7 OFF_8 OFF_9 rate limits key on the edge's XFF hop, ignore ?apiKey= on HTTP, and charge wrong keys", async () => {
+    const limited = await s.startApi({freeRpm: 2});
+    const get = (h: Record<string, string>, q = "") => fetch(`${limited.url}/v1/terms${q}`, {headers: h});
+    // OFF-7: the client-controlled left part of X-Forwarded-For does not pick the bucket; the right-most hop does.
+    expect((await get({"x-forwarded-for": "1.1.1.1, 203.0.113.50"})).status).toBe(200);
+    expect((await get({"x-forwarded-for": "2.2.2.2, 203.0.113.50"})).status).toBe(200);
+    expect((await get({"x-forwarded-for": "3.3.3.3, 203.0.113.50"})).status).toBe(429);
+    // OFF-8: a key in the query string is ignored on HTTP (free tier, not 401).
+    const q = await get({"x-forwarded-for": "203.0.113.52"}, "?apiKey=sk_whatever");
+    expect(q.status).toBe(200);
+    expect(q.headers.get("x-ratelimit-tier")).toBe("free");
+    // OFF-9: wrong keys cost the IP's free budget: 401, 401, then 429.
+    const bad = {"x-forwarded-for": "203.0.113.51", "x-api-key": "sk_not_a_key"};
+    expect((await get(bad)).status).toBe(401);
+    expect((await get(bad)).status).toBe(401);
+    expect((await get(bad)).status).toBe(429);
+  });
+
+  it("OFF_11 WS: a connection that floods messages is closed (1008)", async () => {
+    const ws = new WebSocket(`${base.replace("http", "ws")}/v1/stream`, {headers: {"x-forwarded-for": "198.51.100.77"}});
+    await new Promise((r) => ws.once("open", r));
+    const closed = new Promise<number>((r) => ws.once("close", (code) => r(code)));
+    for (let i = 0; i < 30; i++) ws.send(JSON.stringify({channel: "market", symbol: "NVDA"}));
+    expect(await closed).toBe(1008);
   });
 
   it("SI_R10 / SI_R11 WS: subscribe, receive the snapshot, get pushed within 2 s of the block; free tier = 1 connection", async () => {
@@ -295,5 +322,16 @@ describe("public API on the indexed seed week (SI-R10…R14)", () => {
     const status = await client.status();
     expect(status.data.chainId).toBe(31337);
     await expect(client.market("NOPE")).rejects.toThrow(/unknown symbol/);
+  });
+});
+
+describe("OFF-10 in-memory SIWE nonces are bounded", () => {
+  it("OFF_10 the store never holds more than its bound, dropping expired then oldest nonces", async () => {
+    const {MemoryNonceStore} = await import("../src/keys.js");
+    const n = new MemoryNonceStore(100);
+    for (let i = 0; i < 1_000; i++) await n.put(`n${i}`, 600);
+    expect(n.size).toBeLessThanOrEqual(100);
+    expect(await n.take("n999")).toBe(true);
+    expect(await n.take("n0")).toBe(false);
   });
 });

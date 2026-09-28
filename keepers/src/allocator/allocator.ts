@@ -10,8 +10,7 @@ import {
   type AllocatorAction,
   type AllocatorParams,
   type AllocatorState,
-  type ChainDeployment,
-} from "@stockline/sdk";
+  type ChainDeployment, safeErrorLine} from "@stockline/sdk";
 import type {TxSender} from "../common/signer.js";
 import type {Health} from "../common/health.js";
 import {capIds, encodeMarketParams, marketParams} from "../common/market.js";
@@ -104,7 +103,7 @@ export class Allocator {
         this.health?.ok(ticker, block.number);
       } catch (e) {
         this.health?.fail(ticker, e);
-        this.log(`[allocator] ${ticker} error: ${String(e)}`);
+        this.log(`[allocator] ${ticker} error: ${safeErrorLine(e, process.env)}`);
       }
     }
     return out;

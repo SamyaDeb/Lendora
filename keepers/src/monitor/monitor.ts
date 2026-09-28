@@ -14,6 +14,7 @@ import {
   morphoAbi,
   morphoEventsAbi,
   readMarket,
+  safeErrorLine,
   stockMarketState,
   stocklineOracleAbi,
   stockWrapperAbi,
@@ -181,7 +182,7 @@ export class Monitor {
         this.health?.ok(name, block.number);
       } catch (e) {
         this.health?.fail(name, e);
-        this.o.log(`[monitor] ${name} error: ${String(e)}`);
+        this.o.log(`[monitor] ${name} error: ${safeErrorLine(e, process.env)}`);
       }
     };
 
@@ -401,7 +402,7 @@ export class Monitor {
         status = r.status;
         body = await r.json().catch(() => null);
       } catch (e) {
-        body = String(e).split("\n")[0];
+        body = safeErrorLine(e, process.env); // OFF-1
       }
       obs.push({rule: "KEEPER_DOWN", subject: name, active: status !== 200, title: `Keeper ${name} unhealthy`, details: {keeper: name, url, status, body}});
     }
@@ -500,7 +501,7 @@ export class Monitor {
         await pager.send(p);
         ok = true;
       } catch (e) {
-        this.o.log(`[monitor] ${pager.name} ${p.action} ${p.key}: ${String(e)}`);
+        this.o.log(`[monitor] ${pager.name} ${p.action} ${p.key}: ${safeErrorLine(e, process.env)}`);
       }
     }
     return ok;

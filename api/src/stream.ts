@@ -4,7 +4,7 @@ import type {Duplex} from "node:stream";
 import {randomBytes} from "node:crypto";
 import type {Redis} from "ioredis";
 import {WebSocketServer, WebSocket} from "ws";
-import type {ChainDeployment} from "@stockline/sdk";
+import {safeErrorLine, type ChainDeployment} from "@stockline/sdk";
 import type {IndexerDb, EventCursor} from "./db.js";
 import {envelope, eventView, marketView} from "./model.js";
 import {clientKey, type Limiter} from "./limits.js";
@@ -61,7 +61,7 @@ export class RedisFanout implements Fanout {
     await this.pub.publish(this.channel, JSON.stringify(msg));
   }
   onMessage(h: (m: StreamMessage) => void) {
-    this.sub.subscribe(this.channel).catch((e) => console.error(`[stream] subscribe: ${String(e)}`));
+    this.sub.subscribe(this.channel).catch((e) => console.error(`[stream] subscribe: ${safeErrorLine(e, process.env)}`));
     this.sub.on("message", (_c, raw: string) => h(JSON.parse(raw) as StreamMessage));
   }
   /** Leader lease: 5 s, renewed by the holder on every poll. */
@@ -102,7 +102,7 @@ export class StreamPublisher {
       try {
         if (await this.fanout.isLeader()) await this.poll();
       } catch (e) {
-        console.error(`[stream] ${String(e)}`);
+        console.error(`[stream] ${safeErrorLine(e, process.env)}`);
       } finally {
         this.running = false;
       }
@@ -160,7 +160,11 @@ export class StreamServer {
       d: ChainDeployment;
       freeWs: number;
       keyedWs: number;
+      /** OFF-9: a WebSocket upgrade with a wrong key costs the IP's free-tier budget. */
+      freeRpm?: number;
       clientIp: (req: IncomingMessage) => string;
+      /** OFF-11: per-connection message budget. */
+      maxMsgsPer10s?: number;
     },
   ) {
     deps.fanout.onMessage((m) => this.dispatch(m));
@@ -190,7 +194,8 @@ export class StreamServer {
     if (key) {
       const k = await this.deps.keys.resolve(key);
       if (!k) {
-        socket.end("HTTP/1.1 401 Unauthorized\r\n\r\n");
+        const r = await this.deps.limiter.hit(clientKey(this.deps.clientIp(req)), this.deps.freeRpm ?? 60);
+        socket.end(r.allowed ? "HTTP/1.1 401 Unauthorized\r\n\r\n" : "HTTP/1.1 429 Too Many Requests\r\n\r\n");
         return;
       }
       slot = `key:${k.id}`;
@@ -210,7 +215,18 @@ export class StreamServer {
         // Also runs while the server shuts down and Redis may already be closed; the slot key expires by itself.
         this.deps.limiter.release(slot).catch(() => {});
       });
-      ws.on("message", (raw) => this.onClientMessage(ws, raw.toString()).catch((e) => console.error(`[stream] message: ${String(e)}`)));
+      // OFF-11: every `market` subscribe reads the database, so a client gets at most `maxMsgsPer10s` messages per 10 s
+      // (then the connection is closed, 1008). Subscriptions are already bounded: 2 channels × (listed symbols + "*").
+      const budget = {n: 0, reset: Date.now() + 10_000};
+      ws.on("message", (raw) => {
+        const now = Date.now();
+        if (now >= budget.reset) Object.assign(budget, {n: 0, reset: now + 10_000});
+        if (++budget.n > (this.deps.maxMsgsPer10s ?? 20)) {
+          ws.close(1008, "message rate limit");
+          return;
+        }
+        this.onClientMessage(ws, raw.toString()).catch((e) => console.error(`[stream] message: ${safeErrorLine(e, process.env)}`));
+      });
       ws.send(JSON.stringify({type: "welcome", channels: ["market", "events"], symbols: [...Object.keys(this.deps.d.stocks), "*"]}));
     });
   }

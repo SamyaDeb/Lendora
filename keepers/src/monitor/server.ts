@@ -1,3 +1,4 @@
+import {safeErrorLine} from "@stockline/sdk";
 import {Hono} from "hono";
 import type {Health} from "../common/health.js";
 import type {Pager} from "./pager.js";
@@ -9,7 +10,7 @@ import {weekendReports} from "./weekend.js";
 export function monitorApp(store: MonitorStore, health: Health, tickers: string[], pagers: Pager[]) {
   const app = new Hono();
   app.onError((err, c) => {
-    console.error(`[monitor] ${String(err)}`);
+    console.error(`[monitor] ${safeErrorLine(err, process.env)}`); // OFF-1
     return c.json({error: "internal error"}, 500);
   });
   const big = (v: unknown) => JSON.parse(JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? x.toString() : x)));

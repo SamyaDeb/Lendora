@@ -19,11 +19,12 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
+    "@stockline/indexer": "workspace:*",
     "@stockline/sdk": "workspace:*",
     "hono": "^4.13.9",
     "pg": "^8.23.0",
     "viem": "^2.56.9",
-    "@stockline/indexer": "workspace:*"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@stockline/api": "workspace:*",

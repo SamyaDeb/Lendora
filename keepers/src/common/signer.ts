@@ -22,15 +22,39 @@ export class DryRunSender implements TxSender {
   }
 }
 
+/** EIP-1559 fees for one transaction, already checked against the cap. */
+export interface Fees {
+  maxFeePerGas: bigint;
+  maxPriorityFeePerGas: bigint;
+}
+
+/** OFF-2: the node's fee estimate is above `MAX_FEE_PER_GAS_GWEI`; the tick is skipped, nothing is sent. */
+export class GasPriceTooHigh extends Error {
+  constructor(
+    readonly maxFeePerGas: bigint,
+    readonly cap: bigint,
+  ) {
+    super(`gas price ${maxFeePerGas} wei is above the cap ${cap} wei (MAX_FEE_PER_GAS_GWEI)`);
+  }
+}
+
+/** Default remote-signer timeout (OFF-3): a hung KMS bridge fails the tick instead of stalling the keeper forever. */
+export const REMOTE_SIGNER_TIMEOUT_MS = 15_000;
+
 class ClientSender implements TxSender {
   constructor(
     readonly kind: "env-key" | "rpc-unlocked" | "remote",
     readonly address: `0x${string}`,
-    private readonly sendRaw: (to: `0x${string}`, data: Hex) => Promise<Hex>,
+    private readonly sendRaw: (to: `0x${string}`, data: Hex, fees: Fees) => Promise<Hex>,
     private readonly client: PublicClient,
+    private readonly maxFeePerGas?: bigint,
   ) {}
   async send(to: `0x${string}`, data: Hex, label: string): Promise<Hex> {
-    const hash = await this.sendRaw(to, data);
+    // OFF-2: every transaction carries explicit fees, checked against the cap before anything is signed.
+    const est = await this.client.estimateFeesPerGas();
+    if (this.maxFeePerGas !== undefined && est.maxFeePerGas > this.maxFeePerGas) throw new GasPriceTooHigh(est.maxFeePerGas, this.maxFeePerGas);
+    const fees = {maxFeePerGas: est.maxFeePerGas, maxPriorityFeePerGas: est.maxPriorityFeePerGas};
+    const hash = await this.sendRaw(to, data, fees);
     const receipt = await this.client.waitForTransactionReceipt({hash});
     if (receipt.status !== "success") throw new Error(`${label} reverted: ${hash}`);
     return hash;
@@ -38,18 +62,18 @@ class ClientSender implements TxSender {
 }
 
 /** Account unlocked on the node (anvil `anvil_impersonateAccount` or default accounts). Tests only. */
-export function rpcUnlockedSender(client: PublicClient, rpcUrl: string, chain: Chain, address: `0x${string}`): TxSender {
+export function rpcUnlockedSender(client: PublicClient, rpcUrl: string, chain: Chain, address: `0x${string}`, maxFeePerGas?: bigint): TxSender {
   const wallet = createWalletClient({chain, transport: http(rpcUrl)});
-  return new ClientSender("rpc-unlocked", address, (to, data) => wallet.sendTransaction({account: address, to, data, chain}), client);
+  return new ClientSender("rpc-unlocked", address, (to, data, fees) => wallet.sendTransaction({account: address, to, data, chain, ...fees}), client, maxFeePerGas);
 }
 
 /** Key from `KEEPER_PRIVATE_KEY` (a secret manager should inject it). */
-export function envKeySender(client: PublicClient, rpcUrl: string, chain: Chain, env: NodeJS.ProcessEnv = process.env): TxSender {
+export function envKeySender(client: PublicClient, rpcUrl: string, chain: Chain, env: NodeJS.ProcessEnv = process.env, maxFeePerGas?: bigint): TxSender {
   const pk = env.KEEPER_PRIVATE_KEY as Hex | undefined;
   if (!pk) throw new Error("KEEPER_PRIVATE_KEY is not set");
   const account = privateKeyToAccount(pk);
   const wallet = createWalletClient({account, chain, transport: http(rpcUrl)});
-  return new ClientSender("env-key", account.address, (to, data) => wallet.sendTransaction({account, to, data, chain}), client);
+  return new ClientSender("env-key", account.address, (to, data, fees) => wallet.sendTransaction({account, to, data, chain, ...fees}), client, maxFeePerGas);
 }
 
 /**
@@ -59,45 +83,81 @@ export function envKeySender(client: PublicClient, rpcUrl: string, chain: Chain,
  * address **and** has the same chain, nonce, recipient, value and calldata, so a misconfigured or compromised remote
  * cannot swap the payload or sign with another key. No key material in this process.
  */
-export function remoteTxSender(client: PublicClient, chain: Chain, url: string, address: `0x${string}`, auth?: string, fetchImpl: typeof fetch = fetch): TxSender {
-  const sendRaw = async (to: `0x${string}`, data: Hex): Promise<Hex> => {
-    const [nonce, fees, gas] = await Promise.all([
-      client.getTransactionCount({address, blockTag: "pending"}),
-      client.estimateFeesPerGas(),
-      client.estimateGas({account: address, to, data}),
-    ]);
+export function remoteTxSender(
+  client: PublicClient,
+  chain: Chain,
+  url: string,
+  address: `0x${string}`,
+  auth?: string,
+  fetchImpl: typeof fetch = fetch,
+  opts: {maxFeePerGas?: bigint; timeoutMs?: number} = {},
+): TxSender {
+  const sendRaw = async (to: `0x${string}`, data: Hex, fees: Fees): Promise<Hex> => {
+    const [nonce, gas] = await Promise.all([client.getTransactionCount({address, blockTag: "pending"}), client.estimateGas({account: address, to, data})]);
     const unsigned: TransactionSerializableEIP1559 = {type: "eip1559", chainId: chain.id, nonce, to, data, value: 0n, gas: (gas * 12n) / 10n, maxFeePerGas: fees.maxFeePerGas, maxPriorityFeePerGas: fees.maxPriorityFeePerGas};
-    const r = await fetchImpl(url, {method: "POST", headers: {"content-type": "application/json", ...(auth ? {authorization: auth} : {})}, body: JSON.stringify({chainId: chain.id, transaction: serializeTransaction(unsigned)})});
+    const r = await fetchImpl(url, {
+      method: "POST",
+      headers: {"content-type": "application/json", ...(auth ? {authorization: auth} : {})},
+      body: JSON.stringify({chainId: chain.id, transaction: serializeTransaction(unsigned)}),
+      signal: AbortSignal.timeout(opts.timeoutMs ?? REMOTE_SIGNER_TIMEOUT_MS), // OFF-3
+    });
     if (!r.ok) throw new Error(`remote signer ${r.status}`);
     const {signedTransaction} = (await r.json()) as {signedTransaction: Hex};
     const tx = parseTransaction(signedTransaction);
     const signer = await recoverTransactionAddress({serializedTransaction: signedTransaction as never});
     if (signer.toLowerCase() !== address.toLowerCase()) throw new Error("remote signer signed with another key");
-    if (tx.chainId !== chain.id || tx.nonce !== nonce || tx.to?.toLowerCase() !== to.toLowerCase() || (tx.value ?? 0n) !== 0n || tx.data !== data) {
+    if (
+      tx.chainId !== chain.id ||
+      tx.nonce !== nonce ||
+      tx.to?.toLowerCase() !== to.toLowerCase() ||
+      (tx.value ?? 0n) !== 0n ||
+      tx.data !== data ||
+      (tx.maxFeePerGas ?? 0n) > fees.maxFeePerGas || // OFF-2: the remote cannot raise the fee past what the keeper checked
+      (tx.gas ?? 0n) > unsigned.gas!
+    ) {
       throw new Error("remote signer returned a different transaction");
     }
     return client.sendRawTransaction({serializedTransaction: signedTransaction});
   };
-  return new ClientSender("remote", address, sendRaw, client);
+  return new ClientSender("remote", address, sendRaw, client, opts.maxFeePerGas);
 }
 
 /** The sender a keeper's config asks for: dry run (default), env key, remote signer, or anvil-unlocked (tests). */
+/**
+ * The sender a keeper's config asks for: dry run (default), env key, remote signer, or anvil-unlocked (tests). Every
+ * signing keeper's `main.ts` goes through this (OFF-4: before, four of them built their own sender and silently ran
+ * dry with `KEEPER_SIGNER=remote`). `roleAddress` is the deployment's role for this keeper, used for dry runs and the
+ * anvil-unlocked account when `KEEPER_ADDRESS` is unset.
+ */
 export function senderFromConfig(
-  cfg: {signer: "dry-run" | "env-key" | "rpc-unlocked" | "remote"; rpcUrl: string; unlockedAddress?: `0x${string}`; remoteSignerUrl?: string; remoteSignerAuth?: string},
+  cfg: {
+    signer: "dry-run" | "env-key" | "rpc-unlocked" | "remote";
+    rpcUrl: string;
+    unlockedAddress?: `0x${string}`;
+    remoteSignerUrl?: string;
+    remoteSignerAuth?: string;
+    maxFeePerGasWei?: bigint;
+    remoteSignerTimeoutMs?: number;
+  },
   client: PublicClient,
   chain: Chain,
   env: NodeJS.ProcessEnv = process.env,
+  roleAddress?: `0x${string}`,
 ): TxSender {
+  const cap = cfg.maxFeePerGasWei;
   switch (cfg.signer) {
     case "env-key":
-      return envKeySender(client, cfg.rpcUrl, chain, env);
-    case "rpc-unlocked":
-      return rpcUnlockedSender(client, cfg.rpcUrl, chain, cfg.unlockedAddress!);
+      return envKeySender(client, cfg.rpcUrl, chain, env, cap);
+    case "rpc-unlocked": {
+      const a = cfg.unlockedAddress ?? roleAddress;
+      if (!a) throw new Error("KEEPER_SIGNER=rpc-unlocked needs KEEPER_ADDRESS");
+      return rpcUnlockedSender(client, cfg.rpcUrl, chain, a, cap);
+    }
     case "remote":
       if (!cfg.remoteSignerUrl || !cfg.unlockedAddress) throw new Error("KEEPER_SIGNER=remote needs KEEPER_REMOTE_SIGNER_URL and KEEPER_ADDRESS");
-      return remoteTxSender(client, chain, cfg.remoteSignerUrl, cfg.unlockedAddress, cfg.remoteSignerAuth);
+      return remoteTxSender(client, chain, cfg.remoteSignerUrl, cfg.unlockedAddress, cfg.remoteSignerAuth, fetch, {maxFeePerGas: cap, timeoutMs: cfg.remoteSignerTimeoutMs});
     default:
-      return new DryRunSender(cfg.unlockedAddress);
+      return new DryRunSender(cfg.unlockedAddress ?? roleAddress);
   }
 }
 
@@ -127,13 +187,13 @@ export function envKeyTypedDataSigner(prefix: string, env: NodeJS.ProcessEnv = p
  * A remote signer (KMS/HSM bridge) reached over HTTPS: POST `{typedData}` → `{signature}`. The signature is checked
  * against the expected address before use, so a misconfigured remote cannot hand out attestations for another key.
  */
-export function remoteTypedDataSigner(url: string, address: `0x${string}`, auth?: string): TypedDataSigner {
+export function remoteTypedDataSigner(url: string, address: `0x${string}`, auth?: string, fetchImpl: typeof fetch = fetch, timeoutMs = REMOTE_SIGNER_TIMEOUT_MS): TypedDataSigner {
   return {
     kind: "remote",
     address,
     async signTypedData(t) {
       const body = JSON.stringify({typedData: t}, (_k, v) => (typeof v === "bigint" ? v.toString() : v));
-      const r = await fetch(url, {method: "POST", headers: {"content-type": "application/json", ...(auth ? {authorization: auth} : {})}, body});
+      const r = await fetchImpl(url, {method: "POST", headers: {"content-type": "application/json", ...(auth ? {authorization: auth} : {})}, body, signal: AbortSignal.timeout(timeoutMs)}); // OFF-3
       if (!r.ok) throw new Error(`remote signer ${r.status}`);
       const {signature} = (await r.json()) as {signature: Hex};
       const ok = await verifyTypedData({...(t as Parameters<typeof verifyTypedData>[0]), address, signature});

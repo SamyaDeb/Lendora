@@ -1,5 +1,8 @@
 import {createHmac} from "node:crypto";
-import {lookup} from "node:dns/promises";
+import {lookup as dnsLookup} from "node:dns/promises";
+import {request as httpRequest} from "node:http";
+import {request as httpsRequest} from "node:https";
+import {isIP} from "node:net";
 import type {AlertSettings} from "@stockline/sdk";
 
 /**
@@ -75,28 +78,94 @@ export class TelegramTransport implements Transport {
   }
 }
 
-const PRIVATE = [/^10\./, /^127\./, /^169\.254\./, /^172\.(1[6-9]|2\d|3[01])\./, /^192\.168\./, /^0\./, /^::1$/, /^f[cd]/i, /^fe80/i];
+/**
+ * OFF-6 (SSRF): true for any address a webhook must never reach: loopback, private, link-local (cloud metadata),
+ * CGNAT (100.64/10), "this network", benchmarking, multicast/reserved, IPv6 ULA/link-local/multicast/unspecified,
+ * NAT64, and IPv4-mapped IPv6 forms of all of those (`::ffff:127.0.0.1`, `::ffff:7f00:1`).
+ */
+export function isPrivateAddress(ip: string): boolean {
+  let a = ip.toLowerCase().replace(/^\[|\]$/g, "").split("%")[0];
+  const mapped = /^::ffff:(?:0:)?([0-9.]+|[0-9a-f]{1,4}:[0-9a-f]{1,4})$/.exec(a);
+  if (mapped) {
+    const m = mapped[1];
+    if (m.includes(".")) a = m;
+    else {
+      const [hi, lo] = m.split(":").map((x) => parseInt(x, 16));
+      a = `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`;
+    }
+  }
+  if (isIP(a) === 4) {
+    const [x, y] = a.split(".").map(Number);
+    return (
+      x === 0 || x === 10 || x === 127 || x >= 224 ||
+      (x === 100 && y >= 64 && y <= 127) ||
+      (x === 169 && y === 254) ||
+      (x === 172 && y >= 16 && y <= 31) ||
+      (x === 192 && (y === 168 || (y === 0 && a.split(".")[2] === "0"))) ||
+      (x === 198 && (y === 18 || y === 19))
+    );
+  }
+  if (isIP(a) === 6) {
+    return a === "::" || a === "::1" || /^f[cd]/.test(a) || /^fe[89ab]/.test(a) || /^ff/.test(a) || a.startsWith("64:ff9b:") || a.startsWith("2001:db8:");
+  }
+  return true; // not an IP at all: refuse
+}
 
-/** JSON POST with an HMAC-SHA256 signature header; refuses private addresses (SSRF) unless allowed (anvil/dev). */
+/** Resolves every address of a hostname (all A and AAAA records). */
+export type Resolver = (host: string) => Promise<{address: string; family: number}[]>;
+const systemResolver: Resolver = (h) => dnsLookup(h, {all: true});
+
+/**
+ * JSON POST with an HMAC-SHA256 signature header (APP-R8). OFF-6 (SSRF): https only; no credentials in the URL;
+ * **every** resolved address must be public, and the connection is pinned to the checked address (no second DNS
+ * lookup, so DNS rebinding cannot swap in a private IP); no redirects; 5 s timeout; the signing key is required. Local
+ * dev and anvil tests pass `allowPrivate` (http and private addresses allowed).
+ */
 export class WebhookTransport implements Transport {
   readonly channel = "webhook" as const;
   constructor(
     private readonly signingKey: string,
     private readonly allowPrivate = false,
+    private readonly resolve: Resolver = systemResolver,
+    private readonly timeoutMs = 5_000,
   ) {}
   target(s: AlertSettings) {
     return s.channels.webhookUrl;
   }
   async send(url: string, a: Alert) {
     const u = new URL(url);
-    if (!this.allowPrivate) {
-      const {address} = await lookup(u.hostname);
-      if (PRIVATE.some((r) => r.test(address))) throw new Error("webhook resolves to a private address");
-    }
+    if (!this.allowPrivate && u.protocol !== "https:") throw new Error("webhook must be https");
+    if (u.protocol !== "https:" && u.protocol !== "http:") throw new Error("webhook must be http(s)");
+    if (u.username || u.password) throw new Error("webhook URL must not carry credentials");
+    if (!this.allowPrivate && this.signingKey.length < 16) throw new Error("webhook signing key (>= 16 chars) is not configured");
+    const host = u.hostname.replace(/^\[|\]$/g, "");
+    const addrs = isIP(host) ? [{address: host, family: isIP(host)}] : await this.resolve(host);
+    if (!addrs.length) throw new Error("webhook host does not resolve");
+    if (!this.allowPrivate && addrs.some((x) => isPrivateAddress(x.address))) throw new Error("webhook resolves to a private address");
+    const pin = addrs[0];
     const body = JSON.stringify({...a, block: a.block.toString(), blockTime: a.blockTime.toString()});
     const sig = createHmac("sha256", this.signingKey).update(body).digest("hex");
-    const r = await fetch(url, {method: "POST", headers: {"content-type": "application/json", "x-stockline-signature": `sha256=${sig}`}, body, signal: AbortSignal.timeout(5_000), redirect: "error"});
-    if (!r.ok) throw new Error(`webhook ${r.status}`);
+    const status = await new Promise<number>((resolve, reject) => {
+      const req = (u.protocol === "https:" ? httpsRequest : httpRequest)(
+        u,
+        {
+          method: "POST",
+          headers: {"content-type": "application/json", "content-length": Buffer.byteLength(body), "x-stockline-signature": `sha256=${sig}`},
+          // Pinned: the socket connects to the address checked above; TLS still verifies the certificate for `host`.
+          lookup: ((_h: string, opts: {all?: boolean}, cb: (...args: unknown[]) => void) =>
+            opts?.all ? cb(null, [{address: pin.address, family: pin.family}]) : cb(null, pin.address, pin.family)) as never,
+          signal: AbortSignal.timeout(this.timeoutMs),
+        },
+        (res) => {
+          res.resume();
+          res.on("end", () => resolve(res.statusCode ?? 0));
+          res.on("error", reject);
+        },
+      );
+      req.on("error", reject);
+      req.end(body);
+    });
+    if (status < 200 || status >= 300) throw new Error(`webhook ${status}`); // 3xx included: redirects are not followed
   }
 }
 

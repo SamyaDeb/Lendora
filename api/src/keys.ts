@@ -18,8 +18,21 @@ export interface NonceStore {
 
 export class MemoryNonceStore implements NonceStore {
   private readonly m = new Map<string, number>();
+  constructor(private readonly max = 10_000) {}
   async put(nonce: string, ttlSec: number) {
+    // OFF-10: bounded. Expired nonces are dropped as the map grows; past `max` live ones the oldest go first.
+    if (this.m.size >= this.max) {
+      const now = Date.now();
+      for (const [k, exp] of this.m) if (exp <= now) this.m.delete(k);
+      for (const k of this.m.keys()) {
+        if (this.m.size < this.max) break;
+        this.m.delete(k);
+      }
+    }
     this.m.set(nonce, Date.now() + ttlSec * 1000);
+  }
+  get size() {
+    return this.m.size;
   }
   async take(nonce: string) {
     const exp = this.m.get(nonce);
