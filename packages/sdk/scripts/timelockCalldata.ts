@@ -19,12 +19,19 @@
  *   router.setAttestationSigner      signer=0x…
  *   router.setSwapTarget             target=0x… mode=0|1|2
  *
+ * Vault V2 curator actions (the vault's own timelock, not the TimelockController; FE-R1):
+ *   vault.setPerformanceFeeRecipient ticker=NVDA recipient=0x…                   (turn fees on: → FeeSplitter)
+ *   vault.setPerformanceFee          ticker=NVDA feeWad=100000000000000000        (10%)
+ *   These print `submitCalldata` (curator → vault), the timelocked `data` (anyone → vault after the delay) and
+ *   `revokeCalldata` (curator or guardian sentinel → vault, veto).
+ *
  * `sdk:<fromTs>` takes the sessions (or the ticker's event windows) from packages/sdk/data/calendar.json whose
  * open/start is at or after `fromTs`, i.e. what `gen:sessions` produced.
  */
 import {eventWindowsByTickerData, feedSessions} from "../src/calendar/schedule.js";
 import {getDeployment, parseDeploymentKey, type Address} from "../src/addresses.js";
 import {saltOf, timelockOperation, type OracleParamsInput, type TimelockAction} from "../src/timelock.js";
+import {vaultCuratorOperation} from "../src/vaultTimelock.js";
 
 const argv = process.argv.slice(2);
 const flag = (name: string, dflt: string) => {
@@ -107,6 +114,25 @@ function action(): TimelockAction {
 const network = flag("network", "31337");
 const d = getDeployment(parseDeploymentKey(network));
 if (!d) throw new Error(`no deployment for ${network} in addresses.json`);
+if (kind?.startsWith("vault.")) {
+  const va =
+    kind === "vault.setPerformanceFeeRecipient"
+      ? ({kind, ticker: need("ticker"), recipient: need("recipient") as Address} as const)
+      : kind === "vault.setPerformanceFee"
+        ? ({kind, ticker: need("ticker"), feeWad: big(need("feeWad"))} as const)
+        : undefined;
+  if (!va) throw new Error(`unknown action ${kind}; see the header of scripts/timelockCalldata.ts`);
+  const op = vaultCuratorOperation(d, va);
+  const wait = network === "46630" ? "24h" : "48h";
+  console.log(
+    JSON.stringify(
+      {network, ...op, steps: [`1. curator → vault ${op.vault}: submitCalldata`, `2. after the vault timelock (${wait}): executableAt(data) <= now`, `3. anyone → vault: data`, `veto before 3: curator or guardian → vault: revokeCalldata`]},
+      null,
+      2,
+    ),
+  );
+  process.exit(0);
+}
 const a = action();
 const delay = BigInt(flag("delay", network === "46630" ? "86400" : "172800"));
 const label = flag("salt", `${kind} ${new Date().toISOString().slice(0, 10)}`);

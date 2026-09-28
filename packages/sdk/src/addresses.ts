@@ -29,7 +29,12 @@ export interface Roles {
   guardian: Address;
   allocator: Address;
   guardKeeper: Address;
-  feeSplitter: Address;
+  /** Treasury multisig: treasury share of the performance fee (Phase 3, Q9). */
+  treasury?: Address;
+  /** `BackstopReserve` multisig: backstop share until Phase 5 (FE-R3, Q9). */
+  backstopReserve?: Address;
+  /** Phase 1–2 placeholder fee recipient (testnet 46630 was deployed with it; the real one is `feeSplitter`). */
+  feeSplitter?: Address;
 }
 
 export interface ChainDeployment {
@@ -54,6 +59,8 @@ export interface ChainDeployment {
   startBlock?: string;
   /** ShortInterestLens (Phase 2, SI-R20). */
   lens?: Address;
+  /** FeeSplitter: every vault's performance fee recipient (Phase 3, FE-R1…R3). */
+  feeSplitter?: Address;
 }
 
 /** Keys: a chain id ("31337" anvil) or "fork-4663" (a simulated deployment on a Robinhood Chain fork). Real 4663 is

@@ -25,7 +25,9 @@ Phase 1 only runs this on anvil and on forks. Nothing here broadcasts to Robinho
 5. The script then deploys, in order: `StockWrapper` → `StocklineOracle` (owner = timelock) → Morpho market
    (wSTOCK / clUSDG, AdaptiveCurveIRM, LLTV 77%) seeded for `0xdead` → Vault V2 from the official factory →
    `MorphoMarketV1AdapterV2` from the official factory → caps (absolute = launch cap at the listing price on all three
-   adapter ids; relative = 90% `U_MAX`) → 10% performance fee to the `FeeSplitter` → `maxRate` → vault seeded for
+   adapter ids; relative = 90% `U_MAX`) → `performanceFeeRecipient = FeeSplitter`, then `performanceFee = 10%`
+   (FE-R1; both **before** the timelocks, so no 48h wait at listing; the splitter itself is deployed once in
+   `_deployCore`, owned by the timelock) → `maxRate` → vault seeded for
    `0xdead` → adapter and vault timelocks 48h → sentinel = guardian, curator = multisig, owner = timelock.
 
 ## 2. Wire (timelock proposals, 48h)
@@ -35,6 +37,21 @@ Phase 1 only runs this on anvil and on forks. Nothing here broadcasts to Robinho
 | `StocklineRouter.listMarket(stock, …)` with the per-address cap | Router (task 8) |
 | `MarketHours.replaceEventsFrom(stock, …)` if the stock has earnings windows | MarketHours |
 | Keeper configs: add the vault/adapter to the allocator, the pools to the guard keeper, the market to the liquidator | Ops (no timelock) |
+
+## 2b. Fees on a vault deployed without them (FE-R1; testnet 46630)
+
+Testnet vaults were deployed with `fee = 10%` to a keyless placeholder. Point them at the `FeeSplitter` through the
+vault's **own** curator timelock (24h testnet, 48h mainnet; not the `TimelockController`):
+
+```sh
+pnpm --filter @stockline/sdk timelock vault.setPerformanceFeeRecipient ticker=NVDA recipient=$(addr '.feeSplitter') --network $NET
+# 1. curator → vault: submitCalldata   2. wait: cast call $VAULT "executableAt(bytes)(uint256)" <data>
+# 3. anyone → vault: data               veto before 3: curator or guardian → vault: revokeCalldata
+cast call $VAULT "performanceFeeRecipient()(address)" --rpc-url $RPC      # = FeeSplitter
+```
+
+Then fees accrue on every interaction (`accrueInterest`); anyone calls `FeeSplitter.distribute(vault)`. Rehearsed on
+anvil: `packages/devnet/test/runbooks.test.ts` ("list-stock.md fees").
 
 ## 3. Launch
 
@@ -51,6 +68,9 @@ Phase 1 only runs this on anvil and on forks. Nothing here broadcasts to Robinho
 | `vault.timelock(addAdapter / increaseAbsoluteCap / setIsAllocator / setPerformanceFee / increaseTimelock)` | 172800 |
 | `vault.liquidityAdapter()` | `0x0` (deposits idle until allocated) |
 | `vault.maxRate()` | `200e16 / 365 days` |
+| `vault.performanceFee()` / `performanceFeeRecipient()` | `1e17` / `FeeSplitter` (FE-R1) |
+| `vault.timelock(setPerformanceFeeRecipient)` | 172800 |
+| `FeeSplitter.owner()` / `recipients()` | timelock / treasury 5,000 + `BackstopReserve` 5,000 bps (Q8, FE-R3) |
 | `oracle.price()` vs feed | `1e48 / (answer · (1 + b))` for USDG = $1 |
 | `oracle.guardTripped()` | false (unless the market is closed and stale) |
 | `wrapper.backingShortfall()` | 0 (P0 page otherwise) |

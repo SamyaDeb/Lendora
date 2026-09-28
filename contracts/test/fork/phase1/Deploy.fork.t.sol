@@ -91,7 +91,7 @@ contract DeployForkTest is Phase1ForkBase, ForkConfig {
         assertEq(v.adaptersLength(), 1);
         assertEq(v.liquidityAdapter(), address(0), "deposits stay idle until allocated (03 s3)");
         assertEq(v.performanceFee(), 0.1e18);
-        assertEq(v.performanceFeeRecipient(), c.feeSplitter);
+        assertEq(v.performanceFeeRecipient(), address(core.feeSplitter), "FE-R1");
         assertEq(v.maxRate(), 200e16 / uint256(365 days));
         assertEq(v.forceDeallocatePenalty(nvdaD.adapter), 0);
         assertEq(IMorphoMarketV1AdapterV2Min(nvdaD.adapter).parentVault(), nvdaD.vault);

@@ -26,6 +26,8 @@ import {StocklineRouter} from "../src/StocklineRouter.sol";
 import {StocklineLiquidator} from "../src/StocklineLiquidator.sol";
 import {IStocklineRouter} from "../src/interfaces/IStocklineRouter.sol";
 import {ShortInterestLens} from "../src/ShortInterestLens.sol";
+import {FeeSplitter} from "../src/fees/FeeSplitter.sol";
+import {IFeeSplitter} from "../src/interfaces/IFeeSplitter.sol";
 
 /// @title StocklineDeploy
 /// @notice Deployment logic shared by the scripts (anvil, fork) and the fork tests, so tests exercise exactly what the
@@ -35,8 +37,8 @@ import {ShortInterestLens} from "../src/ShortInterestLens.sol";
 /// AdaptiveCurveIRM,
 /// LLTV 77%) seeded against share inflation → Vault V2 `rSTOCK` from the official factory → MorphoMarketV1AdapterV2
 /// →
-/// caps (absolute = launch cap from D8, relative = U_MAX) → 10% performance fee → maxRate → roles (curator
-/// multisig,
+/// caps (absolute = launch cap from D8, relative = U_MAX) → 10% performance fee to the `FeeSplitter` (FE-R1) →
+/// maxRate → roles (curator multisig,
 /// allocators, sentinel = guardian, owner = timelock) → 48h timelocks on every harmful curator action.
 abstract contract StocklineDeploy {
     using MarketParamsLib for MarketParams;
@@ -70,7 +72,8 @@ abstract contract StocklineDeploy {
         address guardian; // multisig; vault sentinel
         address allocator; // keeper EOA
         address guardKeeper; // keeper EOA
-        address feeSplitter; // placeholder until Phase 3
+        address treasury; // multisig: treasury share of the performance fee (Q9)
+        address backstopReserve; // multisig: backstop share until Phase 5's BackstopPool (FE-R3, Q9)
         uint256 timelockDelay; // 48h
         address attestationSigner; // RT-R2 compliance signer
         uint256 globalCollateralCap; // clUSDG raw units ($4M at launch, 10-risk)
@@ -95,6 +98,7 @@ abstract contract StocklineDeploy {
         address routerImplementation;
         StocklineLiquidator liquidator;
         ShortInterestLens lens; // Phase 2 (SI-R20, SI-R21)
+        FeeSplitter feeSplitter; // Phase 3: every vault's performance fee recipient (FE-R1, FE-R2)
     }
 
     struct StockDeployment {
@@ -136,6 +140,16 @@ abstract contract StocklineDeploy {
         );
         core.clUSDG.setRouter(address(core.router));
         if (c.swapTarget != address(0)) core.router.setSwapTarget(c.swapTarget, c.swapMode);
+
+        // FE-R1…R3: the fee recipient exists before any vault is configured; owned by the timelock from the start.
+        core.feeSplitter = new FeeSplitter(address(core.timelock), _feeRecipients(c));
+    }
+
+    /// @notice Launch fee split (Q8): 5,000 bps `BackstopReserve` (FE-R3), 5,000 bps treasury.
+    function _feeRecipients(CoreConfig memory c) internal pure virtual returns (IFeeSplitter.Recipient[] memory r) {
+        r = new IFeeSplitter.Recipient[](2);
+        r[0] = IFeeSplitter.Recipient(c.treasury, 5000);
+        r[1] = IFeeSplitter.Recipient(c.backstopReserve, 5000);
     }
 
     /// @notice After every stock is listed: the router's owner becomes the timelock; the fallback liquidator (holds no
@@ -259,7 +273,8 @@ abstract contract StocklineDeploy {
             _curate(v, abi.encodeCall(IVaultV2Min.increaseAbsoluteCap, (ids[i], d.capAssets)));
             _curate(v, abi.encodeCall(IVaultV2Min.increaseRelativeCap, (ids[i], U_MAX))); // LM-R23 / LM-R30
         }
-        _curate(v, abi.encodeCall(IVaultV2Min.setPerformanceFeeRecipient, (c.feeSplitter)));
+        // FE-R1: recipient first (Vault V2 refuses a fee without one), both before `_lockVault` timelocks them (48h).
+        _curate(v, abi.encodeCall(IVaultV2Min.setPerformanceFeeRecipient, (address(core.feeSplitter))));
         _curate(v, abi.encodeCall(IVaultV2Min.setPerformanceFee, (PERFORMANCE_FEE)));
         v.setMaxRate(MAX_RATE); // Vault V2 defaults to 0, which would keep interest out of the share price
         // Drop the temporary role, unless the deployer is also a configured allocator (testnet default: one key holds
@@ -365,6 +380,9 @@ abstract contract StocklineDeploy {
         VM.serializeAddress(obj, "routerImplementation", core.routerImplementation);
         VM.serializeAddress(obj, "liquidator", address(core.liquidator));
         if (address(core.lens) != address(0)) VM.serializeAddress(obj, "lens", address(core.lens));
+        if (address(core.feeSplitter) != address(0)) {
+            VM.serializeAddress(obj, "feeSplitter", address(core.feeSplitter));
+        }
         if (bytes(_startBlock).length > 0) VM.serializeString(obj, "startBlock", _startBlock);
         VM.serializeAddress(obj, "vaultV2Factory", c.vaultFactory);
         VM.serializeAddress(obj, "adapterFactory", c.adapterFactory);
@@ -382,7 +400,8 @@ abstract contract StocklineDeploy {
         VM.serializeAddress(o, "guardian", c.guardian);
         VM.serializeAddress(o, "allocator", c.allocator);
         VM.serializeAddress(o, "guardKeeper", c.guardKeeper);
-        return VM.serializeAddress(o, "feeSplitter", c.feeSplitter);
+        VM.serializeAddress(o, "treasury", c.treasury);
+        return VM.serializeAddress(o, "backstopReserve", c.backstopReserve);
     }
 
     function _stocksJson(string memory key, StockConfig[] memory stocks, StockDeployment[] memory ds)

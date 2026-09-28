@@ -70,8 +70,10 @@ contract DeployTestnet is Script, StocklineDeploy, LocalMocks {
             guardian: vm.envOr("STOCKLINE_GUARDIAN", deployer),
             allocator: vm.envOr("STOCKLINE_ALLOCATOR", deployer),
             guardKeeper: vm.envOr("STOCKLINE_GUARD_KEEPER", deployer),
-            feeSplitter: vm.envOr(
-                "STOCKLINE_FEE_SPLITTER", address(uint160(uint256(keccak256("stockline.placeholder.feeSplitter"))))
+            treasury: vm.envOr("STOCKLINE_TREASURY", deployer),
+            backstopReserve: vm.envOr(
+                "STOCKLINE_BACKSTOP_RESERVE",
+                address(uint160(uint256(keccak256("stockline.placeholder.backstopReserve"))))
             ),
             timelockDelay: 24 hours, // 02: 48h on mainnet, 24h on testnet
             attestationSigner: vm.envAddress("STOCKLINE_ATTESTATION_SIGNER"), // the compliance service's key

@@ -1,5 +1,5 @@
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
-import {encodeFunctionData, type Hex} from "viem";
+import {encodeFunctionData, getAddress, type Hex} from "viem";
 import {
   marketHoursAbi,
   mockStockTokenAbi,
@@ -10,6 +10,10 @@ import {
   timelockAbi,
   timelockOperation,
   type TimelockAction,
+  erc20Abi,
+  feeSplitterAbi,
+  vaultCuratorOperation,
+  vaultV2FullAbi,
 } from "@stockline/sdk";
 import {DEPLOYER, startAnvil, type Anvil} from "../src/anvil.js";
 import {ChainDriver, GUARD} from "../src/driver.js";
@@ -110,6 +114,47 @@ describe("runbook rehearsals on anvil (docs/runbooks)", () => {
     await drv.poke(["NVDA"]);
     expect((await reasons("NVDA")) & GUARD.TOKEN_PAUSED).toBe(0n);
   });
+
+  it("list-stock.md fees (FE-R1): recipient switch through the vault's own timelock, then accrue → distribute", async () => {
+    const nvda = a.d.stocks.NVDA;
+    const splitter = a.d.feeSplitter!;
+    const read = (functionName: string, args: readonly unknown[] = []) => a.client.readContract({address: nvda.vault, abi: vaultV2FullAbi, functionName, args} as never) as Promise<unknown>;
+    expect(await read("performanceFeeRecipient")).toBe(splitter);
+    // Testnet shape: a vault whose recipient is a placeholder. Move it away, then turn fees on with the SDK calldata.
+    const placeholder = getAddress("0x00000000000000000000000000000000000fee00");
+    async function throughVaultTimelock(recipient: `0x${string}`) {
+      const op = vaultCuratorOperation(a.d, {kind: "vault.setPerformanceFeeRecipient", ticker: "NVDA", recipient});
+      await a.send(a.d.roles.curator, nvda.vault, op.submitCalldata);
+      await expect(a.send(DEPLOYER, nvda.vault, op.data), "not before the vault timelock").rejects.toThrow();
+      const wait = (await read("executableAt", [op.data])) as bigint;
+      for (let t = (await drv.now()) + 6n * 3600n; t < wait; t += 6n * 3600n) await drv.freshRounds(t);
+      await drv.freshRounds(wait + 1n);
+      await a.send(DEPLOYER, nvda.vault, op.data); // anyone executes
+      return op;
+    }
+    // A sentinel (guardian) veto clears a pending change.
+    const veto = vaultCuratorOperation(a.d, {kind: "vault.setPerformanceFeeRecipient", ticker: "NVDA", recipient: placeholder});
+    await a.send(a.d.roles.curator, nvda.vault, veto.submitCalldata);
+    await a.send(a.d.roles.guardian, nvda.vault, veto.revokeCalldata);
+    expect(await read("executableAt", [veto.data])).toBe(0n);
+
+    await throughVaultTimelock(placeholder);
+    expect(await read("performanceFeeRecipient")).toBe(placeholder);
+    await throughVaultTimelock(splitter);
+    expect(await read("performanceFeeRecipient")).toBe(splitter);
+
+    // Interest keeps accruing on the open borrow; fee shares reach the splitter; anyone distributes.
+    await drv.freshRounds((await drv.now()) + 7n * 86_400n);
+    await a.send(DEPLOYER, nvda.vault, call(vaultV2FullAbi, "accrueInterest"));
+    const bal = (who: `0x${string}`) => a.client.readContract({address: nvda.vault, abi: erc20Abi, functionName: "balanceOf", args: [who]});
+    const held = await bal(splitter);
+    expect(held > 0n, "fee shares minted to the splitter").toBe(true);
+    const [t0, b0] = [await bal(a.d.roles.treasury!), await bal(a.d.roles.backstopReserve!)];
+    await a.send(lender, splitter, call(feeSplitterAbi, "distribute", [nvda.vault]));
+    const [t1, b1] = [await bal(a.d.roles.treasury!), await bal(a.d.roles.backstopReserve!)];
+    expect(t1 - t0 + (b1 - b0)).toBe(held);
+    expect(await bal(splitter)).toBe(0n);
+  }, 180_000);
 
   it("wrapper-backing-shortfall.md / usdg-freeze.md kill plan: delist through the timelock; entries stop, exits keep working", async () => {
     await governed({kind: "router.delistMarket", ticker: "NVDA"}, "rehearsal NVDA delist");
