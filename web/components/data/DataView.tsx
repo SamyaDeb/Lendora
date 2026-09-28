@@ -27,7 +27,7 @@ function changeOver(h: HistoryPoint[] | undefined, hours: number) {
   const start = h.find((p) => Date.parse(p.bucket) >= t) ?? h[0];
   const a = Number(start.borrowed);
   const b = Number(end.borrowed);
-  return {abs: b - a, rel: a > 0 ? (b - a) / a : 0};
+  return {abs: b - a, rel: a > 0 ? (b - a) / a : undefined};
 }
 
 /** 07 §4 public dashboard: most shorted, biggest movers, per-stock history, weekend panel, API. No wallet needed. */
@@ -43,8 +43,16 @@ export function DataView({markets, histories, asOf, weekendPanel, revenuePanel, 
   const s = (f: (p: HistoryPoint) => number) => pts.map((p) => ({t: Date.parse(p.bucket) / 1000, v: f(p)}));
 
   const movers = (markets ?? []).map((m) => ({m, day: changeOver(histories[m.symbol], 24), week: changeOver(histories[m.symbol], 24 * 7)}));
-  const byDay = [...movers].filter((x) => x.day).sort((a, b) => Math.abs(b.day!.rel) - Math.abs(a.day!.rel)).slice(0, 3);
-  const byWeek = [...movers].filter((x) => x.week).sort((a, b) => Math.abs(b.week!.rel) - Math.abs(a.week!.rel)).slice(0, 3);
+  // Largest relative moves first; a stock with no short interest at the start ("new") ranks by its share change.
+  const rank = (c: {abs: number; rel?: number}) => (c.rel === undefined ? Infinity : Math.abs(c.rel));
+  const pick = (k: "day" | "week") =>
+    movers
+      .filter((x) => x[k] && Math.abs(x[k]!.abs) >= 0.005) // below what the list can show (0.01 sh)
+      .sort((a, b) => rank(b[k]!) - rank(a[k]!) || Math.abs(b[k]!.abs) - Math.abs(a[k]!.abs))
+      .slice(0, 3)
+      .map((x) => ({m: x.m, c: x[k]!}));
+  const byDay = pick("day");
+  const byWeek = pick("week");
 
   return (
     <div className="space-y-8">
@@ -82,8 +90,8 @@ export function DataView({markets, histories, asOf, weekendPanel, revenuePanel, 
           </section>
 
           <section className="grid gap-4 md:grid-cols-2" aria-label="Biggest changes">
-            <Movers title="Biggest changes today" items={byDay.map((x) => ({m: x.m, c: x.day!}))} />
-            <Movers title="Biggest changes this week" items={byWeek.map((x) => ({m: x.m, c: x.week!}))} />
+            <Movers title="Biggest changes today" items={byDay} />
+            <Movers title="Biggest changes this week" items={byWeek} />
           </section>
 
           <section className="space-y-3" aria-labelledby="lb-h">
@@ -157,12 +165,12 @@ export function DataView({markets, histories, asOf, weekendPanel, revenuePanel, 
   );
 }
 
-function Movers({title, items}: {title: string; items: {m: Market; c: {abs: number; rel: number}}[]}) {
+function Movers({title, items}: {title: string; items: {m: Market; c: {abs: number; rel?: number}}[]}) {
   return (
     <div className="panel p-5">
       <h2 className="text-[15px] font-medium">{title}</h2>
       {items.length === 0 ? (
-        <p className="mt-3 text-[13.5px] text-muted">Not enough history yet.</p>
+        <p className="mt-3 text-[13.5px] text-muted">No change in short interest in this period.</p>
       ) : (
         <ul className="mt-3 divide-y divide-line">
           {items.map(({m, c}) => (
@@ -170,10 +178,10 @@ function Movers({title, items}: {title: string; items: {m: Market; c: {abs: numb
               <AssetIcon ticker={m.symbol} size="sm" />
               <span className="flex-1 font-medium">{m.symbol}</span>
               <span className="num text-muted">{`${c.abs >= 0 ? "+" : ""}${num(c.abs)} sh`}</span>
-              <span className={cn("num inline-flex w-24 items-center justify-end gap-1 font-medium", c.rel > 0 ? "text-borrow" : c.rel < 0 ? "text-supply" : "text-dim")}>
-                <Icon name={c.rel >= 0 ? "arrowUp" : "arrowDown"} size={13} />
-                <span className="sr-only">{c.rel >= 0 ? "Up" : "Down"}</span>
-                {pct(Math.abs(c.rel), 1)}
+              <span className={cn("num inline-flex w-24 items-center justify-end gap-1 font-medium", c.abs > 0 ? "text-borrow" : "text-supply")}>
+                <Icon name={c.abs >= 0 ? "arrowUp" : "arrowDown"} size={13} />
+                <span className="sr-only">{c.abs >= 0 ? "Up" : "Down"}</span>
+                {c.rel === undefined ? "New" : pct(Math.abs(c.rel), 1)}
               </span>
             </li>
           ))}
