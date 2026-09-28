@@ -1,5 +1,5 @@
 "use client";
-import {useMemo, useState} from "react";
+import {useMemo, useState, type ReactNode} from "react";
 import Link from "next/link";
 import {useRouter} from "next/navigation";
 import type {HistoryPoint, Market} from "@/lib/api";
@@ -26,10 +26,12 @@ export interface MarketsBoardProps {
   asOf?: {block: string; time: string; confirmed: boolean};
   error?: boolean;
   onRetry?: () => void;
+  /** Shown above the table (the USDG Earn entry, flag-gated by the container). */
+  earn?: ReactNode;
 }
 
 /** 06 `/`: the borrow board. Summary strip, search and filter, a sortable table (cards on mobile). */
-export function MarketsBoardView({markets, histories, asOf, error, onRetry}: MarketsBoardProps) {
+export function MarketsBoardView({markets, histories, asOf, error, onRetry, earn}: MarketsBoardProps) {
   const [sort, setSort] = useState<{key: Key; desc: boolean}>({key: "utilization", desc: true});
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -61,6 +63,8 @@ export function MarketsBoardView({markets, histories, asOf, error, onRetry}: Mar
           <Stat label="Active borrowers" size="lg" value={t ? <NumberTicker value={t.borrowers} digits={0} /> : <Skeleton className="h-7 w-12" />} />
         </dl>
       </div>
+
+      {earn}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <label className="flex h-10 w-full items-center gap-2 rounded-sm bg-sunken px-3 shadow-[inset_0_0_0_1px_var(--border)] focus-within:shadow-[inset_0_0_0_1px_var(--accent)] sm:w-72">

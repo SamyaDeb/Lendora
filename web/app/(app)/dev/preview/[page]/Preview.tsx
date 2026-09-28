@@ -11,7 +11,10 @@ import {fixtureSourceFor} from "@/lib/vault";
 import {VaultEnvProvider} from "@/lib/vault/hooks";
 import {DataView} from "@/components/data/DataView";
 import {BackstopView} from "@/components/backstop/BackstopView";
-import {FX_BACKSTOP, VAULT_STATES, type VaultState} from "@/lib/fixtures";
+import {FX_BACKSTOP, FX_VAULT_OVERVIEW, VAULT_STATES, type VaultState} from "@/lib/fixtures";
+import {FEATURES} from "@/lib/features";
+import {EarnCard} from "@/components/vault/EarnCard";
+import {VaultPortfolioSection} from "@/components/vault/VaultPortfolio";
 
 /** Portfolio fixture: an at-risk NVDA short, a healthy AAPL borrow with lending, SPY lending only. */
 const PORTFOLIO: Record<string, {debt?: number; collateral?: number; lent?: number}> = {NVDA: {debt: 10, collateral: 2600, lent: 0}, AAPL: {debt: 3, collateral: 5000, lent: 4.2}, SPY: {lent: 12.3}};
@@ -49,18 +52,19 @@ export function Preview({page, state, tab}: {page: string; state: string; tab?: 
     portfolio: <Portfolio />,
     data: <DataView markets={state === "error" ? undefined : markets} histories={histories} asOf={{block: "10181", confirmed: true}} apiUrl="https://api.lendora.example" />,
     vault: <VaultPreview state={state} />,
+    "vault-portfolio": <VaultPreview state={state} portfolio restricted={tab === "restricted"} />,
     backstop: <BackstopView b={FX_BACKSTOP} now={1_791_317_952} />,
-    markets: <MarketsBoardView markets={state === "loading" || state === "error" ? undefined : markets} histories={histories} asOf={state === "loading" || state === "error" ? undefined : {block: "10181", time: "2026-10-06T20:19:12.000Z", confirmed: true}} error={state === "error"} onRetry={() => {}} />,
+    markets: <MarketsBoardView markets={state === "loading" || state === "error" ? undefined : markets} histories={histories} asOf={state === "loading" || state === "error" ? undefined : {block: "10181", time: "2026-10-06T20:19:12.000Z", confirmed: true}} error={state === "error"} onRetry={() => {}} earn={FEATURES.vault ? <EarnCard apy={FX_VAULT_OVERVIEW.apy.d30} /> : undefined} />,
   };
   return views[page] ?? <p>Unknown preview “{page}”. Try: {Object.keys(views).join(", ")}.</p>;
 }
 
-/** /dev/preview/vault?state=…: the real screen on the state's fixture source, with a pinned preview wallet. */
-function VaultPreview({state}: {state: string}) {
+/** /dev/preview/vault?state=… (and vault-portfolio, ?tab=restricted): the real screen on the state's fixture source, with a pinned preview wallet. */
+function VaultPreview({state, portfolio, restricted = false}: {state: string; portfolio?: boolean; restricted?: boolean}) {
   const st = (VAULT_STATES as readonly string[]).includes(state) ? (state as VaultState) : "open";
   return (
     <VaultEnvProvider source={fixtureSourceFor(st)} account={st === "disconnected" ? null : E2E_ACCOUNT}>
-      <VaultScreen />
+      {portfolio ? <VaultPortfolioSection restricted={restricted} /> : <VaultScreen />}
     </VaultEnvProvider>
   );
 }

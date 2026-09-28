@@ -2,6 +2,8 @@
 import {useQueries, useQuery} from "@tanstack/react-query";
 import {browserApi} from "@/lib/api";
 import {TICKERS} from "@/lib/env";
+import {FEATURES} from "@/lib/features";
+import {EarnCardLive} from "@/components/vault/EarnCard";
 import {MarketsBoardView} from "./MarketsBoardView";
 
 type MarketsResponse = Awaited<ReturnType<ReturnType<typeof browserApi>["markets"]>>;
@@ -22,6 +24,7 @@ export function MarketsBoard({initial}: {initial?: MarketsResponse}) {
       asOf={q.data ? {block: q.data.asOfBlock, time: q.data.asOfTime, confirmed: q.data.confirmed} : undefined}
       error={q.isError}
       onRetry={() => q.refetch()}
+      earn={FEATURES.vault ? <EarnCardLive /> : undefined}
     />
   );
 }

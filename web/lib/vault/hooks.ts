@@ -40,10 +40,10 @@ export function useVaultOverview() {
 }
 
 /** The wallet's shares, balances and withdrawal requests, every 5 s and after every transaction. */
-export function useVaultUser() {
+export function useVaultUser(o: {enabled?: boolean} = {}) {
   const s = useVaultSource();
   const {address} = useVaultAccount();
-  return useQuery({queryKey: ["vault", s.id, "user", address ?? null], queryFn: () => s.user(address!), enabled: Boolean(address), refetchInterval: 5000});
+  return useQuery({queryKey: ["vault", s.id, "user", address ?? null], queryFn: () => s.user(address!), enabled: Boolean(address) && o.enabled !== false, refetchInterval: 5000});
 }
 
 /** Refetch everything vault-related (after a transaction). */
