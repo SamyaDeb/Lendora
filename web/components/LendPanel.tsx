@@ -97,7 +97,7 @@ export function LendPanel({symbol}: {symbol: string}) {
       </section>
       <aside className="card space-y-3 p-4" aria-label="Your lending">
         <dl className="grid grid-cols-2 gap-3">
-          <Stat label="Supply APY (variable)" value={apiQ.data ? pct(apiQ.data.data.supplyApy) : <Skeleton />} />
+          <Stat label="Supply APY (variable, current)" value={apiQ.data ? pct(apiQ.data.data.supplyApy) : <Skeleton />} hint="Earned in the stock you lend, net of the 10% protocol fee" />
           <Stat label="Utilization" value={apiQ.data ? pct(apiQ.data.data.utilization) : <Skeleton />} />
           <Stat label={`r${symbol} balance`} value={u ? wad(u.vaultShares, 4) : "–"} />
           <Stat label="Value" value={u ? `${wad(u.vaultAssets, 4)} ${symbol}` : "–"} hint="Wrapped units; one unit is one raw Stock Token" />
@@ -105,8 +105,14 @@ export function LendPanel({symbol}: {symbol: string}) {
           <Stat label="Value (USD)" value={u && price ? `$${num(value * price)}` : "–"} />
           <Stat label="Earnings" value={earnings !== undefined ? `${num(earnings, 6)} ${symbol} ($${num(earnings * price)})` : "–"} hint="Current value minus net deposits through the router" />
           <Stat label="Withdrawable now" value={u ? wad(withdrawable, 4) : "–"} />
+          <Stat
+            label="Yield at the current rate"
+            value={u && apiQ.data ? `${num(value * apiQ.data.data.supplyApy, 6)} ${symbol}/yr${price ? ` ($${num(value * apiQ.data.data.supplyApy * price)})` : ""}` : "–"}
+            hint="Your value × the current APY, in the stock and in USD at today's price (09 §1). Variable; not a forecast"
+            testId="yield-now"
+          />
         </dl>
-        <p className="text-xs text-[var(--color-muted)]">Yields are variable and not guaranteed. Dividends reach lenders through the Stock Token multiplier.</p>
+        <p className="text-xs text-[var(--color-muted)]">Yields are variable (historical/current) and not guaranteed; they accrue in {symbol}, so their USD value moves with the stock. Dividends reach lenders through the Stock Token multiplier.</p>
         <button className="btn btn-ghost w-full" disabled title="Receipt-as-collateral markets open 30 days after mainnet launch (CL-R10)">
           Use r{symbol} as collateral (coming later)
         </button>

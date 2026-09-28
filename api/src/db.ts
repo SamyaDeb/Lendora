@@ -128,6 +128,22 @@ export class IndexerDb {
 
   // ------------------------------------------------------------------ API keys (SI-R10)
 
+  /** FE-R5: fees per stock per UTC day in [from, to] (unix seconds, day starts). */
+  async feeDays(from: bigint, to: bigint): Promise<Row[]> {
+    const {rows} = await this.pool.query(`select * from ${this.s}.fee_day where day >= $1 and day <= $2 order by day, ticker`, [from.toString(), to.toString()]);
+    return rows;
+  }
+
+  /** FE-R5: count and sums of fee movements by kind in [from, to] (unix seconds). */
+  async feeTotals(from: bigint, to: bigint): Promise<Row[]> {
+    const {rows} = await this.pool.query(
+      `select kind, count(*)::int as n, coalesce(sum(usd), 0)::text as usd, coalesce(sum(usdg), 0)::text as usdg
+         from ${this.s}.fee_event where timestamp >= $1 and timestamp < $2 group by kind`,
+      [from.toString(), to.toString()],
+    );
+    return rows;
+  }
+
   async insertKey(id: string, keyHash: string, address: string, label: string | null): Promise<void> {
     await this.pool.query(`insert into ${this.a}.api_keys (id, key_hash, address, label) values ($1, $2, lower($3), $4)`, [id, keyHash, address, label]);
   }

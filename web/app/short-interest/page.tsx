@@ -3,13 +3,17 @@ import {API_URL, TICKERS} from "@/lib/env";
 import {Leaderboard} from "@/components/Leaderboard";
 import {SiChart} from "@/components/SiChart";
 import {WeekendPanel} from "@/components/WeekendPanel";
+import {RevenuePanel} from "@/components/RevenuePanel";
 
 export const metadata = {title: "Short interest", description: "Live short interest for Stock Tokens on Robinhood Chain: borrowed shares, % of float, borrow rates, days to cover."};
 
 export default async function ShortInterestPage() {
   const c = serverApi();
   const from = new Date(Date.now() - 400 * 86_400_000).toISOString();
-  const [markets, ...histories] = await Promise.all([safe(c.markets()), ...TICKERS.map((t) => safe(c.history(t, {interval: "1h", from})))]);
+  const [[markets, ...histories], revenue] = await Promise.all([
+    Promise.all([safe(c.markets()), ...TICKERS.map((t) => safe(c.history(t, {interval: "1h", from})))]),
+    safe(c.revenue()), // FE-R5
+  ]);
   const hist = Object.fromEntries(TICKERS.map((t, i) => [t, histories[i]?.data ?? []]));
   return (
     <div className="space-y-6">
@@ -20,6 +24,7 @@ export default async function ShortInterestPage() {
       <Leaderboard initial={markets} />
       <SiChart histories={hist} />
       <WeekendPanel markets={markets?.data ?? []} />
+      <RevenuePanel revenue={revenue} />
       <section className="card space-y-3 p-4" aria-labelledby="built">
         <h2 id="built" className="font-semibold">
           Built on this data

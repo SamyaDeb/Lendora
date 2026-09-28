@@ -29,11 +29,11 @@ export function HealthFactor({hf, label}: {hf?: bigint; label?: string}) {
   );
 }
 
-export function Stat({label, value, hint}: {label: string; value: ReactNode; hint?: string}) {
+export function Stat({label, value, hint, testId}: {label: string; value: ReactNode; hint?: string; testId?: string}) {
   return (
     <div>
       <dt className="text-xs text-[var(--color-muted)]">{label}</dt>
-      <dd className="num text-base font-semibold" title={hint}>
+      <dd className="num text-base font-semibold" title={hint} data-testid={testId}>
         {value}
       </dd>
     </div>

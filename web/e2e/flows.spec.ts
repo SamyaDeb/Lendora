@@ -157,6 +157,9 @@ test.describe.serial("Stockline app on anvil", () => {
     await expect(page.getByTestId("leaderboard").locator("tbody tr")).toHaveCount(3);
     await expect(page.getByText("Weekend panel")).toBeVisible();
     await expect(page.getByText("Built on this data")).toBeVisible();
+    // FE-R5: the seed week accrued fees; the panel shows them (historical, variable).
+    await expect(page.getByTestId("revenue")).toContainText("Protocol revenue (historical");
+    await expect(page.getByTestId("revenue-total")).toContainText("$");
   });
 });
 
