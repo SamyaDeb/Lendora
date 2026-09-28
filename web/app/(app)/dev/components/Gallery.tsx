@@ -3,6 +3,11 @@ import {useState, type ReactNode} from "react";
 import {
   Address,
   AmountInput,
+  ApyHero,
+  CountdownBadge,
+  EarnEstimate,
+  YieldSplitBar,
+  type ApyWindow,
   AssetIcon,
   Badge,
   Button,
@@ -355,6 +360,10 @@ export function Gallery() {
         </Sheet>
       </Section>
 
+      <Section title="Yield product (USDG Earn)" note="CP-R7: every APY is net, windowed and variable; the only estimate carries (variable, not a forecast). Costs are negative and drawn over the end of the bar.">
+        <YieldGallery />
+      </Section>
+
       <Section title="Loading, empty, error">
         <div className="grid gap-4 md:grid-cols-3">
           <Card className="space-y-3">
@@ -381,6 +390,53 @@ export function Gallery() {
           ))}
         </div>
       </Section>
+    </div>
+  );
+}
+
+const APY = {d7: 0.1012, d30: 0.0934, d90: 0.0871};
+const APY_SERIES = Array.from({length: 90}, (_, i) => 0.093 + Math.sin(i / 6) * 0.012 + ((i * 37) % 11) / 2000);
+
+function YieldGallery() {
+  const [w, setW] = useState<ApyWindow>("30d");
+  const [fetchedAt] = useState(() => Date.now());
+  const asOf = new Date(NOW * 1000).toISOString();
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      <Card className="space-y-3">
+        <p className="t-label">ApyHero · switch the window: the headline ticks</p>
+        <ApyHero apy={APY} series={APY_SERIES} window={w} onWindow={setW} />
+      </Card>
+      <Card className="space-y-3">
+        <p className="t-label">ApyHero · no history yet (no sparkline)</p>
+        <ApyHero apy={APY} series={[]} window="7d" onWindow={() => {}} />
+      </Card>
+      <Card className="space-y-3">
+        <p className="t-label">YieldSplitBar · normal (30d)</p>
+        <YieldSplitBar split={{lending: 0.0461, funding: 0.0512, buffer: 0.0021, costs: -0.006}} notes={{lending: "Paid by borrowers of the lent Stock Tokens", costs: "Swaps, rebalancing, venue fees, 10% performance fee"}} />
+      </Card>
+      <Card className="space-y-3">
+        <p className="t-label">YieldSplitBar · funding turned negative (counted as a cost)</p>
+        <YieldSplitBar split={{lending: 0.0402, funding: -0.0081, buffer: 0.0024, costs: -0.0061}} />
+      </Card>
+      <Card className="space-y-3">
+        <p className="t-label">EarnEstimate · 5,000 USDG at 9.34%</p>
+        <EarnEstimate amount={5000} apy={0.0934} />
+        <p className="t-label pt-2">EarnEstimate · empty amount (renders nothing)</p>
+        <div className="rounded-xs border border-dashed border-line p-2 text-[12px] text-muted">
+          <EarnEstimate amount={0} apy={0.0934} />
+          (nothing)
+        </div>
+      </Card>
+      <Card className="space-y-3">
+        <p className="t-label">CountdownBadge · chain time (the gallery pins it to the fixtures&apos; clock)</p>
+        <div className="flex flex-wrap gap-2">
+          <CountdownBadge to={NOW + 2 * 86_400 + 4 * 3600 + 300} asOf={asOf} fetchedAt={fetchedAt} />
+          <CountdownBadge to={NOW + 3 * 3600 + 12 * 60} asOf={asOf} fetchedAt={fetchedAt} />
+          <CountdownBadge to={NOW + 12 * 60 + 5} asOf={asOf} fetchedAt={fetchedAt} />
+          <CountdownBadge to={NOW - 60} asOf={asOf} fetchedAt={fetchedAt} />
+        </div>
+      </Card>
     </div>
   );
 }

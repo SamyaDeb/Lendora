@@ -1,24 +1,14 @@
 "use client";
-import {useEffect, useState} from "react";
+import {useEffect} from "react";
 import Link from "next/link";
 import {useQuery} from "@tanstack/react-query";
 import {AnimatePresence, motion, useReducedMotion} from "motion/react";
 import {browserApi, type Market} from "@/lib/api";
 import {et, pct} from "@/lib/format";
 import {countdown, sessionFromMarkets, type SessionView} from "@/lib/session";
+import {useChainNow} from "@/lib/chainNow";
 import {Icon} from "@/components/ui";
 import {DUR, EASE_OUT} from "@/components/ui/motion";
-
-/** Chain time: the API's snapshot time plus the time since it was fetched (anvil and testnets run ahead of the wall clock). */
-export function useChainNow(asOfTime: string | undefined, fetchedAt: number) {
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
-  useEffect(() => {
-    const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
-    return () => clearInterval(id);
-  }, []);
-  if (!asOfTime || !fetchedAt) return now;
-  return Math.floor(Date.parse(asOfTime) / 1000 + (now * 1000 - fetchedAt) / 1000);
-}
 
 /** The session bar's data: the markets list (shared cache with the board) and the derived session. */
 export function useSession(): {view?: SessionView; now: number; error: boolean} {

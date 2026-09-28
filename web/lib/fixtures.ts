@@ -1,3 +1,4 @@
+import type {VaultOverview, VaultPoint, VaultUser} from "./vault/types";
 import type {HistoryPoint, Market, MarketDetail} from "./api";
 import type {MarketChainState} from "./chain";
 
@@ -158,39 +159,149 @@ export function fxChain(ticker: string, price: number, o: {weekend?: boolean; de
   };
 }
 
-/** Delta-neutral vault (08, Phase 4): preview data until the contracts exist. */
-export interface VaultData {
-  navPerShare: number;
-  netApy: number;
-  tvl: number;
-  cap: number;
-  yieldSplit: {lending: number; funding: number; buffer: number; costs: number};
-  allocation: {held: number; lent: number; perpMargin: number; cash: number};
-  sleeves: {symbol: string; weight: number; delta: number; marginRatio: number}[];
-  venue: string;
-  lastRebalance: string;
-  bandPct: number;
-  marginTarget: number;
-  user?: {shares: number; value: number; queued: number; queuedReadyAt: string};
+/**
+ * USDG Earn (08, Phase 4): overview and user per preview state until the contracts (task 14) and `/v1/vault/*`
+ * (task 16) exist. `lib/vault/source.ts` seeds its in-memory ledger from these; views and tests read them directly.
+ */
+export const VAULT_STATES = ["preview", "open", "cap_full", "weekend", "nav_stale", "kill_switch", "venue_halted", "has_requests", "loading", "error", "disconnected", "empty"] as const;
+export type VaultState = (typeof VAULT_STATES)[number];
+
+/** Tue 6 Oct 2026 16:19 ET (market open), the markets fixtures' time; weekend states use Sat 10 Oct. */
+export const VAULT_T_OPEN = Date.parse("2026-10-06T20:19:12.000Z") / 1000;
+export const VAULT_T_WEEKEND = Date.parse("2026-10-10T16:00:00.000Z") / 1000;
+const DAY = 86_400;
+const iso = (t: number) => new Date(t * 1000).toISOString();
+
+/** Daily net APY and share price since launch (160 days), seeded; the share price compounds the APY. */
+function vaultSeries(end: number, days = 160, level = 0.093, seed = 7) {
+  let s = seed * 9301;
+  const rnd = () => ((s = (s * 9301 + 49297) % 233280) / 233280 - 0.5) * 2;
+  const apy: VaultPoint[] = [];
+  let a = level;
+  for (let i = 0; i < days; i++) {
+    a = Math.max(0.035, Math.min(0.16, a + rnd() * 0.006 + (level - a) * 0.08));
+    apy.push({t: end - (days - 1 - i) * DAY, v: Math.round(a * 1e5) / 1e5});
+  }
+  let p = 1;
+  const price = apy.map((x) => ({t: x.t, v: Math.round((p *= 1 + x.v / 365) * 1e6) / 1e6}));
+  return {apy, price};
 }
-export const FX_VAULT: VaultData = {
-  navPerShare: 1.0412,
-  netApy: 0.0934,
+
+const OPEN_SERIES = vaultSeries(VAULT_T_OPEN);
+
+export const FX_VAULT_OVERVIEW: VaultOverview = {
+  asOf: {block: "10181", time: iso(VAULT_T_OPEN)},
+  apy: {d7: 0.1012, d30: 0.0934, d90: 0.0871},
+  apySeries: OPEN_SERIES.apy,
+  sharePriceSeries: OPEN_SERIES.price,
+  split: [
+    {window: "7d", lending: 0.0488, funding: 0.0571, buffer: 0.0021, costs: -0.0068},
+    {window: "30d", lending: 0.0461, funding: 0.0512, buffer: 0.0021, costs: -0.006},
+    {window: "90d", lending: 0.0442, funding: 0.0463, buffer: 0.0022, costs: -0.0056},
+  ],
+  sharePrice: OPEN_SERIES.price[OPEN_SERIES.price.length - 1].v,
   tvl: 1_284_000,
   cap: 2_000_000,
-  yieldSplit: {lending: 0.0461, funding: 0.0512, buffer: 0.0021, costs: -0.006},
-  allocation: {held: 0.0534, lent: 0.6589, perpMargin: 0.2375, cash: 0.05},
   sleeves: [
-    {symbol: "SPY", weight: 0.5, delta: 0.004, marginRatio: 3.1},
-    {symbol: "NVDA", weight: 0.25, delta: -0.012, marginRatio: 2.6},
-    {symbol: "AAPL", weight: 0.25, delta: 0.007, marginRatio: 2.9},
+    {symbol: "SPY", weight: 0.5, cap: 1_000_000, delta: 0.004, marginRatio: 3.1, status: "active"},
+    {symbol: "NVDA", weight: 0.25, cap: 500_000, delta: -0.012, marginRatio: 2.6, status: "active"},
+    {symbol: "AAPL", weight: 0.25, cap: 500_000, delta: 0.007, marginRatio: 2.9, status: "active"},
   ],
-  venue: "Perp venue (to be selected)",
-  lastRebalance: "2026-10-06T19:30:00.000Z",
+  allocation: {lent: 0.6589, held: 0.0534, perpMargin: 0.2377, cash: 0.05},
+  instantCapacity: 64_200,
+  nav: {ageSec: 42, stale: false},
+  venue: {name: "Perp venue (to be selected)", status: "ok"},
+  killSwitch: [],
+  lastRebalance: iso(VAULT_T_OPEN - 49 * 60),
   bandPct: 0.02,
   marginTarget: 2,
-  user: {shares: 4_802.1, value: 5_000, queued: 1_200, queuedReadyAt: "2026-10-12T13:30:00.000Z"},
+  marginTargetClosed: 3,
+  marketClosed: false,
+  depositsOpen: true,
+  contracts: {
+    vault: "0x5f1C5e6a0b3E0cC9a1D1A0a4B7c6D2e8F3a9b0c1",
+    strategy: "0x7a2B9c0D1e2F3a4B5c6D7e8F9a0B1c2D3e4F5a6b",
+    navOracle: "0x3c4D5e6F7a8B9c0D1e2F3a4B5c6D7e8F9a0B1c2d",
+    perpAdapter: "0x9e8F7a6B5c4D3e2F1a0B9c8D7e6F5a4B3c2D1e0f",
+  },
 };
+
+/** A wallet with 4,802.1 shares (≈ 5,000 USDG), 50,000 USDG to deposit, no approval yet. */
+export const FX_VAULT_USER: VaultUser = {
+  shares: 4_802.1,
+  value: Math.round(4_802.1 * FX_VAULT_OVERVIEW.sharePrice * 100) / 100,
+  netDeposits: 4_850,
+  usdgBalance: 50_000,
+  usdgAllowance: 0,
+  requests: [],
+};
+
+const WEEKEND_SERIES = vaultSeries(VAULT_T_WEEKEND);
+const req = (id: string, assets: number, requestedAt: number, settlesAt: number, status: "queued" | "ready", position: number) => ({
+  id,
+  assets,
+  shares: Math.round((assets / FX_VAULT_OVERVIEW.sharePrice) * 1e4) / 1e4,
+  requestedAt: iso(requestedAt),
+  settlesAt: iso(settlesAt),
+  status,
+  position,
+});
+
+/** Overview and user for each state (loading / error / disconnected render without one or the other). */
+export function fxVault(state: VaultState): {overview?: VaultOverview; user?: VaultUser; error?: boolean} {
+  const o = FX_VAULT_OVERVIEW;
+  const u = FX_VAULT_USER;
+  switch (state) {
+    case "preview":
+      return {overview: {...o, tvl: 0, cap: 0, instantCapacity: 0, depositsOpen: false, pauseReason: "cap_zero"}, user: {...u, shares: 0, value: 0, netDeposits: 0}};
+    case "cap_full":
+      return {overview: {...o, tvl: 2_000_000, instantCapacity: 100_000, depositsOpen: false, pauseReason: "cap_full"}, user: u};
+    case "weekend":
+      return {
+        overview: {...o, asOf: {block: "10420", time: iso(VAULT_T_WEEKEND)}, apySeries: WEEKEND_SERIES.apy, sharePriceSeries: WEEKEND_SERIES.price, marketClosed: true, lastRebalance: iso(VAULT_T_WEEKEND - 44 * 3600), nav: {ageSec: 180, stale: false}, sleeves: o.sleeves.map((s) => ({...s, marginRatio: s.marginRatio + 0.5}))},
+        user: u,
+      };
+    case "nav_stale":
+      return {
+        overview: {...o, asOf: {block: "10420", time: iso(VAULT_T_WEEKEND)}, marketClosed: true, nav: {ageSec: 21 * 60, stale: true}, depositsOpen: false, pauseReason: "nav_stale"},
+        user: {...u, requests: [req("r-3", 1_200, VAULT_T_WEEKEND - 5 * DAY, VAULT_T_WEEKEND - 2 * DAY, "ready", 0)]},
+      };
+    case "kill_switch":
+      return {
+        overview: {
+          ...o,
+          apy: {d7: 0.0712, d30: 0.0788, d90: 0.0823},
+          split: [
+            {window: "7d", lending: 0.0402, funding: 0.0347, buffer: 0.0024, costs: -0.0061},
+            {window: "30d", lending: 0.0423, funding: 0.0399, buffer: 0.0023, costs: -0.0057},
+            {window: "90d", lending: 0.0431, funding: 0.0425, buffer: 0.0022, costs: -0.0055},
+          ],
+          sleeves: o.sleeves.map((s) => (s.symbol === "NVDA" ? {...s, delta: 0, marginRatio: 0, status: "unwound" as const} : s)),
+          allocation: {lent: 0.4944, held: 0.04, perpMargin: 0.1781, cash: 0.2875},
+          instantCapacity: 369_150,
+          killSwitch: [{symbol: "NVDA", since: iso(VAULT_T_OPEN - 2 * DAY)}],
+        },
+        user: u,
+      };
+    case "venue_halted":
+      return {overview: {...o, venue: {...o.venue, status: "halted"}}, user: u};
+    case "has_requests":
+      return {
+        overview: o,
+        user: {...u, requests: [req("r-2", 2_000, VAULT_T_OPEN - 3600, VAULT_T_OPEN + 2 * DAY + 4 * 3600 + 20 * 60, "queued", 3), req("r-1", 1_200, VAULT_T_OPEN - 4 * DAY, VAULT_T_OPEN - DAY, "ready", 0)]},
+      };
+    case "loading":
+      return {};
+    case "error":
+      return {error: true};
+    case "disconnected":
+      return {overview: o};
+    case "empty":
+      return {overview: o, user: {...u, shares: 0, value: 0, netDeposits: 0}};
+    default:
+      return {overview: o, user: u};
+  }
+}
 
 /** Backstop pool (09 §2, Phase 5): preview data. */
 export interface BackstopData {

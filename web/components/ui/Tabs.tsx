@@ -88,7 +88,7 @@ export function Segmented<V extends string>({options, value, onChange, label, te
             (e.currentTarget.parentElement?.children[k] as HTMLElement | undefined)?.focus();
           }}
           tabIndex={o.value === value ? 0 : -1}
-          className={cn("pressable h-7 rounded-[7px] px-3 text-[13px] font-medium", o.value === value ? "bg-raised text-fg shadow-[inset_0_0_0_1px_var(--border-strong)]" : "text-muted hover:text-dim")}
+          className={cn("pressable h-7 rounded-[7px] px-3 text-[13px] font-medium max-md:h-11 max-md:min-w-11", o.value === value ? "bg-raised text-fg shadow-[inset_0_0_0_1px_var(--border-strong)]" : "text-muted hover:text-dim")}
         >
           {o.label}
         </button>

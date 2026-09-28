@@ -13,6 +13,8 @@ import {Badge, ButtonLink, EmptyState, HealthFactor, Icon, Notice, NumberTicker,
 import {ConnectButton} from "@/components/shell/ConnectButton";
 import {BorrowCard, LendCard} from "./PositionCards";
 import {FaucetButton} from "./FaucetButton";
+import {VaultPortfolioSection} from "@/components/vault/VaultPortfolio";
+import {useVaultUser} from "@/lib/vault/hooks";
 
 /**
  * 06 `/portfolio`: every Lendora position of the wallet, from the chain (APP-R5), refreshed every 5 s and after
@@ -54,6 +56,8 @@ function Positions({address, restricted}: {address: `0x${string}`; restricted: b
   const collateral = borrows.reduce((a, r) => a + Number(formatUnits(r.st!.user!.collateral, 6)), 0);
   const lowest = borrows.find((r) => r.hf !== undefined)?.hf;
   const errors = all.filter((p) => p.error).map((p) => p.symbol);
+  const vault = useVaultUser({enabled: FEATURES.vault}).data;
+  const vaultActive = Boolean(vault && (vault.shares > 0 || vault.requests.some((r) => r.status !== "claimed")));
   // Symbols that had a position this visit, riskiest current ones first, then any just closed.
   const borrowSeen = useRef(new Set<string>());
   const lendSeen = useRef(new Set<string>());
@@ -64,10 +68,11 @@ function Positions({address, restricted}: {address: `0x${string}`; restricted: b
 
   return (
     <div className="space-y-8">
-      <dl className="panel grid grid-cols-2 gap-5 p-5 sm:grid-cols-4">
+      <dl className={`panel grid grid-cols-2 gap-5 p-5 ${FEATURES.vault ? "sm:grid-cols-3 lg:grid-cols-5" : "sm:grid-cols-4"}`}>
         <Stat label="Lent" size="lg" tone="supply" value={loading ? <Skeleton className="h-7 w-20" /> : <NumberTicker value={lentUsd} format="usd" />} />
         <Stat label="Borrowed" size="lg" tone="borrow" value={loading ? <Skeleton className="h-7 w-20" /> : <NumberTicker value={borrowedUsd} format="usd" />} />
         <Stat label="Collateral" size="lg" value={loading ? <Skeleton className="h-7 w-20" /> : <NumberTicker value={collateral} format="num" suffix=" USDG" />} />
+        {FEATURES.vault && <Stat label="USDG Earn" size="lg" tone="supply" value={loading && !vault ? <Skeleton className="h-7 w-20" /> : <NumberTicker value={vault?.value ?? 0} format="usd" />} testId="summary-vault" />}
         <Stat label="Lowest health factor" size="lg" value={loading ? <Skeleton className="h-7 w-14" /> : lowest !== undefined ? <HealthFactor hf={lowest} /> : "–"} hint="Liquidation at 1.00" />
       </dl>
 
@@ -83,7 +88,8 @@ function Positions({address, restricted}: {address: `0x${string}`; restricted: b
         {loading && borrows.length + lends.length === 0 ? (
           <PortfolioSkeleton />
         ) : (
-          borrows.length + lends.length === 0 && (
+          borrows.length + lends.length === 0 &&
+          !vaultActive && (
             <EmptyState title="You're not lending or borrowing anything yet" icon="layers" action={!restricted && <ButtonLink href="/markets" variant="secondary">Pick a stock from the board</ButtonLink>}>
               Lend a Stock Token to earn what borrowers pay, or borrow one to short or hedge.
             </EmptyState>
@@ -110,11 +116,7 @@ function Positions({address, restricted}: {address: `0x${string}`; restricted: b
             <LendSlot key={sym} symbol={sym} active={lends.some((r) => r.symbol === sym)} />
           ))}
         </section>
-        {FEATURES.vault && (
-          <EmptyState title="No USDG vault shares" icon="layers" action={<ButtonLink href="/vault" variant="secondary">See the vault</ButtonLink>}>
-            Vault positions appear here once the delta-neutral vault launches.
-          </EmptyState>
-        )}
+        {FEATURES.vault && <VaultPortfolioSection restricted={restricted} />}
       </div>
 
       <History address={address} />

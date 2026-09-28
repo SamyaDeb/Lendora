@@ -13,7 +13,7 @@ import {SessionBar} from "./SessionBar";
 export const NAV = [
   {href: "/markets", label: "Markets"},
   {href: "/portfolio", label: "Portfolio"},
-  ...(FEATURES.vault ? [{href: "/vault", label: "Vault"}] : []),
+  ...(FEATURES.vault ? [{href: "/vault", label: "Earn"}] : []),
   {href: "/data", label: "Short interest"},
   ...(FEATURES.backstop ? [{href: "/backstop", label: "Backstop"}] : []),
   {href: "/alerts", label: "Alerts"},
