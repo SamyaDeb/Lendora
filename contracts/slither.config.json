@@ -13,6 +13,7 @@
     "low/informational (not suppressed)": "timestamp (calendar logic is timestamp-based by design), low-level-calls (fail-closed staticcalls, OR-R2), missing-zero-check on optional roles/feeds (address(0) disables them by design), naming of immutables/constants.",
     "unused-return: StocklineRouter flows": "StockWrapper.wrap/unwrap and CollateralToken.unwrap return exactly their input or revert; Morpho borrow/repay are called in asset or share mode and the needed side is used; forceDeallocate's return is penalty shares (penalty 0, LM-R22); partially read tuples (stockAnswer, tryRecover, expectedMarketBalances) are intentional. RT-R5 invariant + unit tests cover balances.",
     "reentrancy-balance: StocklineLiquidator.onMorphoLiquidate": "Balance delta across the allowlisted swap call is the intended output measurement (return data untrusted). liquidate() is nonReentrant, the callback requires msg.sender == Morpho and our own transient in-liquidation flag, and the contract holds no funds between calls; re-entry can only increase the measured stock, never move funds out. Tested in test/liquidator (contract left empty after every path).",
-    "unused-return: StocklineLiquidator": "StockWrapper.wrap/unwrap and CollateralToken.unwrap return exactly their input or revert."
+    "unused-return: StocklineLiquidator": "StockWrapper.wrap/unwrap and CollateralToken.unwrap return exactly their input or revert.",
+    "incorrect-equality: FeeSplitter.distribute": "`amount == 0` makes distribute a no-op on an empty balance; anyone can only make the balance non-zero (a donation is then split like fees). Covered by test_FE_R2_zeroBalanceDistributeIsNoOp."
   }
 }

@@ -172,6 +172,12 @@ Added while building the indexer, API and app. Each is isolated in one SDK funct
 | A30 | The monitor treats event rules (`BAD_DEBT`, `DIRECT_BORROW`) as resolved 24h / 1h after they page; the provider keeps the history and the runbook drives follow-up. `DIRECT_BORROW` dedupes per (market, borrower). | `keepers/src/monitor/rules.ts` | Resolve only by operator ack. |
 | A31 | `PULL_NOT_EFFECTIVE` ignores free liquidity up to 1e15 raw units (the allocator's minimum move), and utilization is vault-level (07 `utilizationVault`), since market-level utilization is routinely ~100% of what the vault allocates. | `keepers/src/monitor/monitor.ts` | Change the two options. |
 
+### Phase 3 engineering assumptions (A32+, 2026-09-28)
+
+| # | Assumption | Where it lives | If wrong |
+|---|---|---|---|
+| A32 | `FeeSplitter` rounding: recipient `i` gets `floor(bal·cum_i/10⁴) − floor(bal·cum_{i−1}/10⁴)` (running weight sum), so payouts add up to the whole balance and each is within 1 wei of its exact share for any number of recipients; the last recipient takes the final rounding step instead of a fixed "dust recipient" (which would exceed the 1-wei bound with > 2 recipients). A recipient whose transfer reverts makes the whole `distribute` revert (revert-all); the owner replaces it through the timelock. | `src/fees/FeeSplitter.sol` | Fixed dust recipient: one line in `_split`; skip-and-keep: a `try` per transfer and per-recipient accounting. |
+
 ### Open questions from Phase 2 (need your call; nothing is blocked)
 
 1. **Go for testnet**: the deployment, keepers and services wait for your go, a deployer key (`TESTNET_DEPLOYER_KEY` or a remote signer) and, ideally, an archive testnet RPC (the public one is not archive, A24).
