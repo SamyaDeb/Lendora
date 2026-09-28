@@ -11,7 +11,7 @@ import * as chromeLauncher from "chrome-launcher";
 import {chromium} from "@playwright/test";
 import {startWebStack} from "../e2e/stack";
 
-const PAGES = ["/", "/short-interest"];
+const PAGES = ["/markets", "/data"];
 const w = await startWebStack();
 const chrome = await chromeLauncher.launch({chromePath: chromium.executablePath(), chromeFlags: ["--headless=new", "--no-sandbox"]});
 const rows: string[] = [];

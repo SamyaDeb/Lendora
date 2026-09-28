@@ -1,23 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { Market } from "@/lib/api";
+import { totals } from "@/lib/market";
 
-const ROLL = ["from 7 blockchains", "100+ crypto tokens", "multiple asset classes"];
+/** The rolling word: the Stock Tokens you can lend and borrow (the listed tickers first, then the general term). */
+const rollFor = (tickers: string[]) => [...tickers.slice(0, 3), "Stock Tokens"];
 
-export default function Hero() {
+const usdShort = (v: number) => (v >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `$${(v / 1e3).toFixed(0)}K` : `$${v.toFixed(0)}`);
+
+export default function Hero({ markets, tickers }: { markets?: Market[]; tickers: string[] }) {
+  const ROLL = rollFor(tickers);
   const [menuOpen, setMenuOpen] = useState(false);
   const [cur, setCur] = useState(0);
   const [out, setOut] = useState<number | null>(null);
-  const [oi, setOi] = useState(84);
-  const [prevOi, setPrevOi] = useState<number | null>(null);
-  const [go, setGo] = useState(false);
   const curRef = useRef(0);
-  const oiRef = useRef(84);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const timers: ReturnType<typeof setTimeout>[] = [];
-
     const roll = setInterval(() => {
       if (document.hidden) return;
       const prev = curRef.current;
@@ -26,38 +27,31 @@ export default function Hero() {
       setCur(curRef.current);
       timers.push(setTimeout(() => setOut((o) => (o === prev ? null : o)), 1000));
     }, 3600);
-
-    const tick = setInterval(() => {
-      if (document.hidden) return;
-      const old = oiRef.current;
-      oiRef.current = old + 1 > 92 ? 84 : old + 1;
-      setPrevOi(old);
-      setOi(oiRef.current);
-      setGo(false);
-      // two frames so the "pre" state is painted before the transition starts
-      requestAnimationFrame(() => requestAnimationFrame(() => setGo(true)));
-      timers.push(
-        setTimeout(() => {
-          setPrevOi(null);
-          setGo(false);
-        }, 800)
-      );
-    }, 7000);
-
     return () => {
       clearInterval(roll);
-      clearInterval(tick);
       timers.forEach(clearTimeout);
     };
-  }, []);
+  }, [ROLL.length]);
 
-  const noop = (e: React.MouseEvent) => e.preventDefault();
+  // Live totals from the public API; without them, what the product is (no invented numbers).
+  const t = markets?.length ? totals(markets) : undefined;
+  const stats: [string, string][] = t
+    ? [
+        ["Stocks listed", String(markets!.length)],
+        ["Lent", usdShort(t.suppliedUsd)],
+        ["Borrowed", usdShort(t.borrowedUsd)],
+      ]
+    : [
+        ["Stocks listed", String(tickers.length)],
+        ["Built on", "Morpho"],
+        ["Custody", "Yours"],
+      ];
 
   return (
     <div className="hero">
       <header className="site-header">
         <div className="wrap">
-          <a className="brand" href="#" aria-label="Lendora home" onClick={noop}>
+          <a className="brand" href="/" aria-label="Lendora home">
             <img src="/landing-logo.png" alt="" />
             <span className="brand-name">Lendora</span>
           </a>
@@ -72,9 +66,9 @@ export default function Hero() {
           >
             <ul>
               <li><a href="#products">Products</a></li>
-              <li><a href="#markets">Prices</a></li>
-              <li><a href="#articles">Article</a></li>
-              <li><a href="#community">Company</a></li>
+              <li><a href="#markets">Markets</a></li>
+              <li><a href="#community">Safety</a></li>
+              <li><a href="#articles">Learn</a></li>
             </ul>
           </nav>
 
@@ -100,20 +94,18 @@ export default function Hero() {
       <main className="hero-main">
         <div className="hero-wrap">
           <h1 className="hd" id="headline">
-            <span className="sr-only">
-              Trade from 7 blockchains, 100+ crypto tokens and multiple asset classes from your wallet
-            </span>
+            <span className="sr-only">Lend and borrow Stock Tokens on Robinhood Chain</span>
             <span className="hd-top" aria-hidden="true">
-              <span>Trade</span>
+              <span>Lend and borrow</span>
               <span className="hd-roll">
-                {ROLL.map((t, i) => (
-                  <span key={t} className={i === cur ? "is-cur" : i === out ? "is-out" : undefined}>
-                    {t}
+                {ROLL.map((w, i) => (
+                  <span key={w} className={i === cur ? "is-cur" : i === out ? "is-out" : undefined}>
+                    {w}
                   </span>
                 ))}
               </span>
             </span>
-            <span className="hd-line" aria-hidden="true">from your wallet</span>
+            <span className="hd-line" aria-hidden="true">on Robinhood Chain</span>
           </h1>
 
           <hr className="hero-rule" />
@@ -126,28 +118,15 @@ export default function Hero() {
               Launch app
             </a>
             <p className="hero-desc">
-              Non-custodial crypto trading with deep liquidity and low costs, built for everyone
+              Earn what borrowers pay on your Stock Tokens, or borrow them to short or hedge. Non-custodial, on Morpho Blue.
             </p>
-            <dl className="hero-stats">
-              <div><dt>Traders</dt><dd>128K</dd></div>
-              <div>
-                <dt>Open interest</dt>
-                <dd id="stat-oi">
-                  {prevOi !== null && (
-                    <span key={"old" + prevOi} className={"tk-new tk-old" + (go ? " go" : "")}>${prevOi}M</span>
-                  )}
-                  <span key={"new" + oi} className={"tk-new" + (prevOi !== null ? (go ? " go" : " pre") : "")}>
-                    ${oi}M
-                  </span>
-                </dd>
-              </div>
-              <div>
-                <dt>
-                  Total volume{" "}
-                  <svg viewBox="0 0 6 9" aria-hidden="true"><path d="M1 1l3.5 3.5L1 8" /></svg>
-                </dt>
-                <dd>$1.2B</dd>
-              </div>
+            <dl className="hero-stats" data-testid="hero-stats" data-live={t ? "1" : "0"}>
+              {stats.map(([k, v]) => (
+                <div key={k}>
+                  <dt>{k}</dt>
+                  <dd>{v}</dd>
+                </div>
+              ))}
             </dl>
           </div>
         </div>
