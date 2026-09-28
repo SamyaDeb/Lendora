@@ -5,7 +5,7 @@ import {loadConfig} from "../common/config.js";
 import {publicClient} from "../common/chain.js";
 import {Health} from "../common/health.js";
 import {runLoop} from "../common/loop.js";
-import {getExternal} from "@stockline/sdk";
+import {getExternal, isRobinhoodMainnet} from "@stockline/sdk";
 import {IndexerBorrowers, Monitor} from "./monitor.js";
 import {mockAggregatorQuoter, uniswapQuoter} from "./quoter.js";
 import {pagersFromEnv} from "./pager.js";
@@ -39,7 +39,7 @@ const parseList = (v: string | undefined): Record<string, string> =>
   );
 const keepers = parseList(process.env.MONITOR_KEEPERS);
 const reconcileEveryMs = Number(process.env.RECONCILE_EVERY_MS ?? 24 * 3600_000);
-const ext = cfg.deploymentKey === "fork-4663" || cfg.deploymentKey === 4663 ? getExternal(4663) : undefined;
+const ext = isRobinhoodMainnet(cfg.deploymentKey) ? getExternal(4663) : undefined;
 const quoter = ext ? uniswapQuoter(client, ext.uniswap.v3QuoterV2) : cfg.deployment.mocks?.swapAggregator ? mockAggregatorQuoter(client, cfg.deployment.mocks.swapAggregator) : undefined;
 const monitor = new Monitor(
   client,

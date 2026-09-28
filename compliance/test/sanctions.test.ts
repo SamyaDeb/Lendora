@@ -4,7 +4,7 @@ import {afterAll, afterEach, beforeAll, describe, expect, it} from "vitest";
 import type {PublicClient} from "viem";
 import {createComplianceApp} from "../src/app.js";
 import {DenyListScreen, StaticRangeReputation} from "../src/checks.js";
-import {assertStartupConfig, intEnv} from "../src/server.js";
+import {assertStartupConfig, intEnv, startCompliance} from "../src/server.js";
 import {ComplianceService, type Terms, type TermsStore} from "../src/service.js";
 import {ChainalysisScreen, LayeredScreen, ScreenUnavailable, sanctionsFromEnv, TrmScreen} from "../src/sanctions/index.js";
 
@@ -177,6 +177,10 @@ describe("CP-R3 provider selection and startup (Q5, CP-R8)", () => {
     expect(() => assertStartupConfig({PROXY_SECRET: SECRET, SANCTIONS_PROVIDER: "trm", SANCTIONS_API_KEY: KEY}, "4663")).not.toThrow();
     expect(() => assertStartupConfig({PROXY_SECRET: SECRET, SANCTIONS_PROVIDER: "chainalysis", SANCTIONS_API_KEY: KEY}, "4663")).not.toThrow();
     expect(() => assertStartupConfig({SANCTIONS_PROVIDER: "nope"}, "31337")).toThrow(/must be one of/);
+  });
+
+  it("MN_R6 mainnet (4663) with a real provider still refuses until addresses.json has the deployment", async () => {
+    await expect(startCompliance({STOCKLINE_NETWORK: "4663", PROXY_SECRET: SECRET, SANCTIONS_PROVIDER: "trm", SANCTIONS_API_KEY: KEY, DATABASE_URL: "postgres://x"})).rejects.toThrow(/compliance: no deployment "4663".*MN-R6/);
   });
 });
 

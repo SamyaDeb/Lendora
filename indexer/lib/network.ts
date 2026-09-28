@@ -1,9 +1,9 @@
-import {getDeployment, getExternal, parseDeploymentKey, type Address, type ChainDeployment, type DeploymentKey, type StockDeployment} from "@stockline/sdk";
+import {getExternal, isRobinhoodMainnet, resolveDeployment, type Address, type ChainDeployment, type DeploymentKey, type StockDeployment} from "@stockline/sdk";
 
 /**
  * Which deployment the indexer follows (SI-R1): `STOCKLINE_NETWORK` = "31337" (anvil + mocks), "fork-4663" (anvil
  * fork of Robinhood Chain with the simulated deployment) or "46630" (testnet). Addresses and ABIs come only from
- * `@stockline/sdk`. Never "4663" in Phase 2.
+ * `@stockline/sdk`. "4663" (mainnet) only once the launch has published its deployment (MN-R6).
  */
 export interface NetworkConfig {
   key: DeploymentKey;
@@ -34,11 +34,7 @@ const lc = (a: string) => a.toLowerCase();
 
 export function networkConfig(env: NodeJS.ProcessEnv = process.env): NetworkConfig {
   const raw = env.STOCKLINE_NETWORK ?? env.DEPLOYMENT_KEY ?? "31337";
-  if (raw === "4663") throw new Error("Phase 2 never indexes a real 4663 deployment (use fork-4663)");
-  const key = parseDeploymentKey(raw);
-  const d = getDeployment(key);
-  if (!d) throw new Error(`no deployment "${raw}" in @stockline/sdk addresses.json`);
-  const chainId = key === "fork-4663" ? 4663 : Number(key);
+  const {key, chainId, d} = resolveDeployment(raw, "indexer"); // MN-R6: 4663 only once the launch published it
   const stocks = d.stocks;
   const tickers = Object.keys(stocks).sort();
   const map = (f: (s: StockDeployment) => string) => new Map(tickers.map((t) => [lc(f(stocks[t])), t]));
@@ -51,7 +47,7 @@ export function networkConfig(env: NodeJS.ProcessEnv = process.env): NetworkConf
     dexKind = "mock";
   } else {
     const ext = getExternal(4663);
-    if (key === "fork-4663" && ext) {
+    if (isRobinhoodMainnet(key) && ext) {
       for (const t of tickers) {
         // USDG and WETH 0.05% pools hold the main liquidity (01-chain-facts §6); token0 is the lower address.
         for (const quote of ["USDG", "WETH"] as const) {

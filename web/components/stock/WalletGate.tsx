@@ -3,6 +3,7 @@ import {useEffect, useState, type ReactNode} from "react";
 import {useAccount, useSwitchChain} from "wagmi";
 import Link from "next/link";
 import {CHAIN_ID, chain, deployment} from "@/lib/env";
+import {isTestChain} from "@/lib/network";
 import {Button, Icon} from "@/components/ui";
 import {ConnectButton, useWrongNetwork} from "@/components/shell/ConnectButton";
 
@@ -37,7 +38,7 @@ export function WalletGate({children}: {children: ReactNode}) {
 
 /** Local and testnet: point an empty wallet to the test funds on the portfolio page. */
 export function NeedFunds({token, show}: {token: string; show: boolean}) {
-  const testChain = CHAIN_ID === 31337 || Boolean(deployment().mocks?.faucet);
+  const testChain = isTestChain(CHAIN_ID, deployment());
   if (!show || !testChain) return null;
   return (
     <p className="flex items-center gap-2 text-[13px] text-muted">

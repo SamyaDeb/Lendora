@@ -1,4 +1,4 @@
-import {getExternal} from "@stockline/sdk";
+import {getExternal, isRobinhoodMainnet} from "@stockline/sdk";
 import {loadConfig} from "../common/config.js";
 import {chainFor, publicClient} from "../common/chain.js";
 import {senderFromConfig} from "../common/signer.js";
@@ -12,7 +12,7 @@ const client = publicClient(cfg.rpcUrl, cfg.deploymentKey);
 const sender = senderFromConfig(cfg, client, chainFor(cfg.deploymentKey));
 const d = cfg.deployment;
 if (!d.feeSplitter || !d.treasuryConverter || !d.backstopConverter) throw new Error(`deployment ${String(cfg.deploymentKey)} has no FeeSplitter / FeeConverters`);
-const ext = cfg.deploymentKey === "fork-4663" || cfg.deploymentKey === 4663 ? getExternal(4663) : undefined;
+const ext = isRobinhoodMainnet(cfg.deploymentKey) ? getExternal(4663) : undefined;
 const sell = ext ? universalRouterSellBuilder(ext.uniswap.universalRouter) : mockDexSellBuilder(d.mocks!.swapAggregator);
 const env = process.env;
 const opts = {

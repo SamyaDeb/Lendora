@@ -1,4 +1,4 @@
-import {getDeployment, parseDeploymentKey, type ChainDeployment, type DeploymentKey} from "@stockline/sdk";
+import {resolveDeployment, type ChainDeployment, type DeploymentKey} from "@stockline/sdk";
 
 /** API configuration from the environment. Secrets (database/redis URLs with passwords) come only from env. */
 export interface ApiConfig {
@@ -42,10 +42,7 @@ function num(env: NodeJS.ProcessEnv, name: string, dflt: number, min: number, ma
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   const raw = env.STOCKLINE_NETWORK ?? env.DEPLOYMENT_KEY ?? "31337";
-  if (raw === "4663") throw new Error("Phase 2 serves no real 4663 deployment");
-  const key = parseDeploymentKey(raw);
-  const d = getDeployment(key);
-  if (!d) throw new Error(`no deployment "${raw}" in @stockline/sdk addresses.json`);
+  const {key, chainId, d} = resolveDeployment(raw, "api"); // MN-R6: 4663 only once the launch published it
   if (!env.DATABASE_URL) throw new Error("DATABASE_URL is required");
   if (env.TRUST_PROXY !== undefined && !["true", "false", ""].includes(env.TRUST_PROXY)) throw new Error('TRUST_PROXY must be "true" or "false"');
   return {
@@ -57,7 +54,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     redisUrl: env.REDIS_URL || undefined,
     rpcUrl: env.RPC_URL ?? "http://127.0.0.1:8545",
     key,
-    chainId: key === "fork-4663" ? 4663 : Number(key),
+    chainId,
     d,
     freeRpm: num(env, "FREE_RPM", 60, 1, 100_000),
     keyedRpm: num(env, "KEYED_RPM", 600, 1, 1_000_000),

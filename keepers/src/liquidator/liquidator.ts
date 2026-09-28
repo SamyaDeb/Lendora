@@ -4,6 +4,8 @@ import {
   stocklineLiquidatorAbi,
   stocklineOracleAbi,
   type ChainDeployment,
+  type Address,
+  type DeploymentKey,
   type StockDeployment, safeErrorLine} from "@stockline/sdk";
 import type {TxSender} from "../common/signer.js";
 import type {Health} from "../common/health.js";
@@ -253,4 +255,17 @@ export class LiquidatorBot {
     this.log(`[liquidator] liquidate ${plan.borrower} repaid~${plan.expectedRepaid} seized~${plan.expectedSeized} usdgIn=${plan.usdgIn}`);
     await this.sender.send(liquidator, data, `liquidate ${plan.borrower}`);
   }
+}
+
+/**
+ * Where liquidation profit goes. MN-R6: on mainnet (4663) `LIQUIDATOR_RECIPIENT` must be set explicitly (the treasury
+ * Safe or the keeper's sweep address); elsewhere it defaults to the signer, then the owner.
+ */
+export function liquidatorRecipient(key: DeploymentKey, configured: string | undefined, signer: Address | undefined, owner: Address): Address {
+  if (configured) {
+    if (!/^0x[0-9a-fA-F]{40}$/.test(configured)) throw new Error("LIQUIDATOR_RECIPIENT must be an address");
+    return configured as Address;
+  }
+  if (key === 4663) throw new Error("mainnet (4663) needs LIQUIDATOR_RECIPIENT (MN-R6)");
+  return signer ?? owner;
 }

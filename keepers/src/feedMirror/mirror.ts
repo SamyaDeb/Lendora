@@ -1,5 +1,5 @@
 import {encodeFunctionData, type PublicClient} from "viem";
-import {aggregatorV3Abi, mockAggregatorAbi, mockSwapAggregatorAbi, mockUniswapV3PoolAbi, tickForAnswer, type ChainDeployment, type ExternalChain} from "@stockline/sdk";
+import {aggregatorV3Abi, mockAggregatorAbi, mockSwapAggregatorAbi, mockUniswapV3PoolAbi, tickForAnswer, type ChainDeployment, type DeploymentKey, type ExternalChain} from "@stockline/sdk";
 import type {TxSender} from "../common/signer.js";
 import type {Health} from "../common/health.js";
 
@@ -78,4 +78,13 @@ export class FeedMirror {
     this.health?.ok("feeds", block);
     return actions;
   }
+}
+
+/**
+ * MN-R6 / A26: the mirror writes mock feeds, so it must never run against Robinhood Chain mainnet (4663) or its fork,
+ * nor against any deployment without gated mock feeds.
+ */
+export function assertMirrorAllowed(key: DeploymentKey, d: ChainDeployment): void {
+  if (key === 4663 || key === "fork-4663") throw new Error("the feed mirror never runs on Robinhood Chain mainnet (4663): it is for mock-feed deployments (46630, 31337)");
+  if (!d.mocks) throw new Error(`the feed mirror needs mock feeds; deployment ${String(key)} has none`);
 }

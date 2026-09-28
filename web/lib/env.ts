@@ -1,5 +1,6 @@
 import type {Chain} from "viem";
-import {chainFor, getDeployment, type ChainDeployment} from "@stockline/sdk";
+import {chainFor, type ChainDeployment} from "@stockline/sdk";
+import {webDeployment} from "./network";
 
 /** Public configuration (NEXT_PUBLIC_*, inlined at build time). The app serves exactly one deployment. */
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? 31337);
@@ -13,14 +14,13 @@ export const WALLETCONNECT_PROJECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_PR
 export const E2E = process.env.NEXT_PUBLIC_E2E === "1" && CHAIN_ID === 31337;
 export const E2E_ACCOUNT = (process.env.NEXT_PUBLIC_E2E_ACCOUNT ?? "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955") as `0x${string}`;
 
-if (CHAIN_ID === 4663) throw new Error("Phase 2 never serves Robinhood Chain mainnet");
+/** MN-R6: the served network must be published in addresses.json (mainnet only after the launch publishes it). */
+const DEPLOYMENT = webDeployment(CHAIN_ID);
 
 export const chain: Chain = chainFor(CHAIN_ID, RPC_URL);
 
 export function deployment(): ChainDeployment {
-  const d = getDeployment(CHAIN_ID);
-  if (!d) throw new Error(`no deployment for chain ${CHAIN_ID} in @stockline/sdk addresses.json`);
-  return d;
+  return DEPLOYMENT;
 }
 
 export const TICKERS = Object.keys(deployment().stocks).sort();

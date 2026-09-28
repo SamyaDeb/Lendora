@@ -1,5 +1,5 @@
 import {z} from "zod";
-import {getDeployment, type ChainDeployment, type DeploymentKey} from "@stockline/sdk";
+import {resolveDeployment, type ChainDeployment, type DeploymentKey} from "@stockline/sdk";
 
 /** Keeper configuration from the environment. Never contains key material except via `KEEPER_PRIVATE_KEY`, which is
  * read only by the env-key signer and never logged. */
@@ -88,9 +88,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): KeeperConfig {
   if (!p.success) throw new Error(`keeper config: ${p.error.issues.map((i) => `${i.path.join(".") || "env"}: ${i.message}`).join("; ")}`);
   const e = p.data;
   const key = e.DEPLOYMENT_KEY;
-  const deploymentKey: DeploymentKey = key === "fork-4663" ? key : Number(key);
-  const deployment = getDeployment(deploymentKey);
-  if (!deployment) throw new Error(`no deployment for ${key} in @stockline/sdk addresses.json`);
+  const {key: deploymentKey, d: deployment} = resolveDeployment(key, "keeper"); // MN-R6: 4663 only once published
   const dryRun = e.DRY_RUN !== "false";
   const signer = e.KEEPER_SIGNER;
   if (!dryRun && signer === "dry-run") throw new Error("DRY_RUN=false needs KEEPER_SIGNER=env-key, remote or rpc-unlocked");

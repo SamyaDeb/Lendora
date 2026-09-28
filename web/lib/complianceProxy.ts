@@ -31,6 +31,7 @@ export function geoPlatform(v: string | undefined, env: NodeJS.ProcessEnv = proc
   if (v === "static") {
     if (env.NODE_ENV !== "development") throw new Error("GEO_PLATFORM=static is allowed only in development (next dev)");
     if (env.VERCEL || env.RAILWAY_ENVIRONMENT) throw new Error("GEO_PLATFORM=static is refused on a hosting platform (VERCEL / RAILWAY_ENVIRONMENT)");
+    if (Number(env.NEXT_PUBLIC_CHAIN_ID) === 4663) throw new Error("GEO_PLATFORM=static is refused on mainnet (4663, MN-R6)");
     staticGeo(env);
     return "static";
   }

@@ -69,8 +69,8 @@ export interface ChainDeployment {
   backstopConverter?: Address;
 }
 
-/** Keys: a chain id ("31337" anvil) or "fork-4663" (a simulated deployment on a Robinhood Chain fork). Real 4663 is
- * never written in Phase 1. */
+/** Keys: a chain id ("31337" anvil, "46630" testnet, "4663" mainnet once the launch publishes it) or "fork-4663" (a
+ * simulated deployment on a Robinhood Chain fork). Only the mainnet launcher's publish step writes "4663" (MN-R6). */
 export type DeploymentKey = number | "fork-4663";
 
 /** Parse `DEPLOYMENT_KEY` / `STOCKLINE_NETWORK` ("31337", "46630", "fork-4663"). */
@@ -87,3 +87,33 @@ export function getDeployment(key: DeploymentKey): ChainDeployment | undefined {
 
 /** All keys in the address book. */
 export const deploymentKeys: string[] = Object.keys(book);
+
+/** Chain id of a deployment key ("fork-4663" runs on a fork of 4663). */
+export function chainIdOf(key: DeploymentKey): number {
+  return key === "fork-4663" ? 4663 : key;
+}
+
+/** Robinhood Chain mainnet or a fork of it: the real tokens, pools and feeds of `external-addresses.json` apply. */
+export function isRobinhoodMainnet(key: DeploymentKey): boolean {
+  return key === 4663 || key === "fork-4663";
+}
+
+/**
+ * MN-R6: the one startup check every service shares. A network is served only if `addresses.json` has a deployment
+ * for it, so mainnet (4663) runs once the launcher has published `chains["4663"]` and never before (the Phase 2
+ * blanket refusal is gone). Throws with the service name and the key.
+ */
+export function resolveDeployment(
+  raw: string,
+  service: string,
+  lookup: (key: DeploymentKey) => ChainDeployment | undefined = getDeployment,
+): {key: DeploymentKey; chainId: number; d: ChainDeployment} {
+  const key = parseDeploymentKey(raw);
+  if (typeof key === "number" && (!Number.isInteger(key) || key <= 0)) throw new Error(`${service}: invalid network "${raw}" (a chain id or "fork-4663")`);
+  const d = lookup(key);
+  if (!d) {
+    const hint = key === 4663 ? ": mainnet is served only after the launch publishes it (MN-R6)" : "";
+    throw new Error(`${service}: no deployment "${raw}" in @stockline/sdk addresses.json${hint}`);
+  }
+  return {key, chainId: chainIdOf(key), d};
+}

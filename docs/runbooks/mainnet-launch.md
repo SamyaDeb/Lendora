@@ -112,6 +112,18 @@ on the first run, so a `CallScheduled` before it starts is never paged, MON-R16/
 - [ ] Calendar runway ≥ 30 days pushed; earnings windows within 60 days pushed (MON-R13 quiet).
 - [ ] Status page and comms channels ready; comms templates from [README.md](README.md).
 
+**Service network rules on 4663 (MN-R6).** Every service calls `resolveDeployment` from `@stockline/sdk` at startup
+and refuses a network that `addresses.json` does not list, so nothing starts on 4663 until step §3.5 has published
+`chains["4663"]` (released SDK build). What differs on 4663, audited per service:
+
+| Service | On 4663 | Evidence |
+|---|---|---|
+| web | Serves once published; **no faucet** (`faucetKind`), no "get test funds" hint, **no `/dev/*` pages** even with `NEXT_PUBLIC_DEV_PAGES=1`, `GEO_PLATFORM=static` refused, E2E mock wallet only on 31337 | `web/test/network.test.ts` |
+| API | Serves once published (Phase 2 refusal removed) | `api/test/config.test.ts` |
+| indexer | Once published; DEX volume from the real Uniswap v3 pools (same branch as `fork-4663`) | `indexer/test/network.test.ts` |
+| compliance | Once published **and** a real sanctions provider + key (CP-R8) | `compliance/test/sanctions.test.ts` |
+| keepers | Once published; chain 4663 for signing; guard pools, fee converter and liquidator swaps via the real UniversalRouter/pools; **liquidator needs `LIQUIDATOR_RECIPIENT`**; **feed mirror refuses 4663** (it writes mock feeds) | `keepers/test/common.test.ts` |
+
 ## 5. Launch
 
 1. Announce 48h ahead (caps, geo restrictions, risks).

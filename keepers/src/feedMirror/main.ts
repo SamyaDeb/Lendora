@@ -5,11 +5,11 @@ import {chainFor, publicClient} from "../common/chain.js";
 import {senderFromConfig, type TxSender} from "../common/signer.js";
 import {Health} from "../common/health.js";
 import {runLoop} from "../common/loop.js";
-import {ChainlinkSource, FeedMirror} from "./mirror.js";
+import {assertMirrorAllowed, ChainlinkSource, FeedMirror} from "./mirror.js";
 
 /** `pnpm --filter @stockline/keepers feed-mirror` (testnet only). Reads mainnet (MAINNET_RPC_URL) read-only. */
 const cfg = loadConfig();
-if (cfg.deploymentKey === "fork-4663" || cfg.deploymentKey === 4663) throw new Error("the feed mirror is for mock-feed deployments (46630, 31337)");
+assertMirrorAllowed(cfg.deploymentKey, cfg.deployment);
 const client = publicClient(cfg.rpcUrl, cfg.deploymentKey);
 const chain = chainFor(cfg.deploymentKey);
 const mainnet = createPublicClient({chain: robinhoodChain, transport: http(process.env.MAINNET_RPC_URL ?? "https://rpc.mainnet.chain.robinhood.com")}) as PublicClient;

@@ -5,6 +5,9 @@ import {loadConfig} from "../src/common/config.js";
 import {Health} from "../src/common/health.js";
 import {DryRunSender, envKeySender} from "../src/common/signer.js";
 import {runLoop} from "../src/common/loop.js";
+import {chainFor} from "../src/common/chain.js";
+import {assertMirrorAllowed} from "../src/feedMirror/mirror.js";
+import {liquidatorRecipient} from "../src/liquidator/liquidator.js";
 
 describe("keeper plumbing", () => {
   it("defaults to dry run and refuses live mode without a signer", () => {
@@ -13,7 +16,31 @@ describe("keeper plumbing", () => {
     expect(c.signer).toBe("dry-run");
     expect(() => loadConfig({DEPLOYMENT_KEY: "31337", DRY_RUN: "false"})).toThrow(/KEEPER_SIGNER/);
     expect(loadConfig({DEPLOYMENT_KEY: "fork-4663"}).deployment.stocks.NVDA).toBeDefined();
-    expect(() => loadConfig({DEPLOYMENT_KEY: "4663"})).toThrow(/no deployment/);
+    expect(() => loadConfig({DEPLOYMENT_KEY: "4663"})).toThrow(/keeper: no deployment "4663".*MN-R6/);
+  });
+
+  it("MN_R6 the feed mirror never runs on 4663 or its fork, nor without mock feeds", () => {
+    const fork = loadConfig({DEPLOYMENT_KEY: "fork-4663"});
+    expect(() => assertMirrorAllowed(4663, fork.deployment)).toThrow(/never runs on Robinhood Chain mainnet/);
+    expect(() => assertMirrorAllowed("fork-4663", fork.deployment)).toThrow(/never runs/);
+    expect(() => assertMirrorAllowed(46630, {...fork.deployment, mocks: undefined})).toThrow(/needs mock feeds/);
+    expect(() => assertMirrorAllowed(31337, loadConfig({DEPLOYMENT_KEY: "31337"}).deployment)).not.toThrow();
+  });
+
+  it("MN_R6 the liquidator needs an explicit profit recipient on mainnet", () => {
+    const owner = "0x00000000000000000000000000000000000000aa" as const;
+    const signer = "0x00000000000000000000000000000000000000bb" as const;
+    expect(() => liquidatorRecipient(4663, undefined, signer, owner)).toThrow(/LIQUIDATOR_RECIPIENT/);
+    expect(() => liquidatorRecipient(4663, "nope", signer, owner)).toThrow(/must be an address/);
+    expect(liquidatorRecipient(4663, "0x00000000000000000000000000000000000000cc", signer, owner)).toBe("0x00000000000000000000000000000000000000cc");
+    expect(liquidatorRecipient(46630, undefined, signer, owner)).toBe(signer);
+    expect(liquidatorRecipient(31337, undefined, undefined, owner)).toBe(owner);
+  });
+
+  it("MN_R6 keepers sign for chain 4663 on mainnet and its fork", () => {
+    expect(chainFor(4663).id).toBe(4663);
+    expect(chainFor("fork-4663").id).toBe(4663);
+    expect(chainFor(46630).id).toBe(46630);
   });
 
   it("LM-R33: /health fails when a market has not run for 5 minutes", async () => {

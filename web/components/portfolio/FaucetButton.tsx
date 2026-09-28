@@ -5,6 +5,7 @@ import {encodeFunctionData, parseUnits} from "viem";
 import {mockStockTokenAbi, mockUsdgAbi} from "@stockline/sdk";
 import {CHAIN_ID, RPC_URL, TICKERS, deployment} from "@/lib/env";
 import {useTrackedWriter, useTxRunner} from "@/lib/flows/common";
+import {faucetKind} from "@/lib/network";
 import {Button, Icon, Notice, StepList, useToast} from "@/components/ui";
 
 const faucetAbi = [{type: "function", name: "claim", stateMutability: "nonpayable", inputs: [{name: "to", type: "address"}], outputs: []}] as const;
@@ -15,12 +16,12 @@ const ANVIL_DEPLOYER = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
 /**
  * Test funds. Testnet: the Stockline faucet (once per address per day). Local anvil (31337) only: gas ETH plus
  * USDG and every Stock Token, minted by the unlocked deployer through the local RPC, so any browser wallet can run
- * the whole product. Never shown on other chains.
+ * the whole product. Never shown on other chains, and never on mainnet (MN-R6).
  */
 export function FaucetButton() {
-  const faucet = deployment().mocks?.faucet;
-  if (faucet) return <TestnetFaucet faucet={faucet} />;
-  if (CHAIN_ID === 31337 && RPC_URL) return <LocalFunds rpc={RPC_URL} />;
+  const kind = faucetKind(CHAIN_ID, deployment(), RPC_URL); // MN-R6: never on mainnet
+  if (kind === "testnet") return <TestnetFaucet faucet={deployment().mocks!.faucet} />;
+  if (kind === "local") return <LocalFunds rpc={RPC_URL!} />;
   return null;
 }
 

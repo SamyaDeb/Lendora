@@ -1,4 +1,4 @@
-import {getExternal} from "@stockline/sdk";
+import {getExternal, isRobinhoodMainnet} from "@stockline/sdk";
 import {loadConfig} from "../common/config.js";
 import {chainFor, publicClient} from "../common/chain.js";
 import {senderFromConfig, type TxSender} from "../common/signer.js";
@@ -13,7 +13,7 @@ const chain = chainFor(cfg.deploymentKey);
 const sender: TxSender = senderFromConfig(cfg, client, chain, process.env, cfg.deployment.roles.guardKeeper);
 const health = new Health(cfg.maxStaleMs);
 health.serve(cfg.healthPort);
-const pools = poolsFor(cfg.deployment, cfg.deploymentKey === "fork-4663" ? getExternal(4663) : undefined);
+const pools = poolsFor(cfg.deployment, isRobinhoodMainnet(cfg.deploymentKey) ? getExternal(4663) : undefined);
 const keeper = new GuardKeeper(client, sender, cfg.deployment, pools, undefined, health);
 const abort = new AbortController();
 process.on("SIGINT", () => abort.abort());

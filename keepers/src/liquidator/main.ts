@@ -1,21 +1,21 @@
-import {getExternal} from "@stockline/sdk";
+import {getExternal, isRobinhoodMainnet} from "@stockline/sdk";
 import {loadConfig} from "../common/config.js";
 import {chainFor, publicClient} from "../common/chain.js";
 import {senderFromConfig, type TxSender} from "../common/signer.js";
 import {Health} from "../common/health.js";
 import {runLoop} from "../common/loop.js";
-import {LiquidatorBot, mockDexBuilder, universalRouterBuilder} from "./liquidator.js";
+import {LiquidatorBot, liquidatorRecipient, mockDexBuilder, universalRouterBuilder} from "./liquidator.js";
 
 const cfg = loadConfig();
 const client = publicClient(cfg.rpcUrl, cfg.deploymentKey);
 const chain = chainFor(cfg.deploymentKey);
 // OFF-4: one sender factory for every signing keeper (env key, remote KMS signer, anvil-unlocked, dry run).
 const sender: TxSender = senderFromConfig(cfg, client, chain);
-const swap =
-  cfg.deploymentKey === "fork-4663"
-    ? universalRouterBuilder(getExternal(4663)!.uniswap.universalRouter)
-    : mockDexBuilder(cfg.deployment.mocks!.swapAggregator);
-const recipient = (process.env.LIQUIDATOR_RECIPIENT ?? sender.address ?? cfg.deployment.roles.owner) as `0x${string}`;
+// MN-R6: mainnet and its fork swap through the allowlisted UniversalRouter (Q4); anvil and testnet through the mock DEX.
+const swap = isRobinhoodMainnet(cfg.deploymentKey)
+  ? universalRouterBuilder(getExternal(4663)!.uniswap.universalRouter)
+  : mockDexBuilder(cfg.deployment.mocks!.swapAggregator);
+const recipient = liquidatorRecipient(cfg.deploymentKey, process.env.LIQUIDATOR_RECIPIENT, sender.address, cfg.deployment.roles.owner);
 const health = new Health(cfg.maxStaleMs);
 health.serve(cfg.healthPort);
 const bot = new LiquidatorBot(client, sender, cfg.deployment, swap, recipient, {
