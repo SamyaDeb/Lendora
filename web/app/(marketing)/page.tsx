@@ -5,24 +5,33 @@ import Community from "@/components/landing/Community";
 import Articles from "@/components/landing/Articles";
 import Subscribe from "@/components/landing/Subscribe";
 import Earn from "@/components/landing/Earn";
+import LandingFooter from "@/components/landing/LandingFooter";
 import {FEATURES} from "@/lib/features";
 import {vaultSource} from "@/lib/vault";
-import LandingFooter from "@/components/landing/LandingFooter";
+import {safe, serverApi, type Market} from "@/lib/api";
+import {TICKERS} from "@/lib/env";
 
-/** The vault's 30-day net APY from the adapter, only while the vault flag is on (never blocks the page for long). */
+/** Resolves to undefined after `ms`, so a slow data source never holds the landing page. */
+const within = <T,>(p: Promise<T | undefined>, ms = 1500) => Promise.race([p, new Promise<undefined>((r) => setTimeout(() => r(undefined), ms))]).catch(() => undefined);
+
+/** The vault's 30-day net APY from the adapter, only while the vault flag is on. */
 async function earnApy(): Promise<number | undefined> {
   if (!FEATURES.vault) return undefined;
-  const timeout = new Promise<undefined>((r) => setTimeout(() => r(undefined), 1500));
-  return Promise.race([vaultSource().overview().then((o) => o.apy.d30), timeout]).catch(() => undefined);
+  return within(vaultSource().overview().then((o) => o.apy.d30));
 }
 
+/**
+ * The marketing landing. Every number on it is live from the public API (markets) or the vault adapter; when a
+ * source doesn't answer, the sections show the product without numbers rather than placeholders (CP-R7).
+ */
 export default async function LandingPage() {
-  const apy = await earnApy();
+  const [apy, res] = await Promise.all([earnApy(), within(safe(serverApi().markets()))]);
+  const markets: Market[] | undefined = res?.data;
   return (
     <>
-      <Hero />
-      <Opportunity />
-      <MarketsPreview />
+      <Hero markets={markets} tickers={TICKERS} />
+      <Opportunity vault={FEATURES.vault} />
+      <MarketsPreview markets={markets} tickers={TICKERS} asOfBlock={res?.asOfBlock} />
       <Earn apy={apy} />
       <Community />
       <Articles />

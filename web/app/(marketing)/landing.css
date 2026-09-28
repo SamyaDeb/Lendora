@@ -1123,3 +1123,19 @@
   .earn-step { padding: 22px 22px 24px 70px; }
   .earn-n { left: 20px; top: 22px; }
 }
+
+/* ---------- Product content (replaces the prototype's placeholders) ---------- */
+.mcoin .tile-tk { font-size: 15px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); }
+.mcoin .chg:not(.up):not(.down) { color: var(--text-dim); }
+a.more { display: inline-flex; align-items: center; justify-content: center; }
+.sb-ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin: 50px auto 0; }
+.sb-ctas .join-btn { margin-top: 0; }
+.sb-ctas .more { width: min(100%, 220px); }
+.ft-legal { margin: 56px 0 0; padding-top: 24px; border-top: 1px solid rgba(13, 11, 30, 0.12); max-width: 60em; font-size: 13px; line-height: 1.5; color: inherit; opacity: 0.8; }
+.cm-reg .mock-back p { left: auto; right: 22px; }
+.sb-ctas .more { color: var(--text); background: rgba(13, 10, 43, 0.62); border-color: rgba(255, 255, 255, 0.34); }
+.sb-ctas .more:hover { background: rgba(13, 10, 43, 0.78); }
+@media (max-width: 560px) { .cm-reg .mock-back p { display: none; } }
+@media (max-width: 920px) {
+  .cm-reg .mock { position: relative; inset: auto; top: auto; height: 180px; margin: 28px -34px 0; }
+}

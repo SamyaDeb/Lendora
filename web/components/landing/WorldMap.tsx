@@ -126,7 +126,7 @@ export default function WorldMap() {
       ref={ref}
       id="map-canvas"
       role="img"
-      aria-label="Dotted world map with pins in Lithuania, Malaysia and Singapore, and arcs connecting them"
+      aria-label="Dotted world map"
     />
   );
 }

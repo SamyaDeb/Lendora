@@ -1,20 +1,27 @@
 # 06 · Web app
 
-**Phase 2.** A responsive Next.js app with four areas: Markets, Lend, Borrow/Short and Portfolio. It also hosts the public
+**Phase 2.** A responsive Next.js app with four areas: Markets, Lend, Borrow/Short and Portfolio (Lend and Borrow/Short share one page per stock). It also hosts the public
 short-interest dashboard ([07](07-short-interest.md)). Every number that affects safety (health factor, liquidation price,
 buffer) comes from `packages/sdk` so it matches the contracts.
 
 ## Screens
 
+*(Routes updated 2026-09-29 to match the app after the Lendora redesign. The original plan's `/`, `/market/[symbol]`,
+`/lend/[symbol]`, `/short/[symbol]` and `/short-interest` still resolve: each redirects to its new home below.)*
+
 | Route | Purpose | Key elements |
 |---|---|---|
-| `/` | Markets overview | Table per stock: price, supplied, borrowed, utilization, supply APY, borrow APR, market status (Open / Closed · weekend mode / Guard tripped). Sort by utilization. |
-| `/market/[symbol]` | Market detail | Rate and utilization charts (7d/30d/90d), short-interest history, weekend buffer schedule, contract addresses, parameters (LLTV, caps, `U_MAX`) |
-| `/lend/[symbol]` | Deposit / withdraw | Amount input, APY, `maxWithdraw`, `rSTOCK` balance, earnings in stock and USD, "use as collateral" CTA (G5) |
-| `/short/[symbol]` | Open short / borrow | Collateral input (USDG or vault share), borrow amount or target LTV slider, toggle "sell borrowed stock" (openShort) vs "just borrow", live preview panel |
-| `/portfolio` | Positions | Lends, borrows, health factors, liquidation prices now and at next close, accrued interest, one-click Close / Repay / Add collateral |
-| `/short-interest` | Public dashboard | See [07](07-short-interest.md) |
+| `/` | Landing (marketing) | What Lendora is (lend, borrow, short, short-interest data, USDG Earn), live rates per Stock Token and live totals from the public API (no numbers when the API is down), safety and availability, links into the app. Footer has the "not an offer of securities" notice. |
+| `/markets` | Markets overview (was `/`) | Table per stock: price, supplied, borrowed, utilization, supply APY, borrow APR, market status (Open / Closed · weekend mode / Guard tripped), borrow availability. Sort by utilization; search and filter. |
+| `/stock/[ticker]` | Market detail + Lend / Borrow / Short (was `/market`, `/lend`, `/short`) | Rate and utilization charts (7d/30d/90d), short-interest history, weekend buffer schedule, contract addresses, parameters (LLTV, caps, `U_MAX`). Action panel (sticky on desktop, bottom sheet on mobile): **Lend** (amount, APY, withdrawable now, `rSTOCK` balance, earnings in stock and USD, "use as collateral" shown as coming later, G5) and **Borrow / Short** (USDG collateral, borrow amount or target health factor, the preview panel below; vault-share collateral shown as coming later). `?tab=lend\|borrow\|short` picks the tab. |
+| `/portfolio` | Positions | Lends, borrows, health factors, liquidation prices now and at next close, accrued interest, one-click Close / Repay / Add collateral; USDG Earn position with withdraw and claim when the vault flag is on. Reachable from restricted regions (exits). |
+| `/data` | Public short-interest dashboard (was `/short-interest`) | See [07](07-short-interest.md); plus protocol revenue (FE-R5). |
 | `/alerts` | Notification settings | HF threshold, channels (email, Telegram, webhook URL), weekend warning toggle |
+| `/status` | Guard and oracle status | APP-R4 link target: guard state and reasons per market, oracle freshness, indexer lag. |
+| `/terms` | Terms and risk disclosure | APP-R10: the text the wallet signs, with its version and hash. |
+| `/restricted` | Block page | APP-R2: shown instead of entry routes in restricted regions. |
+| `/vault` | USDG Earn ([08](08-delta-neutral-vault.md), Phase 4) | Behind `NEXT_PUBLIC_FEATURE_VAULT`; on fixture data until the vault contracts and `/v1/vault/*` exist. |
+| `/backstop` | Backstop pool ([09 §2](09-backstop-fees.md), Phase 5) | Behind `NEXT_PUBLIC_FEATURE_BACKSTOP`; preview data, actions disabled. |
 
 ## Preview panel (Borrow/Short)
 
@@ -57,5 +64,5 @@ market at cap, vault withdrawal limited by liquidity, restricted region, unsuppo
   preview HF equals `healthFactorAt` exactly, debt within 1 wei ([`flows.spec.ts`](../../web/e2e/flows.spec.ts)
   "06 acceptance"). Run on plain anvil with the DeployLocal state rather than an anvil fork (A16: testnet has no Stock
   Token markets to fork; the same contracts run on the fork suite).
-- [x] Lighthouse performance ≥ 85 on `/` and `/short-interest`: 96 and 91 (accessibility 100)
+- [x] Lighthouse performance ≥ 85 on the markets overview and the short-interest dashboard (then `/` and `/short-interest`, now `/markets` and `/data`): 96 and 91 (accessibility 100)
   ([`lighthouse/results.md`](../../web/lighthouse/results.md)).

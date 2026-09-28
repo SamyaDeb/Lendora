@@ -1,28 +1,22 @@
 "use client";
 
-import { useToast } from "./Toast";
 import { RevealText, ScrollWords, delay } from "./Reveal";
 
 const navy = { stroke: "#1a1150", strokeWidth: 2 };
 const purple = { stroke: "#4b33b0" };
 const label = { fill: "#fff", fontFamily: "Instrument Sans,Arial,sans-serif" };
 
+/** Learn: the three ideas behind the product, each linking to where the app shows it. */
 export default function Articles() {
-  const toast = useToast();
-  const open = (e: React.MouseEvent) => {
-    e.preventDefault();
-    toast("Articles aren't part of this prototype.");
-  };
-
   return (
     <section className="articles" id="articles" aria-labelledby="ar-title">
       <div className="wrap">
-        <span className="pill on-dark" data-reveal="up">Article</span>
-        <RevealText as="h2" className="ar-title" id="ar-title" d={0.08}>About Cryptocurrencies</RevealText>
-        <ScrollWords className="ar-sub">We examine the fundamental principles, emerging trends, and transformative potential that define the world of digital assets</ScrollWords>
+        <span className="pill on-dark" data-reveal="up">Learn</span>
+        <RevealText as="h2" className="ar-title" id="ar-title" d={0.08}>How stock lending works here</RevealText>
+        <ScrollWords className="ar-sub">Three ideas explain almost everything on Lendora: who earns, what liquidation means, and what short interest tells you.</ScrollWords>
 
         <div className="ar-grid">
-          <a data-reveal="up" style={delay(0)} className="ar-card" href="#" onClick={open}>
+          <a data-reveal="up" style={delay(0)} className="ar-card" href="/markets">
             <div className="ar-ill">
               <svg className="ill" viewBox="0 0 333 228" aria-hidden="true">
                 <rect className="ms" x="10" y="12" width="190" height="10" rx="3" />
@@ -47,10 +41,10 @@ export default function Articles() {
                 <circle className="ln" cx="259" cy="84" r="7" style={navy} /><circle className="ln" cx="277" cy="84" r="7" style={navy} /><path className="ln" d="M266 84h4" style={navy} />
               </svg>
             </div>
-            <div className="ar-txt"><h3>Study Crypto. Master The Future</h3><p>Hit the books on everything from blockchain fundamentals, to advanced trading techniques, to on-chain analysis.</p></div>
+            <div className="ar-txt"><h3>Who pays lenders</h3><p>Borrowers pay interest in the stock they borrow, and dividends reach lenders through the token&apos;s multiplier. Rates rise as more is borrowed.</p></div>
           </a>
 
-          <a data-reveal="up" style={delay(0.12)} className="ar-card" href="#" onClick={open}>
+          <a data-reveal="up" style={delay(0.12)} className="ar-card" href="/stock/NVDA">
             <div className="ar-ill">
               <svg className="ill" viewBox="0 0 333 228" aria-hidden="true">
                 <path className="ln" d="M104 222H148V196H182V168H212V138H258V112H296" style={{ ...purple, strokeWidth: 3 }} />
@@ -71,10 +65,10 @@ export default function Articles() {
                 <path className="nv" d="M107 57Q107 42 123 42Q137 44 136 58Q126 52 107 57Z" />
               </svg>
             </div>
-            <div className="ar-txt"><h3>How do I use Stop orders in spot trading?</h3><p>In spot trading, stop orders can be used as both standalone and complementary orders...</p></div>
+            <div className="ar-txt"><h3>Health factor and liquidation</h3><p>Your health factor compares collateral to debt. Below 1.00 anyone can repay your loan and take collateral at a discount. The app shows the price where that happens.</p></div>
           </a>
 
-          <a data-reveal="up" style={delay(0.24)} className="ar-card" href="#" onClick={open}>
+          <a data-reveal="up" style={delay(0.24)} className="ar-card" href="/data">
             <div className="ar-ill">
               <svg className="ill" viewBox="0 0 333 228" aria-hidden="true">
                 <path className="pp" d="M56 84L122 88L132 196L48 196Q38 140 56 84Z" />
@@ -94,7 +88,7 @@ export default function Articles() {
                 <path className="ln" d="M312 102H330M314 114H330M314 132H330M310 146H326" style={{ stroke: "#d9d5ee", strokeWidth: 2 }} />
               </svg>
             </div>
-            <div className="ar-txt"><h3>What is shorting in the financial market?</h3><p>When the stock market became more accessible to curious participants in the early 20th Century...</p></div>
+            <div className="ar-txt"><h3>Reading short interest</h3><p>Short interest is how much of a stock is borrowed. Days to cover and the borrow rate show how crowded a short is. All of it is live and public.</p></div>
           </a>
         </div>
       </div>
