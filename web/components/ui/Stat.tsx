@@ -7,7 +7,7 @@ export function Stat({label, value, hint, testId, size = "md", tone, className}:
   return (
     <div className={cn("min-w-0", className)}>
       <dt className="t-label">{label}</dt>
-      <dd className={cn("num mt-1 font-medium", {sm: "text-[14px]", md: "text-[17px]", lg: "text-[26px] leading-tight tracking-[-0.02em]"}[size], toneCls)} data-testid={testId}>
+      <dd className={cn("num mt-1 font-medium", {sm: "text-[14px]", md: "text-[17px]", lg: "text-[21px] leading-tight tracking-[-0.02em] sm:text-[26px]"}[size], toneCls)} data-testid={testId}>
         {value}
       </dd>
       {hint && <dd className="mt-0.5 text-[12px] leading-snug text-muted">{hint}</dd>}

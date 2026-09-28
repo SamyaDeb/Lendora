@@ -84,7 +84,7 @@ export function SessionBarView({view, now, error}: {view?: SessionView; now: num
     );
   }
   return (
-    <div className="relative border-b border-line bg-[color-mix(in_srgb,var(--accent-live)_9%,var(--bg))] transition-colors duration-[600ms]" data-testid="session-bar" data-session={view?.state}>
+    <div className="relative border-b border-[color-mix(in_srgb,var(--accent-live)_28%,transparent)] bg-[color-mix(in_srgb,var(--accent-live)_13%,var(--bg))]" data-testid="session-bar" data-session={view?.state}>
       <div className="mx-auto flex h-9 max-w-[1320px] items-center gap-3 px-4 text-[13px] md:px-6">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div

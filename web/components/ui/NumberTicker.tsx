@@ -5,13 +5,15 @@ import {cn} from "@/lib/cn";
 import {num} from "@/lib/format";
 import {DUR, EASE_OUT} from "./motion";
 
-export type TickerFormat = "num" | "usd" | "pct" | "hf";
+export type TickerFormat = "num" | "usd" | "usdCompact" | "pct" | "hf";
 
 export function formatTicker(v: number, format: TickerFormat, digits: number): string {
   if (!Number.isFinite(v)) return "–";
   switch (format) {
     case "usd":
       return `$${num(v, digits)}`;
+    case "usdCompact":
+      return Math.abs(v) >= 1e9 ? `$${num(v / 1e9, 2)}B` : Math.abs(v) >= 1e6 ? `$${num(v / 1e6, 2)}M` : Math.abs(v) >= 1e4 ? `$${num(v / 1e3, 1)}k` : `$${num(v, 0)}`;
     case "pct":
       return `${num(v * 100, digits)}%`;
     case "hf":
