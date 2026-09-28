@@ -36,3 +36,4 @@ web/lighthouse/*.json
 docs/audit/forge-doc/
 web/scripts/.live-stack.json
 web/.next-live/
+web/.next-lh/
