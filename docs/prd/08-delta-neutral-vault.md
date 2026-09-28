@@ -57,7 +57,7 @@ Yield = lending APY on 90% of S + funding on S (positive when longs pay shorts) 
 
 ## Open questions
 
-- Which perp venue(s) list these stocks with enough depth, and can a contract hold a margin account there? Lighter's Robinhood Chain instance lists SPY, NVDA and AAPL perps with public hourly funding history and trades on weekends; Arcus lists stock perps (details unconfirmed) (verified Phase 0, 2026-09-26). [VERIFY] contract-held margin accounts.
+- Which perp venue(s) list these stocks with enough depth, and can a contract hold a margin account there? Lighter's Robinhood Chain instance lists SPY, NVDA and AAPL perps with public hourly funding history and trades on weekends; Arcus lists stock perps (details unconfirmed) (verified Phase 0, 2026-09-26). Contract-held margin accounts: **supported per Lighter's docs** (onchain `changePubKey`, secure withdrawals only to the owning address; Phase 4 task 12, [`docs/phase4/01-perp-venue.md`](../phase4/01-perp-venue.md), A39–A41), with [VERIFY] on EIP-1271 handling and a live canary. Funding history starts 2026-06-26 (≈ 94 days), short of the 12 months the gate needs.
 - Is the vault share itself a security in target jurisdictions? Legal review required before launch.
 - Should vault shares be accepted as `clUSDG` backing ("own vault shares as collateral" in the roadmap)? Not before 90 days of clean operation.
 
