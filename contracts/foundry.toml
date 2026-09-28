@@ -14,6 +14,7 @@ fs_permissions = [
     {access = "read", path = "../packages/sdk/data"},
     {access = "read", path = "../packages/sdk/external-addresses.json"},
     {access = "read-write", path = "../packages/sdk/addresses.json"},
+    {access = "read-write", path = "./deployments"},  # DeployMainnet output (task 7); read by VerifyRoles
 ]
 remappings = [
     "forge-std/=lib/forge-std/src/",

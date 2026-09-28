@@ -23,6 +23,7 @@ named person and evidence (tx hash, screenshot, link) in the launch log. Deploy 
 | Role | Setup | Check |
 |---|---|---|
 | Owner | Safe **4-of-7**, signers on hardware wallets, ≥ 3 organizations or independent people | `getThreshold() == 4`, `getOwners().length == 7` |
+| Curator | Separate Safe (≥ 2 signers, e.g. 3-of-5); **not** the owner Safe (MN-R1) | `vault.curator()`; `getThreshold() >= 2` |
 | Guardian (= Vault V2 sentinel) | Safe **2-of-4**, on-call rotation covers 24/7 | `getThreshold() == 2`, `getOwners().length == 4` |
 | Allocator | Keeper EOA from KMS/HSM (remote signer) **and** the owner Safe as a second allocator | `isAllocator` true for both |
 | Guard keeper | Separate KMS key | `oracle.keeper()` per market |
@@ -30,9 +31,12 @@ named person and evidence (tx hash, screenshot, link) in the launch log. Deploy 
 | Compliance signer | KMS key, never exported (`COMPLIANCE_REMOTE_SIGNER_URL`) | `router.attestationSigner()` |
 | Deployer | Fresh EOA, used once, then emptied; holds **no** role after `_finalize` | every role check below shows no deployer |
 
+| Treasury, `BackstopReserve` | Two Safes (≥ 2 signers each), owner-provided (Q9) | `FeeConverter.destination()` |
+| Fee keeper | Separate KMS key; can only trigger `FeeConverter.convert` | `FeeConverter.keeper()` |
+
 **A27 must not carry over:** on testnet one key held every role; on mainnet **every** `STOCKLINE_*` role is a
-distinct address from the table above. Verify with `test/deploy/DeployRoles.t.sol` logic on a fork of the final config
-before broadcasting.
+distinct address from the table above. `DeployMainnet` refuses otherwise (MN-R1…MN-R3), and the fork test replays the
+exact config before broadcasting (§3.1).
 
 ## 2. Configuration (from D8 and 10 launch parameters)
 
@@ -53,23 +57,49 @@ before broadcasting.
 
 ## 3. Deploy
 
-1. Final dry run on a fork of the latest block with the exact config:
-   `forge script script/DeployFork.s.sol --fork-url $ROBINHOOD_RPC_URL --sender <deployer>`; run the phase 1 fork
-   suite against it; compare `addresses.json["fork-4663"]`.
-2. Broadcast with the fresh deployer (owner's go recorded in the launch log). Verify every contract on the explorer
-   (Sourcify + Blockscout).
-3. Commit `packages/sdk/addresses.json["4663"]`; re-export ABIs if anything changed; tag the release.
-4. Role checks (all must hold; record the `cast call` outputs):
-   router `owner() == timelock`; each oracle `owner() == timelock`, `guardian() == guardian Safe`,
-   `keeper() == guard keeper`; `MarketHours.owner() == timelock`; each vault `owner() == timelock`,
-   `curator() == owner Safe`, `isSentinel(guardian Safe)`, allocators as in §1; liquidator `owner() == owner Safe`;
-   deployer holds nothing.
-5. Vault V2 code hash equals the official factory's (`VaultV2CodeHash.fork.t.sol` logic against the new vaults).
+Scripts: `contracts/script/DeployMainnet.s.sol` (config in `MainnetConfig.sol`) and the read-only
+`contracts/script/VerifyRoles.s.sol`. The nine role addresses come from env; there are no defaults:
+
+```sh
+export STOCKLINE_OWNER=0x… STOCKLINE_CURATOR=0x… STOCKLINE_GUARDIAN=0x… STOCKLINE_ALLOCATOR=0x…
+export STOCKLINE_GUARD_KEEPER=0x… STOCKLINE_TREASURY=0x… STOCKLINE_BACKSTOP_RESERVE=0x…
+export STOCKLINE_FEE_KEEPER=0x… STOCKLINE_ATTESTATION_SIGNER=0x…
+```
+
+1. **Rehearse the exact config** on a fork of the latest block (no broadcast; the script itself refuses 4663 without
+   the go): `cd contracts && ROBINHOOD_RPC_URL=… forge test --match-contract DeployMainnetForkTest -vv`. It deploys
+   with Safe-like placeholders, runs every `VerifyRoles` check and the Phase 1 lend/borrow/repay/withdraw flow. Also
+   run `forge test --match-path 'test/fork/phase1/*'`. Record the fork block and results in the launch log.
+2. Fund the fresh deployer with gas and 2 × SEED raw units (2e12) of each launch Stock Token (SPY, NVDA, AAPL).
+3. **Broadcast** (owner's go recorded in the launch log first; hardware wallet or remote signer, never a key in env):
+   ```sh
+   I_HAVE_THE_OWNERS_GO=1 forge script script/DeployMainnet.s.sol --rpc-url $ROBINHOOD_RPC_URL \
+     --broadcast --slow --verify --sender <deployer> --ledger   # or the remote-signer flags
+   ```
+   It writes `contracts/deployments/4663.json`. Verify every contract on the explorer (Sourcify + Blockscout).
+4. **Role checks** (paste the table into the launch log; every row must be PASS):
+   ```sh
+   STOCKLINE_DEPLOYMENT_JSON=deployments/4663.json STOCKLINE_DEPLOYER=<deployer> \
+     forge script script/VerifyRoles.s.sol --rpc-url $ROBINHOOD_RPC_URL
+   ```
+   It covers: roles distinct/non-zero/not the deployer; Safe thresholds; timelock 48h with the owner Safe as
+   proposer/executor/canceller and no external admin; router `owner() == timelock`, `attestationSigner`, ERC1967
+   implementation, $4M global cap, UniversalRouter in `Transfer` mode; `clUSDG.router()`; `MarketHours.owner()`;
+   liquidator owned by the owner Safe; `FeeSplitter` owner and 50/50 split; both converters' owner, keeper,
+   destination and vault registrations; per stock: oracle owner/guardian/keeper, vault owner/curator/sentinel/
+   allocators, 10% fee to the splitter, `forceDeallocatePenalty = 0`, U_MAX, every curator timelock 48h, adapter
+   timelocks, the router listing; **Vault V2 code** (official factory byte-identical to the pinned source,
+   `isVaultV2`, vault runtime equal to the pinned `VaultV2` outside immutables); deployer holds nothing.
+5. Commit `packages/sdk/addresses.json["4663"]` from `deployments/4663.json` (by hand: scripts never write the `4663`
+   key), commit `deployments/4663.json`; re-export ABIs if anything changed; tag the release.
 
 ## 4. Services before the first deposit
 
+Order matters: **start the monitor before the first governance action** (its governance cursor starts at the head
+on the first run, so a `CallScheduled` before it starts is never paged, MON-R16/R17).
+
 - [ ] Compliance: `PROXY_SECRET` (≥ 32 chars) shared with web, `GEO_PLATFORM` set, `TRUST_PROXY=true`, sanctions
-      provider live, `ALLOWED_ORIGINS` = the app's origin; smoke: a direct request with `cf-ipcountry` and no secret →
+      provider live (startup log and `/health` show `chainalysis` or `trm`), `ALLOWED_ORIGINS` = the app's origin; smoke: a direct request with `cf-ipcountry` and no secret →
       `403 GEO_UNKNOWN`.
 - [ ] Monitoring on: `SERVICE=monitor` with PagerDuty or Opsgenie, `MONITOR_KEEPERS` listing every keeper, on-call
       schedule set; test page acknowledged end to end.

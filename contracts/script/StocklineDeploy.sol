@@ -392,6 +392,20 @@ abstract contract StocklineDeploy {
         string memory extraJson
     ) internal {
         require(keccak256(bytes(key)) != keccak256("4663"), "never write the real 4663 key from a script");
+        string memory chainJson = _chainJson(key, c, core, stocks, ds, extraKey, extraJson);
+        VM.writeJson(chainJson, "../packages/sdk/addresses.json", string.concat(".chains.", key));
+    }
+
+    /// @notice One chain entry of the address book (the shape of `addresses.json["chains"][key]`).
+    function _chainJson(
+        string memory key,
+        CoreConfig memory c,
+        Core memory core,
+        StockConfig[] memory stocks,
+        StockDeployment[] memory ds,
+        string memory extraKey,
+        string memory extraJson
+    ) internal returns (string memory) {
         string memory obj = string.concat("chain-", key);
         VM.serializeAddress(obj, "morpho", c.morpho);
         VM.serializeAddress(obj, "adaptiveCurveIrm", c.irm);
@@ -416,8 +430,7 @@ abstract contract StocklineDeploy {
         VM.serializeString(obj, "roles", roles);
         if (bytes(extraKey).length > 0) VM.serializeString(obj, extraKey, extraJson);
 
-        string memory chainJson = VM.serializeString(obj, "stocks", _stocksJson(key, stocks, ds));
-        VM.writeJson(chainJson, "../packages/sdk/addresses.json", string.concat(".chains.", key));
+        return VM.serializeString(obj, "stocks", _stocksJson(key, stocks, ds));
     }
 
     function _rolesJson(string memory o, CoreConfig memory c) internal returns (string memory) {

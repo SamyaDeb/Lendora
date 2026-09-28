@@ -1,0 +1,4 @@
+# DeployMainnet output (task 7). Only the real launch file is committed; rehearsal files stay local.
+*
+!.gitignore
+!4663.json

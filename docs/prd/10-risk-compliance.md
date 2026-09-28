@@ -114,3 +114,14 @@ Runbooks for each P0/P1 live in `/docs/runbooks/` and are drilled on testnet bef
 - A formal review of oracle math and buffer logic (OR-R1, OR-R20).
 - Bug bounty live at mainnet (for example Immunefi), max payout sized to caps.
 - Deployment via deterministic scripts; addresses verified on the explorer; multisig signers on hardware wallets.
+
+## Mainnet readiness (MN-R*, Phase 3)
+
+| ID | Requirement | Evidence |
+|---|---|---|
+| MN-R1 | *(Phase 3 task 7)* The mainnet deploy refuses any role that is `address(0)`, a `stockline.placeholder.*` address, the deployer, or equal to another role: all nine `STOCKLINE_*` roles (owner, curator, guardian, allocator, guard keeper, treasury, `BackstopReserve`, fee keeper, attestation signer) are distinct (A27 does not carry over). | `test_MN_R1_*` in [`DeployMainnet.t.sol`](../../contracts/test/deploy/DeployMainnet.t.sol) |
+| MN-R2 | The five multisig roles are deployed contracts with Safe thresholds: owner ≥ 4-of-7, guardian ≥ 2-of-4, curator, treasury and `BackstopReserve` ≥ 2 (an EOA-looking placeholder is refused, Q9). | `test_MN_R2_*` |
+| MN-R3 | Launch parameters are enforced by the script: 48h timelock, `sequencerFeed = address(0)`, $4M global `clUSDG` cap, UniversalRouter in `Transfer` mode (Q4), vault caps at exactly 25% of the D8 targets, per-address caps from the launch table. | `test_MN_R3_*` |
+| MN-R4 | `DeployMainnet` runs only on chain 4663 and only with `I_HAVE_THE_OWNERS_GO=1`; no session sets it without the owner's written go in the launch log. | `test_MN_R4_*` |
+| MN-R5 | `VerifyRoles` (read-only) checks every mainnet-launch §3.4 item plus the Vault V2 code (official factory byte-identical to the pinned source, `isVaultV2`, vault runtime equal to the pinned `VaultV2` outside immutables) and prints a pass/fail table; the Phase 1 lifecycle runs against the deployed config. | `test_MN_R5_*` (anvil) and [`DeployMainnet.fork.t.sol`](../../contracts/test/fork/phase3/DeployMainnet.fork.t.sol) (4663 fork at `latest`) |
+
