@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Market } from "@/lib/api";
 import { totals } from "@/lib/market";
 
-/** The rolling word: the Stock Tokens you can lend and borrow (the listed tickers first, then the general term). */
-const rollFor = (tickers: string[]) => [...tickers.slice(0, 3), "Stock Tokens"];
+/** The rolling word that opens line 2: the listed tickers, then the general term. Short, so line 2 stays one line. */
+const rollFor = (tickers: string[]) => [...tickers.slice(0, 3), "stocks"];
 
 const usdShort = (v: number) => (v >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `$${(v / 1e3).toFixed(0)}K` : `$${v.toFixed(0)}`);
 
@@ -15,6 +15,16 @@ export default function Hero({ markets, tickers }: { markets?: Market[]; tickers
   const [cur, setCur] = useState(0);
   const [out, setOut] = useState<number | null>(null);
   const curRef = useRef(0);
+  // The slot is as wide as the current word, so "on Robinhood Chain" follows it (measured; em estimate before that).
+  const wordRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const [widths, setWidths] = useState<number[]>([]);
+  useLayoutEffect(() => {
+    const measure = () => setWidths(wordRefs.current.map((el) => el?.offsetWidth ?? 0));
+    measure();
+    document.fonts?.ready.then(measure);
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [ROLL.length]);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -95,17 +105,17 @@ export default function Hero({ markets, tickers }: { markets?: Market[]; tickers
         <div className="hero-wrap">
           <h1 className="hd" id="headline">
             <span className="sr-only">Lend and borrow Stock Tokens on Robinhood Chain</span>
+            <span className="hd-line" aria-hidden="true">Lend and borrow</span>
             <span className="hd-top" aria-hidden="true">
-              <span>Lend and borrow</span>
-              <span className="hd-roll">
+              <span className="hd-roll" style={{ width: widths[cur] ? `${widths[cur]}px` : `${ROLL[cur].length * 0.62}em` }}>
                 {ROLL.map((w, i) => (
-                  <span key={w} className={i === cur ? "is-cur" : i === out ? "is-out" : undefined}>
+                  <span key={w} ref={(el) => { wordRefs.current[i] = el; }} className={i === cur ? "is-cur" : i === out ? "is-out" : undefined}>
                     {w}
                   </span>
                 ))}
               </span>
+              <span>on Robinhood Chain</span>
             </span>
-            <span className="hd-line" aria-hidden="true">on Robinhood Chain</span>
           </h1>
 
           <hr className="hero-rule" />

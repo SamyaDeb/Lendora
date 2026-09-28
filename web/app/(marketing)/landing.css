@@ -1139,3 +1139,11 @@ a.more { display: inline-flex; align-items: center; justify-content: center; }
 @media (max-width: 920px) {
   .cm-reg .mock { position: relative; inset: auto; top: auto; height: 180px; margin: 28px -34px 0; }
 }
+
+/* Hero headline in two lines: "Lend and borrow" / [rolling word] on Robinhood Chain. The slot follows the word's width. */
+.hd-top { flex-wrap: nowrap; }
+.hd-roll { flex: none; transition: width 0.9s cubic-bezier(0.7, 0, 0.2, 1); }
+.hd { font-size: clamp(24px, calc((100vw - 2 * var(--hero-pad)) / 14), 98px); }
+.hd-top > span:last-child { white-space: nowrap; }
+@media (max-width: 520px) { .hd { font-size: clamp(22px, calc((100vw - 32px) / 13.8), 60px); } }
+@media (prefers-reduced-motion: reduce) { .hd-roll { transition: none; } }
