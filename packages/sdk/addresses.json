@@ -142,6 +142,86 @@
       "usdg": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
       "usdgFeed": "0x61B7e5650328764B076A108EFF5fa7282a1B9aD2",
       "vaultV2Factory": "0x0FBad98595b0186dA120E41f77C102beb49f803c"
+    },
+    "46630": {
+      "adapterFactory": "0xbb0c0401810Fc246450b0D82c1371118cBFA71C0",
+      "adaptiveCurveIrm": "0x71F1E7058424cbaeBe992520B847a4947b6Db27D",
+      "clUSDG": "0x55aE95C20A051870E370AD83127Be026164c5d4C",
+      "lens": "0x3d99fa5651D78D47974cf4D94aaE9866F85A1896",
+      "liquidator": "0x484d70a895013B72b60b2B2C614B01F9917cA14c",
+      "marketHours": "0x2a9EAbBE25dcB91e77547cD710046Bf065d15a37",
+      "mocks": {
+        "AAPL_USDG_pool": "0x12ffC41a317d54C214b2b7B3DC5799847e16fE39",
+        "AAPL_feed": "0x51117407485ADaB77C8420f9cca513a4de96f379",
+        "AAPL_token": "0x71fD679B68Cd1DECBa7979b2F73aE28105b1d44c",
+        "NVDA_USDG_pool": "0xccB9d7D9D1796E970bdb0fE26574458450F4d83b",
+        "NVDA_feed": "0xB1bBeB78cDC71c92CD99E34eb51C0c61cff38447",
+        "NVDA_token": "0x64c2EcBf3a0A0427aBB4554b0f40542F64207F06",
+        "SPY_USDG_pool": "0x83933BAC333F9C621494c669D4C0f91af19A6e6a",
+        "SPY_feed": "0x68e1f627f2d2a318716D43D5DA2C003db871335f",
+        "SPY_token": "0x790f0a94a13682E55794fF0A97d4bf8f59f26e85",
+        "faucet": "0x3BA729FdBC4730C7cc652f74dF2Db4Bb8717E9e2",
+        "registry": "0x1BBE90B43f393BDAf7D34aAF41131292c0107ecF",
+        "swapAggregator": "0x1C6298E5961E241E14d8E584C8b95BeF7CB91C11",
+        "usdgFeed": "0x88E27c0cF31D942CB32B7cdbD6b9E4625FD3C752"
+      },
+      "morpho": "0xCff25c2c38c1D8966Fc9A205692B57Bde52A33Bb",
+      "roles": {
+        "allocator": "0x3394d7Be60302c9649c6E5A3c7fC7b989f521348",
+        "curator": "0x3394d7Be60302c9649c6E5A3c7fC7b989f521348",
+        "feeSplitter": "0xDc8D83511e720907751505454Afe493F308FE007",
+        "guardKeeper": "0x3394d7Be60302c9649c6E5A3c7fC7b989f521348",
+        "guardian": "0x3394d7Be60302c9649c6E5A3c7fC7b989f521348",
+        "owner": "0x3394d7Be60302c9649c6E5A3c7fC7b989f521348"
+      },
+      "router": "0x8233785b189bAEBB54242ABD34ce2069DFA55C0B",
+      "routerImplementation": "0x05a084D679Eabba4fB6F3448A358B549D693d69E",
+      "startBlock": "125546499",
+      "stocks": {
+        "AAPL": {
+          "adapter": "0x4D91827A0410d69cb66d46634c655d30eEb2Dc72",
+          "adapterMarketCapId": "0x8e2e0918bbb4dd073bc9f377572f97d806cfb4baa3f66ae346a0a3e4480999f5",
+          "capAssets": "732171621027968955923",
+          "feed": "0x51117407485ADaB77C8420f9cca513a4de96f379",
+          "lltv": 770000000000000000,
+          "marketId": "0x5340fd5a5b399314eb86697b4ffe62bdd397cb22c4fcdddb59c7d07b5cdcd945",
+          "oracle": "0xb473E6937686f4B48823aF76F27a1d109dA0d6B0",
+          "perAddressCapUsd": 35000,
+          "stockToken": "0x71fD679B68Cd1DECBa7979b2F73aE28105b1d44c",
+          "vault": "0x8C47C33752f9937389F74dA08aE0E26f7f2F7841",
+          "wrapper": "0x73e3D60ba847d5b06975Df744714D384D41b0B70"
+        },
+        "NVDA": {
+          "adapter": "0x48a2f3CD953EE981009Aadce55dD8797DD6A789E",
+          "adapterMarketCapId": "0x959702876cee7a776a4855d083776c049ab697e10d4fc30fecb87a3b4328edc2",
+          "capAssets": "4431445537534343702915",
+          "feed": "0xB1bBeB78cDC71c92CD99E34eb51C0c61cff38447",
+          "lltv": 770000000000000000,
+          "marketId": "0xa63ed37639d6a2099dc2bde3df245a848e88af3b27728aa8d1dc33f09912e84e",
+          "oracle": "0x3DB7e7694921aE4f4D1fB367cC77Ac1eA6954F1F",
+          "perAddressCapUsd": 250000,
+          "stockToken": "0x64c2EcBf3a0A0427aBB4554b0f40542F64207F06",
+          "vault": "0xa08507fc13f6223BC4Aef455a658A6bb9dEA0440",
+          "wrapper": "0x8Ca4D565a605DE3604d3DfdF27dFd1901A78b7AF"
+        },
+        "SPY": {
+          "adapter": "0xfBb773567f4460Be02d919D0501abB33f3ea621C",
+          "adapterMarketCapId": "0x3bfb89f49fe32c230a4b56fc77e95a01baccacae137953b7c9cc0664f0fd93f9",
+          "capAssets": "1294783318011730736861",
+          "feed": "0x68e1f627f2d2a318716D43D5DA2C003db871335f",
+          "lltv": 770000000000000000,
+          "marketId": "0x383c2976f43ce45610a8963706dba312a2ad8ef378dd0591006ef9f7affe5cfb",
+          "oracle": "0x2deDA519dFBDaDf6Fc4c8f24140939DE6E101658",
+          "perAddressCapUsd": 75000,
+          "stockToken": "0x790f0a94a13682E55794fF0A97d4bf8f59f26e85",
+          "vault": "0x9bb32b171f8DA337AC0a8D7Ac08a22C29B88A877",
+          "wrapper": "0xaf60437a684027a9C04864D21bf8ab6c3AaeD16c"
+        }
+      },
+      "timelock": "0x4A302FF565870066F285E022707E64728fb82314",
+      "usdg": "0xC9894fb4776B1441d7Fe77Fa9EFd977A5dAb9cd8",
+      "usdgFeed": "0x88E27c0cF31D942CB32B7cdbD6b9E4625FD3C752",
+      "vaultV2Factory": "0xC8627368AD9f9999FB6C17Ae5d9bC9Da40C83f76"
     }
   }
 }
