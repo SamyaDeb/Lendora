@@ -3,7 +3,7 @@ import {createFixtureSource, type FixtureControls, type VaultSource} from "./sou
 
 export type {VaultSource, FixtureControls} from "./source";
 export * from "./types";
-export {earnings, hedgeStatus, nextUsOpen, PAUSE_COPY, settleTime, splitFor, splitTotal, splitWithdraw, APY_KEY, QUEUE_HOURS} from "./math";
+export {earnings, hedgeStatus, usdgAmt, nextUsOpen, PAUSE_COPY, settleTime, splitFor, splitTotal, splitWithdraw, APY_KEY, QUEUE_HOURS} from "./math";
 
 /** Which fixture state `/vault` runs on while there is no `apiSource` (dev and e2e can pick another). */
 const envState = process.env.NEXT_PUBLIC_VAULT_FIXTURE as VaultState | undefined;

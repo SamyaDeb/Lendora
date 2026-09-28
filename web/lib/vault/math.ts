@@ -63,3 +63,6 @@ export const PAUSE_COPY: Record<NonNullable<VaultOverview["pauseReason"]>, strin
   nav_stale: "Deposits are paused while the vault's price data is more than 15 minutes old and markets are closed. They reopen with the next fresh report.",
   paused: "Deposits are paused by the vault's guardian. Withdrawals and claims still work.",
 };
+
+/** USDG amount for copy: "3,000", "1,204.5" (at most 2 decimals, no trailing zeros). */
+export const usdgAmt = (x: number) => x.toLocaleString("en-US", {maximumFractionDigits: 2});
