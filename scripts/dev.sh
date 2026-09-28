@@ -5,6 +5,7 @@
 #   scripts/dev.sh --fixture       # load the DeployLocal fixture instead of deploying (seconds instead of a minute)
 #   scripts/dev.sh --seed          # also run the chain driver's seed week before the services start
 #   scripts/dev.sh --infra-only    # stop after Postgres, Redis, anvil and the signer (run services yourself)
+#   scripts/dev.sh --network 46630 [--stop|--status]   # the services against Robinhood Chain testnet (dev-testnet.sh)
 #
 # Infra: docker-compose (postgres, redis) when Docker works, else local `postgres` / `redis-server` binaries with data
 # in .dev/ (STOCKLINE_INFRA=docker|native forces one). Anvil is always the local binary on :8545 so `forge script`
@@ -15,6 +16,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Testnet mode lives in its own script (no anvil, no deploy, detached services); everything below is anvil-only.
+for a in "$@"; do case "$a" in --network|--network=*) exec "$ROOT/scripts/dev-testnet.sh" "$@" ;; esac; done
 DEV="$ROOT/.dev"
 mkdir -p "$DEV/logs"
 ANVIL_PORT="${STOCKLINE_ANVIL_PORT:-8545}"
@@ -43,26 +46,8 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 # ---------------------------------------------------------------- Postgres + Redis
-INFRA="${STOCKLINE_INFRA:-}"
-if [ -z "$INFRA" ]; then
-  if docker info >/dev/null 2>&1 && docker compose -f "$ROOT/docker-compose.yml" up -d --wait postgres redis >/dev/null 2>&1; then
-    INFRA=docker
-  else
-    INFRA=native
-  fi
-elif [ "$INFRA" = docker ]; then
-  docker compose -f "$ROOT/docker-compose.yml" up -d --wait postgres redis
-fi
-if [ "$INFRA" = native ]; then
-  if [ ! -d "$DEV/pg" ]; then initdb -D "$DEV/pg" -U stockline --auth=trust -E UTF8 --no-instructions >/dev/null; fi
-  pg_ctl -D "$DEV/pg" -o "-p $PG_PORT -h 127.0.0.1 -k $DEV" -l "$DEV/logs/postgres.log" start >/dev/null
-  until pg_isready -h 127.0.0.1 -p "$PG_PORT" >/dev/null 2>&1; do sleep 0.2; done
-  createdb -h 127.0.0.1 -p "$PG_PORT" -U stockline stockline 2>/dev/null || true
-  redis-server --port "$REDIS_PORT" --bind 127.0.0.1 --save "" --daemonize yes --logfile "$DEV/logs/redis.log" >/dev/null
-fi
-export DATABASE_URL="postgres://stockline@127.0.0.1:$PG_PORT/stockline"
-export REDIS_URL="redis://127.0.0.1:$REDIS_PORT"
-echo "[dev] infra: $INFRA (postgres :$PG_PORT, redis :$REDIS_PORT)"
+. "$ROOT/scripts/lib/infra.sh"
+dev_infra
 
 # ---------------------------------------------------------------- anvil + deployment
 if cast chain-id --rpc-url "$RPC" >/dev/null 2>&1; then

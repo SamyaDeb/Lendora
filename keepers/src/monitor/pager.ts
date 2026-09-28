@@ -1,3 +1,4 @@
+import {appendFile} from "node:fs/promises";
 import {TelegramTransport, WebhookTransport, type Alert, type Transport} from "../alerts/transports.js";
 
 /**
@@ -52,6 +53,15 @@ export class ConsolePager implements Pager {
   readonly name = "console";
   async send(p: Page) {
     console.error(`[page ${p.severity} ${p.action}] ${p.key} ${p.title} ${json(p.details)}`);
+  }
+}
+
+/** Appends one JSON line per page to a file (local stack and drills, until a real pager is configured). */
+export class FilePager implements Pager {
+  readonly name = "file";
+  constructor(private readonly path: string) {}
+  async send(p: Page) {
+    await appendFile(this.path, json(p) + "\n");
   }
 }
 
@@ -141,5 +151,6 @@ export function pagersFromEnv(env: NodeJS.ProcessEnv = process.env): Pager[] {
   if (env.MONITOR_TELEGRAM_BOT_TOKEN && env.MONITOR_TELEGRAM_CHAT_ID) out.push(new TransportPager(new TelegramTransport(env.MONITOR_TELEGRAM_BOT_TOKEN), env.MONITOR_TELEGRAM_CHAT_ID));
   if (env.MONITOR_WEBHOOK_URL) out.push(new TransportPager(new WebhookTransport(env.MONITOR_WEBHOOK_SIGNING_KEY ?? "", env.MONITOR_ALLOW_PRIVATE_WEBHOOKS === "true"), env.MONITOR_WEBHOOK_URL));
   if (!out.length) out.push(new ConsolePager());
+  if (env.MONITOR_PAGE_FILE) out.push(new FilePager(env.MONITOR_PAGE_FILE));
   return out;
 }
