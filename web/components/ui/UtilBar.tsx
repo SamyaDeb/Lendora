@@ -10,10 +10,10 @@ import {DUR, EASE_OUT} from "./motion";
  */
 export function UtilBar({value, cap = 0.9, showLabel = true, className, ...rest}: {value: number; cap?: number; showLabel?: boolean; className?: string; "data-col"?: string}) {
   const reduce = useReducedMotion();
-  const v = Math.max(0, Math.min(1, value));
+  const v = Math.round(Math.max(0, Math.min(1, value)) * 1e4) / 1e4; // rounded: same transform on server and client
   const color = v >= cap ? "var(--danger)" : v >= cap - 0.1 ? "var(--caution)" : "var(--accent-text)";
   return (
-    <span className={cn("inline-flex items-center gap-2.5", className)} {...rest}>
+    <span className={cn("flex w-full items-center gap-2.5", className)} {...rest}>
       {showLabel && <span className="num w-[52px] text-right">{pct(v, 1)}</span>}
       <span
         className="relative block h-1.5 w-full min-w-14 overflow-hidden rounded-full bg-white/[0.08]"

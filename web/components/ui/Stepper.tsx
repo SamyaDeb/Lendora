@@ -1,5 +1,5 @@
 "use client";
-import {motion, useReducedMotion} from "motion/react";
+import {motion} from "motion/react";
 import {cn} from "@/lib/cn";
 import type {StepState} from "@/lib/tx";
 import {EASE_OUT} from "./motion";
@@ -7,13 +7,12 @@ import {EASE_OUT} from "./motion";
 const WORD: Record<StepState["status"], string> = {pending: "Waiting", active: "Confirm in your wallet", done: "Done", failed: "Failed", skipped: "Already done"};
 
 function Mark({status}: {status: StepState["status"]}) {
-  const reduce = useReducedMotion();
   const base = "relative grid size-6 shrink-0 place-items-center rounded-full";
   if (status === "done")
     return (
       <span className={cn(base, "bg-success text-[#0b0a18]")}>
         <svg viewBox="0 0 20 20" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <motion.path d="M4.5 10.5l3.5 3.5L15.5 6" initial={reduce ? false : {pathLength: 0}} animate={{pathLength: 1}} transition={{duration: 0.28, ease: EASE_OUT}} />
+          <motion.path d="M4.5 10.5l3.5 3.5L15.5 6" initial={{pathLength: 0}} animate={{pathLength: 1}} transition={{duration: 0.28, ease: EASE_OUT}} />
         </svg>
       </span>
     );

@@ -28,6 +28,8 @@ export function HealthFactor({hf, label}: {hf?: bigint; label?: string}) {
   );
 }
 
+/** Rounded so the server and client render the same transform. */
+const round4 = (x: number) => Math.round(x * 1e4) / 1e4;
 const hfNum = (hf?: bigint) => (hf === undefined ? undefined : hf > 10n ** 30n ? Infinity : Number(formatUnits(hf, 18)));
 /** Position on the meter: 1.0 → 0%, 1.1 → 12%, 1.5 → 45%, 3.0+ → 100% (log scale, so the risky end has room). */
 const pos = (v: number | undefined) => (v === undefined ? 0 : !Number.isFinite(v) ? 1 : Math.max(0, Math.min(1, Math.log(Math.max(v, 1)) / Math.log(3))));
@@ -42,7 +44,7 @@ export function HealthMeter({hf, next, size = "md", className, ...rest}: {hf?: b
   const tone = hfTone(shown);
   const t = TONE[tone];
   const v = hfNum(shown);
-  const zones = [pos(1.1), pos(1.5)];
+  const zones = [pos(1.1), pos(1.5)].map((z) => (z * 100).toFixed(2));
   return (
     <div className={cn("space-y-1.5", className)} {...rest}>
       <div className="flex items-baseline justify-between gap-3">
@@ -65,16 +67,16 @@ export function HealthMeter({hf, next, size = "md", className, ...rest}: {hf?: b
       </div>
       <div className={cn("relative w-full overflow-hidden rounded-full bg-white/[0.07]", size === "md" ? "h-2" : "h-1.5")} aria-hidden>
         {/* zone boundaries */}
-        <span className="absolute inset-y-0 w-px bg-white/25" style={{left: `${zones[0] * 100}%`}} />
-        <span className="absolute inset-y-0 w-px bg-white/25" style={{left: `${zones[1] * 100}%`}} />
+        <span className="absolute inset-y-0 w-px bg-white/25" style={{left: `${zones[0]}%`}} />
+        <span className="absolute inset-y-0 w-px bg-white/25" style={{left: `${zones[1]}%`}} />
         <motion.span
           className="absolute inset-y-0 left-0 w-full origin-left rounded-full"
           initial={false}
-          animate={{scaleX: tone === "none" ? 0 : Math.max(0.02, pos(v)), backgroundColor: t.color}}
+          animate={{scaleX: tone === "none" ? 0 : round4(Math.max(0.02, pos(v))), backgroundColor: t.color}}
           transition={reduce ? {duration: 0} : {duration: DUR.num, ease: EASE_OUT}}
         />
         {next !== undefined && hf !== undefined && hfNum(hf) !== undefined && (
-          <span className="absolute inset-y-0 w-0.5 bg-white/70" style={{left: `calc(${pos(hfNum(hf)) * 100}% - 1px)`}} />
+          <span className="absolute inset-y-0 w-0.5 bg-white/70" style={{left: `calc(${(pos(hfNum(hf)) * 100).toFixed(2)}% - 1px)`}} />
         )}
       </div>
       <div className="flex justify-between text-[11.5px] text-muted" aria-hidden>

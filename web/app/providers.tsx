@@ -3,9 +3,11 @@ import {createContext, useContext, useEffect, useState, type ReactNode} from "re
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {WagmiProvider, useAccount, useConnect} from "wagmi";
 import {usePathname} from "next/navigation";
+import {MotionConfig} from "motion/react";
 import {wagmiConfig} from "@/lib/wagmi";
 import {track} from "@/lib/analytics";
 import {E2E} from "@/lib/env";
+import {ToastProvider, TooltipProvider} from "@/components/ui";
 
 /** E2E only (anvil): reconnect the mock connector after full page loads. Real wallets use wagmi's reconnect. */
 function E2EAutoConnect() {
@@ -29,7 +31,13 @@ export function Providers({children, restricted}: {children: ReactNode; restrict
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={qc}>
         {E2E && <E2EAutoConnect />}
-        <RegionContext.Provider value={restricted}>{children}</RegionContext.Provider>
+        <MotionConfig reducedMotion="user">
+          <TooltipProvider delayDuration={200}>
+            <ToastProvider>
+              <RegionContext.Provider value={restricted}>{children}</RegionContext.Provider>
+            </ToastProvider>
+          </TooltipProvider>
+        </MotionConfig>
       </QueryClientProvider>
     </WagmiProvider>
   );
