@@ -37,7 +37,7 @@ async function freePort(): Promise<number> {
   });
 }
 
-export async function startWebStack(o: {build?: boolean; log?: (m: string) => void} = {}): Promise<WebStack> {
+export async function startWebStack(o: {build?: boolean; log?: (m: string) => void; onEnv?: (env: NodeJS.ProcessEnv) => void; web?: boolean} = {}): Promise<WebStack> {
   const log = o.log ?? console.log;
   const t0 = Date.now();
   log("[e2e] stack: anvil + seed week + indexer + API");
@@ -89,17 +89,19 @@ export async function startWebStack(o: {build?: boolean; log?: (m: string) => vo
     GEO_PLATFORM: "vercel",
     ALERTS_URL: `http://127.0.0.1:${alertsPort}`,
   };
-  if (o.build !== false) {
+  o.onEnv?.(env);
+  if (o.web !== false && o.build !== false) {
     log("[e2e] next build");
     // Async: the API and compliance servers run in this process and must keep answering during the build.
     const code = await new Promise<number | null>((resolve) => spawn("npx", ["next", "build"], {cwd: WEB_DIR, env, stdio: "inherit"}).on("exit", resolve));
     if (code !== 0) throw new Error("next build failed");
   }
-  const port = await freePort();
-  log(`[e2e] next start on :${port}`);
-  const web: ChildProcess = spawn("npx", ["next", "start", "-p", String(port), "-H", "127.0.0.1"], {cwd: WEB_DIR, env, stdio: "ignore"});
-  const baseUrl = `http://127.0.0.1:${port}`;
-  for (let i = 0; i < 300; i++) {
+  // `web: false`: services only (scripts/liveStack.ts runs `next dev` against them).
+  const port = o.web === false ? 0 : await freePort();
+  if (port) log(`[e2e] next start on :${port}`);
+  const web: ChildProcess | undefined = port ? spawn("npx", ["next", "start", "-p", String(port), "-H", "127.0.0.1"], {cwd: WEB_DIR, env, stdio: "ignore"}) : undefined;
+  const baseUrl = port ? `http://127.0.0.1:${port}` : "";
+  for (let i = 0; port && i < 300; i++) {
     try {
       if ((await fetch(`${baseUrl}/restricted`)).ok) break;
     } catch {
@@ -112,7 +114,7 @@ export async function startWebStack(o: {build?: boolean; log?: (m: string) => vo
     compliance,
     baseUrl,
     async close() {
-      web.kill();
+      web?.kill();
       alertsServer.close();
       await alertsPool.end().catch(() => {});
       await compliance.close().catch(() => {});

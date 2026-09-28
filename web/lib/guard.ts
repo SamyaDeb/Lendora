@@ -25,3 +25,10 @@ export function guardReasonText(mask: bigint): string {
 
 /** Whether exits that move the Stock Token are blocked by the issuer (A25). */
 export const tokenPaused = (mask: bigint) => (mask & 128n) !== 0n;
+
+/** The API's reason codes (api/src/model.ts GUARD_REASONS, same bit order) in plain language. */
+const CODES = ["MANUAL", "DEVIATION", "L2_GAP", "STALE", "SANITY", "USDG_FEED", "ORACLE_PAUSED", "TOKEN_PAUSED", "WRAPPER_BLOCKED", "MULTIPLIER", "SEQUENCER", "CALENDAR"];
+export const guardCodeText = (code: string) => {
+  const i = CODES.indexOf(code);
+  return i < 0 ? code : REASONS[i][1];
+};

@@ -1,5 +1,6 @@
 import {safe, serverApi} from "@/lib/api";
 import {Notice, StatusBadge} from "@/components/ui";
+import {guardCodeText} from "@/lib/guard";
 
 export const metadata = {title: "Status"};
 
@@ -49,7 +50,7 @@ export default async function StatusPage() {
                 <td className="num px-3 py-2 text-right">
                   {Math.round(m.oracle.ageSec / 60)} min{m.oracle.stale ? " (stale)" : m.oracle.sessionOpen ? "" : " (feed closed)"}
                 </td>
-                <td className="px-4 py-3">{m.guard.tripped ? <span className="text-danger">Tripped: {m.guard.reasons.join(", ")}</span> : <span className="text-success">OK</span>}</td>
+                <td className="px-4 py-3">{m.guard.tripped ? <span className="text-danger">Borrowing paused: {m.guard.reasons.map(guardCodeText).join(", ")}</span> : <span className="text-success">OK</span>}</td>
               </tr>
             ))}
           </tbody>

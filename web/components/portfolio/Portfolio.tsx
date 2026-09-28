@@ -124,12 +124,18 @@ function LendSlot({symbol}: {symbol: string}) {
   return <LendCard f={f} />;
 }
 
-const EVENT: Record<string, {label: string; tone: "supply" | "borrow" | "danger" | "neutral"}> = {
-  lend: {label: "Lent", tone: "supply"},
-  withdrawLend: {label: "Withdrew", tone: "neutral"},
-  borrow: {label: "Borrowed", tone: "borrow"},
-  repay: {label: "Repaid", tone: "neutral"},
-  liquidate: {label: "Liquidated", tone: "danger"},
+/** One row per user action: the router's events (plus Morpho liquidations). Morpho and vault events of the same
+ * transaction are skipped. Collateral events are USDG, which the API scales like stock, so no amount is shown. */
+const EVENT: Record<string, {label: string; tone: "supply" | "borrow" | "danger" | "neutral"; amount: boolean}> = {
+  lend: {label: "Lent", tone: "supply", amount: true},
+  withdrawLend: {label: "Withdrew", tone: "neutral", amount: true},
+  openShort: {label: "Shorted", tone: "borrow", amount: true},
+  closeShort: {label: "Closed short", tone: "neutral", amount: true},
+  routerBorrow: {label: "Borrowed", tone: "borrow", amount: true},
+  routerRepay: {label: "Repaid", tone: "neutral", amount: true},
+  collateralAdded: {label: "Added collateral", tone: "neutral", amount: false},
+  collateralWithdrawn: {label: "Withdrew collateral", tone: "neutral", amount: false},
+  liquidate: {label: "Liquidated", tone: "danger", amount: true},
 };
 
 /** Your last actions across markets (public API; the chain is the record). */
@@ -139,7 +145,7 @@ function History({address}: {address: `0x${string}`}) {
     queryFn: async () => {
       const c = browserApi();
       const lists = await Promise.all(TICKERS.map((t) => c.events(t, {type: "all", account: address, limit: 20})));
-      return lists.flatMap((l) => l.data).sort((a, b) => Date.parse(b.time) - Date.parse(a.time)).slice(0, 25);
+      return lists.flatMap((l) => l.data).filter((e) => e.type in EVENT).sort((a, b) => Date.parse(b.time) - Date.parse(a.time)).slice(0, 25);
     },
     refetchInterval: 15_000,
   });
@@ -165,12 +171,12 @@ function History({address}: {address: `0x${string}`}) {
       ) : (
         <ol className="panel divide-y divide-line">
           {q.data.map((e) => {
-            const k = EVENT[e.type] ?? {label: e.type, tone: "neutral" as const};
+            const k = EVENT[e.type];
             return (
               <li key={e.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 text-[14px]">
                 <Badge tone={k.tone}>{k.label}</Badge>
                 <span className="num">
-                  {e.assets ? `${num(Number(e.assets), 4)} ` : ""}
+                  {k.amount && e.assets ? `${num(Number(e.assets), 4)} ` : ""}
                   {e.symbol}
                 </span>
                 <span className="ml-auto text-[13px] text-muted">{new Date(e.time).toUTCString().slice(5, 22)} UTC</span>

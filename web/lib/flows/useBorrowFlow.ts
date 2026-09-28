@@ -130,7 +130,7 @@ export function useBorrowFlow(symbol: string, mode: BorrowMode) {
   const blocker = !w.address
     ? "Connect a wallet to borrow."
     : tripped
-      ? "New borrowing is paused for this market."
+      ? "Borrowing opens again when the safety guard clears. Your exits are on the portfolio page."
       : borrowAmt === 0n
         ? `Enter how much ${symbol} to ${verb.toLowerCase()}.`
         : overBalance

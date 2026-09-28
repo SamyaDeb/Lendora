@@ -34,3 +34,5 @@ web/e2e/.results/
 web/e2e/.report/
 web/lighthouse/*.json
 docs/audit/forge-doc/
+web/scripts/.live-stack.json
+web/.next-live/

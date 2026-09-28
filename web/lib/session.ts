@@ -22,7 +22,8 @@ export function sessionFromMarkets(ms: Market[] | undefined, now: number, sessio
   const list = ms ?? [];
   const statuses = list.map((m) => m.marketStatus);
   const cal = calendarAt(now, sessions);
-  const state: SessionState = statuses.includes("closed") ? "weekend" : statuses.includes("ramping") ? "ramping" : list.length ? "open" : cal.open ? "open" : "weekend";
+  // Market status first; a guard-tripped market says nothing about the session, so fall back to the calendar.
+  const state: SessionState = statuses.includes("closed") ? "weekend" : statuses.includes("ramping") ? "ramping" : statuses.includes("open") ? "open" : cal.open ? "open" : "weekend";
   const buffer = Math.max(0, ...list.map((m) => Number(m.buffer)));
   return {state, nextTs: state === "weekend" ? cal.reopenTs : cal.closeTs, buffer, paused: list.filter((m) => m.guard.tripped).map((m) => m.symbol)};
 }

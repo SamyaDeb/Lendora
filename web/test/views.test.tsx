@@ -60,3 +60,23 @@ describe("health meter", () => {
     expect(render(<HealthMeter hf={W(2)} />).container.textContent).toContain("Liquidation at 1.00");
   });
 });
+
+describe("session with the guard tripped", () => {
+  it("falls back to the calendar: a Saturday is weekend mode even when every market reports guard_tripped", () => {
+    const sat = 1_791_597_600; // Sat 10 Oct 2026 02:00 UTC
+    expect(sessionFromMarkets(FX_MARKETS_PAUSED.map((m) => ({...m, marketStatus: "guard_tripped"})), sat).state).toBe("weekend");
+  });
+});
+
+describe("collateral requirement", () => {
+  it("separates the weekend buffer from the base requirement, weekday and weekend", async () => {
+    const {collateralRequirement} = await import("@/lib/requirements");
+    const {fxChain} = await import("@/lib/fixtures");
+    const ten = 10n * 10n ** 18n;
+    const wk = collateralRequirement(fxChain("NVDA", 182.41, {weekend: true, lent: 0}), ten);
+    expect(wk.buffer > 0n).toBe(true);
+    expect(wk.required).toBe(wk.withoutBuffer + wk.buffer);
+    // No buffer: 10 × $182.41 × 1.10 / 0.77 ≈ 2,605.86 USDG
+    expect(Number(wk.withoutBuffer) / 1e6).toBeCloseTo(2605.86, 0);
+  });
+});
