@@ -31,7 +31,7 @@ describe("CP-R8 startup refuses to trust geo headers without the proxy secret", 
   it("CP_R8 mainnet (4663) refuses the deny-list sanctions adapter (Q5)", () => {
     expect(() => assertStartupConfig({PROXY_SECRET: SECRET}, "4663")).toThrow(/deny-list/);
     expect(() => assertStartupConfig({PROXY_SECRET: SECRET, SANCTIONS_PROVIDER: "deny-list"}, "4663")).toThrow(/deny-list/);
-    expect(() => assertStartupConfig({PROXY_SECRET: SECRET, SANCTIONS_PROVIDER: "trm"}, "4663")).not.toThrow();
+    expect(() => assertStartupConfig({PROXY_SECRET: SECRET, SANCTIONS_PROVIDER: "trm", SANCTIONS_API_KEY: "k"}, "4663")).not.toThrow();
   });
 });
 

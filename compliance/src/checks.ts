@@ -80,12 +80,17 @@ export interface ScreenResult {
   reference?: string;
 }
 
+/** A wallet screen. `screen` throws when it cannot give an answer (timeout, HTTP error, unexpected body): the caller
+ * fails closed for entries (no attestation) and exits never call it (CP-R3, CP-R4). */
 export interface SanctionsScreen {
+  /** Provider name for the startup log and `/health` (never a key). */
+  readonly name?: string;
   screen(address: string): Promise<ScreenResult>;
 }
 
 /** Deterministic deny list (tests, and an emergency manual block list in production). */
 export class DenyListScreen implements SanctionsScreen {
+  readonly name = "deny-list";
   private readonly set: Set<string>;
   constructor(addresses: string[]) {
     this.set = new Set(addresses.map((a) => a.toLowerCase()));
@@ -95,57 +100,4 @@ export class DenyListScreen implements SanctionsScreen {
   }
 }
 
-/**
- * Chainalysis Address Screening (entity risk API). Adapter only: the endpoint and key come from env and it is not
- * exercised in tests. Any error fails closed (the attestation is refused, exits are unaffected, CP-R4).
- */
-export class ChainalysisScreen implements SanctionsScreen {
-  constructor(
-    private readonly apiKey: string,
-    private readonly baseUrl = "https://api.chainalysis.com/api/risk/v2/entities",
-  ) {}
-  async screen(address: string): Promise<ScreenResult> {
-    const headers = {Token: this.apiKey, accept: "application/json", "content-type": "application/json"};
-    const reg = await fetch(this.baseUrl, {method: "POST", headers, body: JSON.stringify({address})});
-    if (!reg.ok) throw new Error(`chainalysis register ${reg.status}`);
-    const r = await fetch(`${this.baseUrl}/${address}`, {headers});
-    if (!r.ok) throw new Error(`chainalysis ${r.status}`);
-    const j = (await r.json()) as {risk?: string; riskReason?: string | null};
-    return {sanctioned: j.risk === "Severe", provider: "chainalysis", reference: j.riskReason ?? undefined};
-  }
-}
-
-/** TRM Labs wallet screening. Adapter only, same fail-closed rule. */
-export class TrmScreen implements SanctionsScreen {
-  constructor(
-    private readonly apiKey: string,
-    private readonly chain = "robinhood",
-    private readonly url = "https://api.trmlabs.com/public/v2/screening/addresses",
-  ) {}
-  async screen(address: string): Promise<ScreenResult> {
-    const r = await fetch(this.url, {
-      method: "POST",
-      headers: {"content-type": "application/json", authorization: `Basic ${Buffer.from(`${this.apiKey}:${this.apiKey}`).toString("base64")}`},
-      body: JSON.stringify([{address, chain: this.chain}]),
-    });
-    if (!r.ok) throw new Error(`trm ${r.status}`);
-    const j = (await r.json()) as {addressRiskIndicators?: {categoryRiskScoreLevelLabel?: string; category?: string}[]}[];
-    const hit = (j[0]?.addressRiskIndicators ?? []).find((x) => x.category === "Sanctions" && x.categoryRiskScoreLevelLabel === "Severe");
-    return {sanctioned: Boolean(hit), provider: "trm", reference: hit?.category};
-  }
-}
-
-/** Provider from env: `SANCTIONS_PROVIDER=chainalysis|trm|deny-list` (+ `SANCTIONS_API_KEY`, `SANCTIONS_DENY_LIST`). */
-export function sanctionsFromEnv(env: NodeJS.ProcessEnv = process.env): SanctionsScreen {
-  const deny = (env.SANCTIONS_DENY_LIST ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-  switch (env.SANCTIONS_PROVIDER ?? "deny-list") {
-    case "chainalysis":
-      if (!env.SANCTIONS_API_KEY) throw new Error("SANCTIONS_API_KEY is required for chainalysis");
-      return new ChainalysisScreen(env.SANCTIONS_API_KEY);
-    case "trm":
-      if (!env.SANCTIONS_API_KEY) throw new Error("SANCTIONS_API_KEY is required for trm");
-      return new TrmScreen(env.SANCTIONS_API_KEY);
-    default:
-      return new DenyListScreen(deny);
-  }
-}
+// Real providers (Chainalysis, TRM) and the env factory live in ./sanctions/ (Q5).

@@ -64,7 +64,7 @@ export function createComplianceApp(svc: ComplianceService, terms: Terms, o: App
     console.error(`[compliance] ${c.req.method} ${c.req.path}: ${String(err)}`);
     return c.json({error: "internal error"}, 500);
   });
-  app.get("/health", (c) => c.json({ok: true, signer: svc.signerAddress}));
+  app.get("/health", (c) => c.json({ok: true, signer: svc.signerAddress, sanctions: svc.sanctionsProvider}));
 
   app.get("/v1/compliance/connection", async (c) => c.json(await svc.connectionCheck(geoOf(c), ipOf(c))));
 

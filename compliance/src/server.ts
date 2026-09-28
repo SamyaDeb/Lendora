@@ -6,7 +6,8 @@ import {createPublicClient, http, type PublicClient} from "viem";
 import {getDeployment, parseDeploymentKey, restrictedListFromEnv, TERMS_VERSION, type Address} from "@stockline/sdk";
 import {envKeyTypedDataSigner, remoteTypedDataSigner, type TypedDataSigner} from "@stockline/keepers/signer";
 import {createComplianceApp} from "./app.js";
-import {sanctionsFromEnv, StaticRangeReputation, type IpReputation, type SanctionsScreen} from "./checks.js";
+import {StaticRangeReputation, type IpReputation, type SanctionsScreen} from "./checks.js";
+import {sanctionsFromEnv, sanctionsProviderOf} from "./sanctions/index.js";
 import {ComplianceService, loadTerms, TermsStore} from "./service.js";
 
 export interface RunningCompliance {
@@ -38,8 +39,9 @@ export const MIN_PROXY_SECRET = 32;
 /**
  * CP-R8 startup rules, before anything else starts. Geo and client-IP headers are trusted only from the web proxy, so
  * every network except local anvil (31337) needs `PROXY_SECRET` (≥ 32 chars, also when set on anvil), and
- * `TRUST_PROXY=true` without it is refused. On mainnet (4663) the deny-list sanctions adapter is refused: a real provider must be configured (CP-R3,
- * open decision Q5).
+ * `TRUST_PROXY=true` without it is refused. On mainnet (4663) the deny-list sanctions adapter and a missing
+ * `SANCTIONS_API_KEY` are refused: a real provider must be configured (CP-R3, open decision Q5). An unknown
+ * `SANCTIONS_PROVIDER` is refused on every network.
  */
 export function assertStartupConfig(env: NodeJS.ProcessEnv, raw: string): void {
   const local = raw === "31337";
@@ -49,19 +51,23 @@ export function assertStartupConfig(env: NodeJS.ProcessEnv, raw: string): void {
   }
   if (!local && env.TRUST_PROXY === "true" && !secret) throw new Error("TRUST_PROXY=true needs PROXY_SECRET (CP-R8)");
   if (secret && secret.length < MIN_PROXY_SECRET) throw new Error(`PROXY_SECRET must be at least ${MIN_PROXY_SECRET} chars (CP-R8)`);
-  if (raw === "4663" && (env.SANCTIONS_PROVIDER ?? "deny-list") === "deny-list") {
-    throw new Error("mainnet (4663) refuses the deny-list sanctions adapter: set SANCTIONS_PROVIDER=chainalysis|trm (CP-R3, CP-R8)");
+  const provider = sanctionsProviderOf(env); // unknown names are refused everywhere, never a silent deny-list fallback
+  if (raw === "4663") {
+    if (provider === "deny-list") throw new Error("mainnet (4663) refuses the deny-list sanctions adapter: set SANCTIONS_PROVIDER=chainalysis|trm (CP-R3, CP-R8)");
+    if (!env.SANCTIONS_API_KEY) throw new Error(`mainnet (4663) needs SANCTIONS_API_KEY for ${provider} (CP-R3, Q5)`);
+    if (env.SANCTIONS_API_URL && !env.SANCTIONS_API_URL.startsWith("https://")) throw new Error("mainnet (4663) needs an https SANCTIONS_API_URL (CP-R3)");
   }
 }
 
 export async function startCompliance(env: NodeJS.ProcessEnv = process.env, o: ComplianceOverrides = {}): Promise<RunningCompliance> {
   const raw = env.STOCKLINE_NETWORK ?? env.DEPLOYMENT_KEY ?? "31337";
   assertStartupConfig(env, raw);
-  if (raw === "4663") throw new Error("Phase 2 signs no attestations for 4663");
   const key = parseDeploymentKey(raw);
   const d = getDeployment(key);
   if (!d?.router) throw new Error(`no router for "${raw}" in @stockline/sdk addresses.json`);
   if (!env.DATABASE_URL) throw new Error("DATABASE_URL is required");
+  const sanctions = o.sanctions ?? sanctionsFromEnv(env);
+  console.log(`[compliance] network ${raw} · sanctions provider ${sanctions.name ?? "custom"}`); // CP-R3: the provider in the startup log, never the key
   const chainId = key === "fork-4663" ? 4663 : Number(key);
   const client = createPublicClient({transport: http(env.RPC_URL ?? "http://127.0.0.1:8545")}) as PublicClient;
   const pool = new pg.Pool({connectionString: env.DATABASE_URL, max: 5});
@@ -76,7 +82,7 @@ export async function startCompliance(env: NodeJS.ProcessEnv = process.env, o: C
     router: d.router,
     restricted: restrictedListFromEnv(env),
     ipReputation: o.ipReputation ?? StaticRangeReputation.fromConfig(env),
-    sanctions: o.sanctions ?? sanctionsFromEnv(env),
+    sanctions,
     terms,
     store,
   });

@@ -92,6 +92,11 @@ export class ComplianceService {
     return this.d.signer.address;
   }
 
+  /** The configured sanctions provider's name (CP-R3), for `/health`; never a key. */
+  get sanctionsProvider() {
+    return this.d.sanctions.name ?? "custom";
+  }
+
   termsMessageFor(address: Address): string {
     return termsMessage(address, this.d.terms.version, this.d.terms.hash);
   }
