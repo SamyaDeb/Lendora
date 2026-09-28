@@ -15,7 +15,6 @@ export function useTrackedWriter() {
       last.current = h;
       return h;
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [w.send],
   );
   return {...w, send, lastHash: last};

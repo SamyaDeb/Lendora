@@ -5,6 +5,10 @@ import type {Market} from "@/lib/api";
 import {FX_MARKETS, FX_MARKETS_PAUSED, FX_MARKETS_WEEKEND, fxChain, fxDetail, fxHistory} from "@/lib/fixtures";
 import {E2E_ACCOUNT} from "@/lib/env";
 import {StockView} from "@/components/stock/StockView";
+import {Portfolio} from "@/components/portfolio/Portfolio";
+
+/** Portfolio fixture: an at-risk NVDA short, a healthy AAPL borrow with lending, SPY lending only. */
+const PORTFOLIO: Record<string, {debt?: number; collateral?: number; lent?: number}> = {NVDA: {debt: 10, collateral: 2600, lent: 0}, AAPL: {debt: 3, collateral: 5000, lent: 4.2}, SPY: {lent: 12.3}};
 import {MarketsBoardView} from "@/components/markets/MarketsBoardView";
 
 const SETS: Record<string, Market[] | undefined> = {open: FX_MARKETS, weekend: FX_MARKETS_WEEKEND, paused: FX_MARKETS_PAUSED, loading: undefined, error: undefined};
@@ -17,7 +21,8 @@ export function Preview({page, state, tab}: {page: string; state: string; tab?: 
     if (markets) qc.setQueryData(["markets"], {asOfBlock: "10181", asOfTime: "2026-10-06T20:19:12.000Z", confirmed: true, safe: true, scope: "fixtures", data: markets});
     // Chain state for the action panel and portfolio (the local anvil may not match the repo's addresses).
     for (const m of FX_MARKETS) {
-      const c = fxChain(m.symbol, Number(m.price.usdPerShare), {weekend: state === "weekend"});
+      const pos = page === "portfolio" && state !== "empty" ? PORTFOLIO[m.symbol] : {lent: page === "portfolio" ? 0 : undefined};
+      const c = fxChain(m.symbol, Number(m.price.usdPerShare), {weekend: state === "weekend", ...pos});
       qc.setQueryData(["chain", m.symbol, E2E_ACCOUNT], c);
       qc.setQueryData(["chain", m.symbol, null], {...c, user: undefined});
       qc.setQueryData(["market", m.symbol], {asOfBlock: "10181", asOfTime: "2026-10-06T20:19:12.000Z", confirmed: true, safe: true, scope: "fixtures", data: fxDetail(m, state === "weekend")});
@@ -35,6 +40,7 @@ export function Preview({page, state, tab}: {page: string; state: string; tab?: 
         initialTab={(["lend", "borrow", "short"].find((t) => t === tab) as "lend" | "borrow" | "short") ?? "lend"}
       />
     ),
+    portfolio: <Portfolio />,
     markets: <MarketsBoardView markets={state === "loading" || state === "error" ? undefined : markets} histories={histories} asOf={state === "loading" || state === "error" ? undefined : {block: "10181", time: "2026-10-06T20:19:12.000Z", confirmed: true}} error={state === "error"} onRetry={() => {}} />,
   };
   return views[page] ?? <p>Unknown preview “{page}”. Try: {Object.keys(views).join(", ")}.</p>;
