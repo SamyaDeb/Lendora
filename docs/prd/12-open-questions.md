@@ -131,7 +131,7 @@ interface or a constructor parameter. Items marked *public docs* come from Robin
 | # | Question | Decision | Where |
 |---|---|---|---|
 | Q1 | OR-R3 quiet multiplier step | **Keep 5%** (proposal approved); OR-R3 text updated | [04](04-oracle.md) OR-R3 |
-| Q2 | OR-R14 event timing | **Keep release-on-round for launch**; sim task for the anchored design before mainnet parameters | [`sim/event_timing`](../../sim/event_timing/README.md) |
+| Q2 | OR-R14 event timing | **Keep release-on-round** — study done (Phase 3 task 8): 0/80 10y prints over Morpho's bound when on time; the 24/5 feed delivers prints as ≤ 1.5% steps (2/2 onchain prints on time). Risk owner to confirm in `risk-signoff.md` | [`event-timing.md`](../../sim/reports/event-timing.md) |
 | Q3 | `openShort` gas | **Accept ≤ 700k**; cheap win done (one debt read in RT-R1 checks): 649k → 644k on a fork | [05](05-collateral-router.md) acceptance |
 | Q4 | Aggregators beyond UniversalRouter | **UniversalRouter only at launch** (A8, A15) | router/liquidator allowlists |
 | Q5 | Sanctions provider (CP-R3) | **[OWNER] pending: Chainalysis or TRM.** Both adapters are built and tested against fake servers (task 6, `SANCTIONS_PROVIDER=chainalysis\|trm`); the deny-list stays for 31337/46630; mainnet (4663) refuses the deny-list, an unknown provider and a missing `SANCTIONS_API_KEY` (CP-R8). Owner: sign one provider contract and set the key | `compliance/src/sanctions/`, `compliance/src/server.ts` |

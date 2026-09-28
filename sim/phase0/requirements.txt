@@ -4,3 +4,4 @@ numpy==2.3.4
 matplotlib==3.10.7
 pyarrow==21.0.0
 yfinance==0.2.66
+lxml==6.0.2

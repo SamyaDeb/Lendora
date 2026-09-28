@@ -1,6 +1,6 @@
 # Sim task · Event-buffer timing (OR-R14, open decision Q2)
 
-**Status: stub (remediation 2026-09-27).** The launch design stays as built: the event buffer is released on the first
+**Status: done (Phase 3 task 8, 2026-09-28): keep release-on-round; report [event-timing.md](../reports/event-timing.md). Risk owner to confirm.** Originally a stub (remediation 2026-09-27). The launch design stays as built: the event buffer is released on the first
 good round with `updatedAt ≥ endTs` (OR-R14). Before mainnet parameters are proposed, the risk owner runs this study
 to decide whether to switch to the anchored design. **The contracts are unchanged.**
 
@@ -40,13 +40,15 @@ for `δ` probabilities from the calendar's history (how often the confirmed prin
 ## Run
 
 ```sh
-sim/.venv/bin/python sim/event_timing/compare.py            # proxy mode until earnings_dates.csv exists
+sim/.venv/bin/python sim/event_timing/compare.py            # → sim/reports/event-timing.md
 sim/.venv/bin/python sim/event_timing/compare.py --buffer NVDA=0.10 --buffer AAPL=0.08
 ```
 
-## To finish (risk owner)
+## Done (Phase 3 task 8)
 
-1. Add `earnings_dates.csv` (10y, NVDA and AAPL).
-2. Estimate timing-error probabilities from past schedule vs actual print times.
-3. Extend with the 1h path; write `sim/reports/event-timing.md` with a recommendation; if "anchored", open a Phase 3
-   task (new oracle version, new markets, migration) — it is not a parameter change.
+1. `sim/data/earnings_dates.csv`: 80 prints (NVDA, AAPL, 2016-10 → 2026-08) from Yahoo (`get_earnings_dates`,
+   research use); every one is after the close (`amc`).
+2. Timing error: the two prints inside the onchain history (AAPL 2026-07-30 16:30 ET, NVDA 2026-08-26 16:20 ET) were
+   on time (first post-print round 34–36 s after `endTs`); the single-jump table is shown for p_err 0–50%.
+3. Instead of the 1h path, the onchain Chainlink rounds at the two prints show the real path: ≤ 1.5% steps.
+   Recommendation: keep release-on-round ([event-timing.md](../reports/event-timing.md)).

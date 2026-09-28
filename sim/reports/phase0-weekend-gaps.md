@@ -134,6 +134,22 @@ Owner: engineering, first US session after 2026-09-28 13:30 UTC. If any pool's w
 weekend figure by more than ±25%, flag it to the owner before changing caps (10 launch parameters: per-address cap ≈
 25% of 2% depth, D8); caps are not changed by this rerun alone.
 
+**Weekday run (Phase 3 task 8, Mon 2026-09-28 13:02 ET, US regular hours):**
+
+| 2026-09-28T17:02 (weekday) | 74961179 | NVDA_USDG_500 | $560,599 | $948,039 |
+| 2026-09-28T17:02 (weekday) | 74961179 | NVDA_WETH_500 | $104,944 | $117,525 |
+| 2026-09-28T17:02 (weekday) | 74961179 | SPY_WETH_500 | $214,582 | $170,858 |
+| 2026-09-28T17:02 (weekday) | 74961179 | SPY_USDG_500 | $110,752 | $123,226 |
+| 2026-09-28T17:02 (weekday) | 74961179 | AAPL_WETH_500 | $54,971 | $37,889 |
+| 2026-09-28T17:02 (weekday) | 74961179 | AAPL_USDG_500 | $89,478 | $97,477 |
+
+Weekday vs weekend (both pools summed, push up 2%, i.e. what a liquidator buys): SPY $325k vs $315k Sat / $302k Sun
+(+3% / +8%), AAPL $144k vs $146k / $141k (−1% / +2%), **NVDA $666k vs $1,258k / $1,054k (−47% / −37%) ⚑**. Sell side
+(the binding direction for the AAPL cap, USDG pool): AAPL $97.5k vs $98.6k / $96.8k (−1% / +1%). **Flagged to the owner;
+caps unchanged.** NVDA's weekday depth is the lower one, so it is the binding snapshot in
+[mainnet-params.md](mainnet-params.md) §3 (per-address rule would give $166k vs $250k). Rerun on two more weekday
+sessions before any NVDA change: `sim/.venv/bin/python sim/phase0/dex_depth.py --label weekday --markdown`.
+
 ## 7. Liquidation profitability during weekend premiums
 
 LLTV 77% → LIF 1.07411 (incentive 7.41%). A liquidator repays wSTOCK valued by the oracle at P_feed·(1+b) and seizes USDG worth LIF times that. If they must buy the stock on the DEX at P_feed·(1+premium) with slippage s, the trade pays only if (1+b)·LIF > (1+premium)·(1+s). Break-even premium = (1+b)·LIF/(1+s) − 1.

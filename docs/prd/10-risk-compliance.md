@@ -33,9 +33,11 @@ mainnet proposals.
 
 Caps rise in steps (for example ×2) only after 2 weekends without a guard incident and a sim rerun. The AAPL cap
 follows the Saturday 2% depth ($146k across both pools); a Sunday rerun (2026-09-27) is within 2% on the binding
-USDG pool, so caps are unchanged. The weekday rerun needs no archive RPC, only a weekday run of
-`dex_depth.py --label weekday` ([WS-C §6](../../sim/reports/phase0-weekend-gaps.md)); a difference above ±25% is
-flagged to the owner before any cap change.
+USDG pool, so caps are unchanged. **Weekday rerun done (Phase 3 task 8, 2026-09-28):** SPY and AAPL within ±8% of
+the weekends; **NVDA push-up depth −47% / −37% ⚑** (flagged to the owner, caps unchanged;
+[WS-C §6](../../sim/reports/phase0-weekend-gaps.md)). The mainnet sim ([mainnet-params.md](../../sim/reports/mainnet-params.md))
+keeps every launch value and flags: the full D8 cap targets for SPY ($323k) and AAPL ($147k) fail the 99.9% $0-bad-debt
+test on today's depth (launch caps at 25% pass), and NVDA's per-address cap would be $166k on weekday depth.
 
 ## Risk register
 
