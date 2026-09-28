@@ -1,4 +1,4 @@
-import {addDays, nthWeekday, weekday, ymdKey, type YMD} from "./time.js";
+import {addDays, etToUnix, nthWeekday, weekday, ymdKey, type YMD} from "./time.js";
 
 /**
  * NYSE full-day holidays and 13:00 ET early closes, by rule (NYSE Rule 7.2 holiday practice).
@@ -75,4 +75,18 @@ export function nyseEarlyCloses(year: number): Map<string, string> {
 export function isTradingDay(d: YMD): boolean {
   const w = weekday(d);
   return w !== 0 && w !== 6 && !nyseHolidays(d.year).has(ymdKey(d));
+}
+
+/**
+ * Whether unix time `t` is inside the NYSE regular session (09:30–16:00 ET, 13:00 on early-close days) of a
+ * trading day. Used by keepers that should act only with the deepest liquidity (fee converter, FE-R4); onchain
+ * gating uses the Chainlink feed sessions (`MarketHours`), which are wider (24/5).
+ */
+export function isUsRegularHours(t: number): boolean {
+  // The ET calendar date of t: the UTC date shifted by the larger offset first, then checked against both bounds.
+  const u = new Date((t - 4 * 3600) * 1000);
+  const d: YMD = {year: u.getUTCFullYear(), month: u.getUTCMonth() + 1, day: u.getUTCDate()};
+  if (!isTradingDay(d)) return false;
+  const close = nyseEarlyCloses(d.year).has(ymdKey(d)) ? 13 : 16;
+  return t >= etToUnix(d, 9, 30) && t < etToUnix(d, close);
 }

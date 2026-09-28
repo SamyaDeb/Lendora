@@ -80,8 +80,8 @@ contract FeeAccrualForkTest is Phase1ForkBase, ForkConfig {
         assertApproxEqAbs(v.convertToAssets(held), interest / 10, 2, "fee shares worth fee x interest");
 
         core.feeSplitter.distribute(address(v));
-        uint256 t = IERC20(address(v)).balanceOf(c.treasury);
-        uint256 b = IERC20(address(v)).balanceOf(c.backstopReserve);
+        uint256 t = IERC20(address(v)).balanceOf(address(core.treasuryConverter));
+        uint256 b = IERC20(address(v)).balanceOf(address(core.backstopConverter));
         assertEq(t + b, held, "all distributed");
         assertApproxEqAbs(t, b, 1, "Q8 50/50");
         assertEq(IERC20(address(v)).balanceOf(address(core.feeSplitter)), 0);

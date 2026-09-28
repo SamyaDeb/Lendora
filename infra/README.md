@@ -10,7 +10,7 @@ created or deployed from this repo without the owner's go.**
 | api | `infra/Dockerfile`, `SERVICE=api` | Hono + WS | `GET /health` (:42070) | `api/.env.example` |
 | compliance | `infra/Dockerfile`, `SERVICE=compliance` | signer | `GET /health` (:42071) | `compliance/.env.example` |
 | alerts | `infra/Dockerfile`, `SERVICE=alerts` | watcher + settings API | `GET /health` (:42072) | `keepers/.env.example` |
-| allocator, guard, liquidator | `infra/Dockerfile`, `SERVICE=<name>` | keeper loops (dry run by default) | `GET /health` (`HEALTH_PORT`) | `keepers/.env.example` |
+| allocator, guard, liquidator, fee-converter | `infra/Dockerfile`, `SERVICE=<name>` | keeper loops (dry run by default) | `GET /health` (`HEALTH_PORT`) | `keepers/.env.example` |
 | monitor (MON-R1…R14) | `infra/Dockerfile`, `SERVICE=monitor` | read-only ops monitor, pages P0/P1/P2, `GET /weekends`, `GET /incidents` | `GET /health` (:42073) | `keepers/.env.example` |
 | feed-mirror (testnet) | `infra/Dockerfile`, `SERVICE=feed-mirror` | mainnet feeds → testnet mock feeds | `GET /health` | `keepers/.env.example` |
 | web | `infra/web.Dockerfile` (NEXT_PUBLIC_* as build args) | `next start` | `GET /restricted` | `web/.env.example` |

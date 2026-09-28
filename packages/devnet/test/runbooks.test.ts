@@ -149,9 +149,9 @@ describe("runbook rehearsals on anvil (docs/runbooks)", () => {
     const bal = (who: `0x${string}`) => a.client.readContract({address: nvda.vault, abi: erc20Abi, functionName: "balanceOf", args: [who]});
     const held = await bal(splitter);
     expect(held > 0n, "fee shares minted to the splitter").toBe(true);
-    const [t0, b0] = [await bal(a.d.roles.treasury!), await bal(a.d.roles.backstopReserve!)];
+    const [t0, b0] = [await bal(a.d.treasuryConverter!), await bal(a.d.backstopConverter!)]; // FE-R4: each share → its converter
     await a.send(lender, splitter, call(feeSplitterAbi, "distribute", [nvda.vault]));
-    const [t1, b1] = [await bal(a.d.roles.treasury!), await bal(a.d.roles.backstopReserve!)];
+    const [t1, b1] = [await bal(a.d.treasuryConverter!), await bal(a.d.backstopConverter!)];
     expect(t1 - t0 + (b1 - b0)).toBe(held);
     expect(await bal(splitter)).toBe(0n);
   }, 180_000);

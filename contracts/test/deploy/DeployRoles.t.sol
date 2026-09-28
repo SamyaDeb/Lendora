@@ -30,6 +30,7 @@ contract DeployRolesTest is Test, StocklineDeploy, LocalMocks {
             guardKeeper: address(this),
             treasury: makeAddr("treasury"),
             backstopReserve: makeAddr("backstopReserve"),
+            feeKeeper: address(this),
             timelockDelay: 24 hours,
             attestationSigner: makeAddr("signer"),
             globalCollateralCap: 4_000_000e6,

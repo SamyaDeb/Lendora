@@ -1,11 +1,11 @@
 import {readFileSync} from "node:fs";
-import {createWalletClient, http, verifyTypedData, type Hex, type PublicClient, type Chain} from "viem";
+import {createWalletClient, http, parseTransaction, recoverTransactionAddress, serializeTransaction, verifyTypedData, type Hex, type PublicClient, type Chain, type TransactionSerializableEIP1559} from "viem";
 import {privateKeyToAccount} from "viem/accounts";
 
 /** Sends keeper transactions. Implementations: dry run (default), a key from the environment, or an unlocked RPC
  * account (anvil tests). No key material lives in code. */
 export interface TxSender {
-  readonly kind: "dry-run" | "env-key" | "rpc-unlocked";
+  readonly kind: "dry-run" | "env-key" | "rpc-unlocked" | "remote";
   readonly address: `0x${string}` | undefined;
   /** Returns the tx hash, or undefined in dry-run mode. Waits for the receipt and throws if it reverted. */
   send(to: `0x${string}`, data: Hex, label: string): Promise<Hex | undefined>;
@@ -24,7 +24,7 @@ export class DryRunSender implements TxSender {
 
 class ClientSender implements TxSender {
   constructor(
-    readonly kind: "env-key" | "rpc-unlocked",
+    readonly kind: "env-key" | "rpc-unlocked" | "remote",
     readonly address: `0x${string}`,
     private readonly sendRaw: (to: `0x${string}`, data: Hex) => Promise<Hex>,
     private readonly client: PublicClient,
@@ -50,6 +50,55 @@ export function envKeySender(client: PublicClient, rpcUrl: string, chain: Chain,
   const account = privateKeyToAccount(pk);
   const wallet = createWalletClient({account, chain, transport: http(rpcUrl)});
   return new ClientSender("env-key", account.address, (to, data) => wallet.sendTransaction({account, to, data, chain}), client);
+}
+
+/**
+ * A remote transaction signer (KMS/HSM bridge) over HTTPS: POST `{chainId, transaction}` (an unsigned EIP-1559
+ * transaction, hex-serialized) → `{signedTransaction}`. The keeper builds the transaction (nonce from the node's
+ * `pending` count, fees and gas from the node) and only accepts a signed transaction that recovers to the expected
+ * address **and** has the same chain, nonce, recipient, value and calldata, so a misconfigured or compromised remote
+ * cannot swap the payload or sign with another key. No key material in this process.
+ */
+export function remoteTxSender(client: PublicClient, chain: Chain, url: string, address: `0x${string}`, auth?: string, fetchImpl: typeof fetch = fetch): TxSender {
+  const sendRaw = async (to: `0x${string}`, data: Hex): Promise<Hex> => {
+    const [nonce, fees, gas] = await Promise.all([
+      client.getTransactionCount({address, blockTag: "pending"}),
+      client.estimateFeesPerGas(),
+      client.estimateGas({account: address, to, data}),
+    ]);
+    const unsigned: TransactionSerializableEIP1559 = {type: "eip1559", chainId: chain.id, nonce, to, data, value: 0n, gas: (gas * 12n) / 10n, maxFeePerGas: fees.maxFeePerGas, maxPriorityFeePerGas: fees.maxPriorityFeePerGas};
+    const r = await fetchImpl(url, {method: "POST", headers: {"content-type": "application/json", ...(auth ? {authorization: auth} : {})}, body: JSON.stringify({chainId: chain.id, transaction: serializeTransaction(unsigned)})});
+    if (!r.ok) throw new Error(`remote signer ${r.status}`);
+    const {signedTransaction} = (await r.json()) as {signedTransaction: Hex};
+    const tx = parseTransaction(signedTransaction);
+    const signer = await recoverTransactionAddress({serializedTransaction: signedTransaction as never});
+    if (signer.toLowerCase() !== address.toLowerCase()) throw new Error("remote signer signed with another key");
+    if (tx.chainId !== chain.id || tx.nonce !== nonce || tx.to?.toLowerCase() !== to.toLowerCase() || (tx.value ?? 0n) !== 0n || tx.data !== data) {
+      throw new Error("remote signer returned a different transaction");
+    }
+    return client.sendRawTransaction({serializedTransaction: signedTransaction});
+  };
+  return new ClientSender("remote", address, sendRaw, client);
+}
+
+/** The sender a keeper's config asks for: dry run (default), env key, remote signer, or anvil-unlocked (tests). */
+export function senderFromConfig(
+  cfg: {signer: "dry-run" | "env-key" | "rpc-unlocked" | "remote"; rpcUrl: string; unlockedAddress?: `0x${string}`; remoteSignerUrl?: string; remoteSignerAuth?: string},
+  client: PublicClient,
+  chain: Chain,
+  env: NodeJS.ProcessEnv = process.env,
+): TxSender {
+  switch (cfg.signer) {
+    case "env-key":
+      return envKeySender(client, cfg.rpcUrl, chain, env);
+    case "rpc-unlocked":
+      return rpcUnlockedSender(client, cfg.rpcUrl, chain, cfg.unlockedAddress!);
+    case "remote":
+      if (!cfg.remoteSignerUrl || !cfg.unlockedAddress) throw new Error("KEEPER_SIGNER=remote needs KEEPER_REMOTE_SIGNER_URL and KEEPER_ADDRESS");
+      return remoteTxSender(client, chain, cfg.remoteSignerUrl, cfg.unlockedAddress, cfg.remoteSignerAuth);
+    default:
+      return new DryRunSender(cfg.unlockedAddress);
+  }
 }
 
 // ---------------------------------------------------------------------- typed data (Phase 2: compliance signer)

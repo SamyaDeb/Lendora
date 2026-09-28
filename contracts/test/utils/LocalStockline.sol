@@ -47,6 +47,7 @@ abstract contract LocalStockline is Test, StocklineDeploy, LocalMocks {
             guardKeeper: makeAddr("guardKeeper"),
             treasury: makeAddr("treasury"),
             backstopReserve: makeAddr("backstopReserve"),
+            feeKeeper: makeAddr("feeKeeper"),
             timelockDelay: 48 hours,
             attestationSigner: signer.addr,
             globalCollateralCap: 4_000_000e6,

@@ -1,6 +1,6 @@
 # Runbook · Keeper down (`KEEPER_DOWN`, MON-R9, P1) and indexer lag (`INDEXER_LAG`, MON-R14, P2)
 
-**Trigger.** A keeper's `/health` is not 200 (allocator, guard, liquidator, alerts; the allocator's turns 503 after
+**Trigger.** A keeper's `/health` is not 200 (allocator, guard, liquidator, alerts, fee-converter; the allocator's turns 503 after
 5 min without a run, LM-R33). `INDEXER_LAG`: the indexer is > 20 blocks behind, or the SI-R5 reconciliation found a
 difference between indexed and onchain values.
 
@@ -11,6 +11,7 @@ difference between indexed and onchain values.
 | guard | No DEVIATION / L2_GAP trips; nobody pokes (onchain reasons are still evaluated live by the router) |
 | liquidator | Only third-party liquidators protect lenders (watch `MISSED_LIQUIDATION`) |
 | alerts | Users get no HF / ramp alerts |
+| fee-converter | Fee shares wait in the `FeeSplitter` / `FeeConverter`s (no user impact; `FEE_NOT_DISTRIBUTED` pages after 8 days above $1k). Anyone can call `FeeSplitter.distribute`; only the fee keeper can convert (FE-R4) |
 | indexer | API, dashboard and the monitor's position list go stale (safety views read the chain) |
 
 ## First 5 minutes

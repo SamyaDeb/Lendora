@@ -33,6 +33,8 @@ export interface Roles {
   treasury?: Address;
   /** `BackstopReserve` multisig: backstop share until Phase 5 (FE-R3, Q9). */
   backstopReserve?: Address;
+  /** Fee-converter keeper EOA (FE-R4): may only trigger conversions. */
+  feeKeeper?: Address;
   /** Phase 1–2 placeholder fee recipient (testnet 46630 was deployed with it; the real one is `feeSplitter`). */
   feeSplitter?: Address;
 }
@@ -61,6 +63,10 @@ export interface ChainDeployment {
   lens?: Address;
   /** FeeSplitter: every vault's performance fee recipient (Phase 3, FE-R1…R3). */
   feeSplitter?: Address;
+  /** FeeConverter of the treasury share → USDG → treasury (FE-R4). */
+  treasuryConverter?: Address;
+  /** FeeConverter of the backstop share → USDG → `BackstopReserve` (FE-R3, FE-R4). */
+  backstopConverter?: Address;
 }
 
 /** Keys: a chain id ("31337" anvil) or "fork-4663" (a simulated deployment on a Robinhood Chain fork). Real 4663 is

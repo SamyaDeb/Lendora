@@ -28,6 +28,8 @@ import {IStocklineRouter} from "../src/interfaces/IStocklineRouter.sol";
 import {ShortInterestLens} from "../src/ShortInterestLens.sol";
 import {FeeSplitter} from "../src/fees/FeeSplitter.sol";
 import {IFeeSplitter} from "../src/interfaces/IFeeSplitter.sol";
+import {FeeConverter} from "../src/fees/FeeConverter.sol";
+import {IFeeConverter} from "../src/interfaces/IFeeConverter.sol";
 
 /// @title StocklineDeploy
 /// @notice Deployment logic shared by the scripts (anvil, fork) and the fork tests, so tests exercise exactly what the
@@ -74,6 +76,7 @@ abstract contract StocklineDeploy {
         address guardKeeper; // keeper EOA
         address treasury; // multisig: treasury share of the performance fee (Q9)
         address backstopReserve; // multisig: backstop share until Phase 5's BackstopPool (FE-R3, Q9)
+        address feeKeeper; // keeper EOA: may only trigger FeeConverter.convert (FE-R4)
         uint256 timelockDelay; // 48h
         address attestationSigner; // RT-R2 compliance signer
         uint256 globalCollateralCap; // clUSDG raw units ($4M at launch, 10-risk)
@@ -99,6 +102,8 @@ abstract contract StocklineDeploy {
         StocklineLiquidator liquidator;
         ShortInterestLens lens; // Phase 2 (SI-R20, SI-R21)
         FeeSplitter feeSplitter; // Phase 3: every vault's performance fee recipient (FE-R1, FE-R2)
+        FeeConverter treasuryConverter; // FE-R4: treasury share → USDG → treasury
+        FeeConverter backstopConverter; // FE-R4: backstop share → USDG → BackstopReserve (FE-R3)
     }
 
     struct StockDeployment {
@@ -141,15 +146,25 @@ abstract contract StocklineDeploy {
         core.clUSDG.setRouter(address(core.router));
         if (c.swapTarget != address(0)) core.router.setSwapTarget(c.swapTarget, c.swapMode);
 
+        // FE-R4 (Q10): one converter per recipient, both shares converted to USDG and forwarded to the multisig. The
+        // deployer registers the vaults, then `_finalize` hands them to the timelock.
+        core.treasuryConverter = new FeeConverter(c.deployer, c.usdg, c.treasury, c.feeKeeper);
+        core.backstopConverter = new FeeConverter(c.deployer, c.usdg, c.backstopReserve, c.feeKeeper);
         // FE-R1…R3: the fee recipient exists before any vault is configured; owned by the timelock from the start.
-        core.feeSplitter = new FeeSplitter(address(core.timelock), _feeRecipients(c));
+        core.feeSplitter = new FeeSplitter(
+            address(core.timelock), _feeRecipients(address(core.treasuryConverter), address(core.backstopConverter))
+        );
     }
 
-    /// @notice Launch fee split (Q8): 5,000 bps `BackstopReserve` (FE-R3), 5,000 bps treasury.
-    function _feeRecipients(CoreConfig memory c) internal pure virtual returns (IFeeSplitter.Recipient[] memory r) {
+    /// @notice Launch fee split (Q8): 5,000 bps treasury, 5,000 bps backstop (FE-R3), each through its converter.
+    function _feeRecipients(address treasuryShare, address backstopShare)
+        internal
+        pure
+        returns (IFeeSplitter.Recipient[] memory r)
+    {
         r = new IFeeSplitter.Recipient[](2);
-        r[0] = IFeeSplitter.Recipient(c.treasury, 5000);
-        r[1] = IFeeSplitter.Recipient(c.backstopReserve, 5000);
+        r[0] = IFeeSplitter.Recipient(treasuryShare, 5000);
+        r[1] = IFeeSplitter.Recipient(backstopShare, 5000);
     }
 
     /// @notice After every stock is listed: the router's owner becomes the timelock; the fallback liquidator (holds no
@@ -161,6 +176,13 @@ abstract contract StocklineDeploy {
             core.liquidator.setSwapTarget(c.swapTarget, StocklineLiquidator.SwapMode(uint8(c.swapMode)));
         }
         core.liquidator.transferOwnership(c.owner);
+        FeeConverter[2] memory convs = [core.treasuryConverter, core.backstopConverter];
+        for (uint256 i; i < 2; i++) {
+            if (c.swapTarget != address(0)) {
+                convs[i].setSwapTarget(c.swapTarget, IFeeConverter.SwapMode(uint8(c.swapMode)));
+            }
+            convs[i].transferOwnership(address(core.timelock));
+        }
         return core;
     }
 
@@ -238,6 +260,8 @@ abstract contract StocklineDeploy {
         (uint256 answer,) = d.oracle.stockAnswer();
         d.capAssets = s.launchCapUsd * 1e18 * 10 ** uint256(_feedDecimals(s.feed)) / answer;
         _configureVault(c, core, s, d);
+        core.treasuryConverter.setVault(d.vault, address(d.oracle)); // FE-R4
+        core.backstopConverter.setVault(d.vault, address(d.oracle));
         core.router
             .listMarket(
                 s.token,
@@ -382,6 +406,8 @@ abstract contract StocklineDeploy {
         if (address(core.lens) != address(0)) VM.serializeAddress(obj, "lens", address(core.lens));
         if (address(core.feeSplitter) != address(0)) {
             VM.serializeAddress(obj, "feeSplitter", address(core.feeSplitter));
+            VM.serializeAddress(obj, "treasuryConverter", address(core.treasuryConverter));
+            VM.serializeAddress(obj, "backstopConverter", address(core.backstopConverter));
         }
         if (bytes(_startBlock).length > 0) VM.serializeString(obj, "startBlock", _startBlock);
         VM.serializeAddress(obj, "vaultV2Factory", c.vaultFactory);
@@ -401,6 +427,7 @@ abstract contract StocklineDeploy {
         VM.serializeAddress(o, "allocator", c.allocator);
         VM.serializeAddress(o, "guardKeeper", c.guardKeeper);
         VM.serializeAddress(o, "treasury", c.treasury);
+        VM.serializeAddress(o, "feeKeeper", c.feeKeeper);
         return VM.serializeAddress(o, "backstopReserve", c.backstopReserve);
     }
 

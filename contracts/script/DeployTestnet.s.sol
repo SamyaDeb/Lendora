@@ -75,6 +75,7 @@ contract DeployTestnet is Script, StocklineDeploy, LocalMocks {
                 "STOCKLINE_BACKSTOP_RESERVE",
                 address(uint160(uint256(keccak256("stockline.placeholder.backstopReserve"))))
             ),
+            feeKeeper: vm.envOr("STOCKLINE_FEE_KEEPER", deployer),
             timelockDelay: 24 hours, // 02: 48h on mainnet, 24h on testnet
             attestationSigner: vm.envAddress("STOCKLINE_ATTESTATION_SIGNER"), // the compliance service's key
             globalCollateralCap: 4_000_000e6,

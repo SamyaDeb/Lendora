@@ -14,7 +14,8 @@
     "lint": "eslint .",
     "alerts": "tsx src/alerts/main.ts",
     "feed-mirror": "tsx src/feedMirror/main.ts",
-    "monitor": "tsx src/monitor/main.ts"
+    "monitor": "tsx src/monitor/main.ts",
+    "fee-converter": "tsx src/feeConverter/main.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",

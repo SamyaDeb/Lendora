@@ -37,6 +37,7 @@ abstract contract ForkConfig is StocklineDeploy {
             guardKeeper: VM_.envOr("STOCKLINE_GUARD_KEEPER", _placeholder("guardKeeper")),
             treasury: VM_.envOr("STOCKLINE_TREASURY", _placeholder("treasury")),
             backstopReserve: VM_.envOr("STOCKLINE_BACKSTOP_RESERVE", _placeholder("backstopReserve")),
+            feeKeeper: VM_.envOr("STOCKLINE_FEE_KEEPER", _placeholder("feeKeeper")),
             timelockDelay: 48 hours,
             attestationSigner: VM_.envOr("STOCKLINE_ATTESTATION_SIGNER", _placeholder("attestationSigner")),
             globalCollateralCap: 4_000_000e6,

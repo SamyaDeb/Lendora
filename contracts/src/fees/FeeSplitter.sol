@@ -54,10 +54,11 @@ contract FeeSplitter is IFeeSplitter, Ownable, ReentrancyGuardTransient {
         uint256[] memory amounts = _split(amount);
         emit Distributed(token, amount);
         for (uint256 i; i < amounts.length; i++) {
-            if (amounts[i] == 0) continue;
-            address account = _recipients[i].account;
-            IERC20(token).safeTransfer(account, amounts[i]);
-            emit Paid(token, account, amounts[i]);
+            if (amounts[i] > 0) {
+                address account = _recipients[i].account;
+                IERC20(token).safeTransfer(account, amounts[i]);
+                emit Paid(token, account, amounts[i]);
+            }
         }
     }
 

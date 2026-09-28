@@ -125,8 +125,11 @@ start web web dev
 HEALTH_PORT=8787 start allocator keepers allocator
 HEALTH_PORT=8788 start guard keepers guard
 start alerts keepers alerts
-# Ops monitor (MON-R1…R14): read-only; pages to the console locally. GET :42073/weekends, /incidents.
-PORT=42073 MONITOR_KEEPERS="allocator=http://127.0.0.1:8787/health,guard=http://127.0.0.1:8788/health,alerts=http://127.0.0.1:42072/health" \
+# FE-R4 fee converter as the fee keeper (anvil account 9); regular-hours gate off so it runs on the fixture clock.
+KEEPER_ADDRESS=0xa0Ee7A142d267C1f36714E4a8F75612F20a79720 HEALTH_PORT=8789 INTERVAL_MS=60000 FEE_CONVERTER_REGULAR_HOURS_ONLY=false \
+  start fee-converter keepers fee-converter
+# Ops monitor (MON-R1…R15): read-only; pages to the console locally. GET :42073/weekends, /incidents.
+PORT=42073 MONITOR_KEEPERS="allocator=http://127.0.0.1:8787/health,guard=http://127.0.0.1:8788/health,alerts=http://127.0.0.1:42072/health,fee-converter=http://127.0.0.1:8789/health" \
   start monitor keepers monitor
 echo "[dev] up. web http://localhost:3000 · api http://localhost:42070/v1 · indexer http://localhost:42069 · monitor http://localhost:42073/weekends · Ctrl-C stops everything"
 wait
