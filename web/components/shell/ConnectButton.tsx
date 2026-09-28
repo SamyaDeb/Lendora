@@ -11,7 +11,7 @@ import {Icon, Skeleton} from "@/components/ui";
 const menuCls = "z-50 min-w-[240px] rounded-sm bg-overlay p-1.5 shadow-[var(--shadow-pop),inset_0_0_0_1px_var(--border-strong)]";
 const itemCls = "flex w-full cursor-pointer items-center gap-2.5 rounded-[7px] px-3 py-2.5 text-[14px] text-dim outline-none data-[highlighted]:bg-white/[0.07] data-[highlighted]:text-fg";
 /** Landing page "Connect Wallet": a violet hairline pill. */
-const pill = "pressable inline-flex h-10 items-center gap-2 rounded-full px-5 text-[15px] font-medium shadow-[inset_0_0_0_1px_rgba(141,127,242,0.9)] hover:bg-white/[0.08]";
+const pill = "pressable inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full px-4 sm:px-5 text-[15px] font-medium shadow-[inset_0_0_0_1px_rgba(141,127,242,0.9)] hover:bg-white/[0.08]";
 
 /** Whether the connected wallet is on another chain (the one-click switch is in the header and the action panel). */
 export function useWrongNetwork() {

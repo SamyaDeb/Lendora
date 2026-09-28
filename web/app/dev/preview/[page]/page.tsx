@@ -6,5 +6,5 @@ export const metadata = {title: "Preview"};
 export default async function PreviewPage({params, searchParams}: {params: Promise<{page: string}>; searchParams: Promise<Record<string, string | string[] | undefined>>}) {
   const {page} = await params;
   const sp = await searchParams;
-  return <Preview page={page} state={typeof sp.state === "string" ? sp.state : "open"} />;
+  return <Preview page={page} state={typeof sp.state === "string" ? sp.state : "open"} tab={typeof sp.tab === "string" ? sp.tab : undefined} />;
 }
