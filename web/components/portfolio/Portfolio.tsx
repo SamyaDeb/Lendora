@@ -8,7 +8,7 @@ import {TICKERS, explorer} from "@/lib/env";
 import {positionSummary, useAllPositions, usePositionFlow} from "@/lib/flows/usePositionFlow";
 import {num} from "@/lib/format";
 import {FEATURES} from "@/lib/features";
-import {useRestricted} from "@/app/providers";
+import {useRestricted} from "@/app/(app)/providers";
 import {Badge, ButtonLink, EmptyState, HealthFactor, Icon, Notice, NumberTicker, Skeleton, Stat} from "@/components/ui";
 import {ConnectButton} from "@/components/shell/ConnectButton";
 import {BorrowCard, LendCard} from "./PositionCards";
@@ -76,7 +76,7 @@ function Positions({address, restricted}: {address: `0x${string}`; restricted: b
         {loading && borrows.length + lends.length === 0 ? (
           <PortfolioSkeleton />
         ) : borrows.length + lends.length === 0 ? (
-          <EmptyState title="You're not lending or borrowing anything yet" icon="layers" action={!restricted && <ButtonLink href="/" variant="secondary">Pick a stock from the board</ButtonLink>}>
+          <EmptyState title="You're not lending or borrowing anything yet" icon="layers" action={!restricted && <ButtonLink href="/markets" variant="secondary">Pick a stock from the board</ButtonLink>}>
             Lend a Stock Token to earn what borrowers pay, or borrow one to short or hedge.
           </EmptyState>
         ) : (

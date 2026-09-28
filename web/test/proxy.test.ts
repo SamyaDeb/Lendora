@@ -8,11 +8,11 @@ describe("APP-R2 geo-block (proxy.ts)", () => {
   it("rewrites restricted visitors to the block page", () => {
     const r = proxy(req("/short/NVDA", "US"));
     expect(r.headers.get("x-middleware-rewrite")).toContain("/restricted");
-    expect(proxy(req("/", "GB")).headers.get("x-middleware-rewrite")).toContain("/restricted");
+    expect(proxy(req("/markets", "GB")).headers.get("x-middleware-rewrite")).toContain("/restricted");
   });
 
-  it("keeps exits reachable: the portfolio, terms and API routes pass with a restricted flag", () => {
-    for (const p of ["/portfolio", "/terms", "/api/compliance/terms"]) {
+  it("keeps the landing page and exits reachable: the portfolio, terms and API routes pass with a restricted flag", () => {
+    for (const p of ["/", "/portfolio", "/terms", "/api/compliance/terms"]) {
       const r = proxy(req(p, "US"));
       expect(r.headers.get("x-middleware-rewrite"), p).toBeNull();
       expect(r.headers.get("x-middleware-request-x-stockline-restricted"), p).toBe("1");

@@ -1,19 +1,29 @@
 # web
 
-Stockline app (docs/prd/06): Next.js 16 App Router, wagmi 3 + viem, TanStack Query, Tailwind 4. Every safety number
+Lendora app (package and SDK still named Stockline, open question Q6) (docs/prd/06): Next.js 16 App Router, wagmi 3 + viem, TanStack Query, Tailwind 4. Every safety number
 (health factor, liquidation price, buffer, rates) comes from `@stockline/sdk`; lists and charts from the public API,
 positions and previews straight from the chain.
 
 | Route | |
 |---|---|
-| `/` | Markets table, sortable by utilization, live status |
-| `/market/[symbol]` | Rate/utilization and short-interest charts (7d/30d/90d, closures shaded), weekend buffer schedule, params, contracts |
-| `/lend/[symbol]` | Deposit / withdraw through the router, variable APY, withdrawable now (LM-R22), earnings, cap and liquidity states |
-| `/short/[symbol]` | Open short or just borrow; collateral, amount or target-HF slider, full 06 preview panel |
-| `/portfolio` | Positions from the chain, HF and liquidation price now and at the next close, accrued interest, Close / Repay / Add / Withdraw |
-| `/short-interest` | 07 §4 dashboard: leaderboard, per-stock chart, weekend panel (DEX TWAP vs Chainlink), API snippets |
+| `/` | Marketing landing page (own root layout, `app/(marketing)`), ported from the Lendora landing prototype (`client/`) |
+| `/markets` | Borrow board: summary strip, search and filters, sortable table (utilization bar vs `U_MAX`, lend APY, borrow APR with a 7-day sparkline, Easy / Tight / Hard to borrow), cards on mobile |
+| `/stock/[ticker]` | Stats, rate / utilization and short-interest charts (7d/30d/90d, closures shaded), risk settings in plain words, weekend buffer schedule, contracts; sticky Lend / Borrow / Short panel (bottom sheet on mobile) |
+| `/portfolio` | Positions from the chain, riskiest first: health meter, liquidation price now and during the next closure, Add collateral / Repay / Close; lending receipts with fees earned and ready-now vs lent-out; history |
+| `/data` | 07 §4 dashboard: most shorted, biggest changes today and this week, leaderboard, per-stock chart, weekend panel, API snippets |
+| `/vault`, `/backstop` | 08 / 09 §2 previews behind `NEXT_PUBLIC_FEATURE_VAULT=1` / `NEXT_PUBLIC_FEATURE_BACKSTOP=1` (no contracts yet; actions disabled) |
 | `/alerts` | APP-R8 settings, saved with a signed message |
 | `/status`, `/terms`, `/restricted` | APP-R4 status link target, APP-R10 terms, APP-R2 block page |
+| `/market/*`, `/lend/*`, `/short/*`, `/short-interest` | Redirects to the routes above |
+| `/dev/components`, `/dev/preview/[page]` | Dev only (off in production unless `NEXT_PUBLIC_DEV_PAGES=1`): every UI primitive in every state; page views on fixtures (`?state=open\|weekend\|paused\|loading\|error`) |
+
+Every action (lend, withdraw, borrow, short, add collateral, repay, close) opens the review sheet (`components/review`):
+amounts in token and USD, health meter, liquidation price now and during the next closure, collateral required incl.
+the weekend buffer, rate, and the step list; borrow and short can't be confirmed without a liquidation price.
+
+Design system: `app/tokens.css` is the only source of colors, type, radius, elevation and motion, taken from the
+Lendora landing page (`client/`). Primitives in `components/ui`; data and transaction logic in `lib/flows` (the calls
+and step lists the old panels used, unchanged), views take props so they render on `lib/fixtures`.
 
 | Req | Where |
 |---|---|

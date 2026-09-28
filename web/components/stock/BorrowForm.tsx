@@ -1,5 +1,5 @@
 "use client";
-import {useMemo, useState} from "react";
+import {useMemo, useRef, useState} from "react";
 import {formatUnits} from "viem";
 import {WAD} from "@stockline/sdk";
 import type {BorrowFlow} from "@/lib/flows/useBorrowFlow";
@@ -16,6 +16,10 @@ const liqText = (x?: bigint) => (x === undefined || x === 0n ? "–" : `$${num(N
 export function BorrowForm({f, price, available}: {f: BorrowFlow; price?: number; available?: number}) {
   const [review, setReview] = useState(false);
   const {symbol, pv, st} = f;
+  // The flow clears its inputs on success, which clears the preview: the open sheet keeps the last one.
+  const lastPv = useRef(pv);
+  if (pv) lastPv.current = pv;
+  const sheetPv = pv ?? lastPv.current;
   // Existing position's health factor, so the meter shows before → after.
   const before = useMemo(() => (st?.user && st.user.borrowShares > 0n ? preview(st, {collateralIn: 0n, borrowAmount: 0n}).hfNow : undefined), [st]);
   const hfTone = f.targetHf >= 1.5 ? "text-success" : f.targetHf >= 1.1 ? "text-caution" : "text-danger";
@@ -94,7 +98,7 @@ export function BorrowForm({f, price, available}: {f: BorrowFlow; price?: number
         {f.blocker && f.address && !f.steps.busy && <p className="mt-2 text-[12.5px] text-muted">{f.blocker}</p>}
       </WalletGate>
 
-      {pv && (
+      {sheetPv && (
         <ReviewSheet
           open={review}
           onOpenChange={setReview}
@@ -103,12 +107,12 @@ export function BorrowForm({f, price, available}: {f: BorrowFlow; price?: number
           successTitle={`${f.mode === "short" ? "Shorted" : "Borrowed"} ${f.amount} ${symbol}`}
           successBody="Watch its health factor in your portfolio. Add collateral before weekends if it gets close to 1.10."
           requireLiquidationPrice
-          risk={{pv, hfBefore: before, requirement: f.requirement, symbol}}
+          risk={{pv: sheetPv, hfBefore: before, requirement: f.requirement, symbol}}
           summary={
             <>
-              <Row label={f.mode === "short" ? "You short" : "You borrow"} value={`${wad(pv.borrowed, 4)} ${symbol} ($${num(pv.borrowedUsd)})`} emphasis />
-              <Row label="Collateral" value={`${num(Number(formatUnits(pv.collateral, 6)))} USDG`} />
-              {pv.swap && <Row label="You receive (min)" value={`${num(Number(formatUnits(pv.swap.minOut, 6)))} USDG · ${pct(pv.swap.priceImpact)} price impact`} />}
+              <Row label={f.mode === "short" ? "You short" : "You borrow"} value={`${wad(sheetPv.borrowed, 4)} ${symbol} ($${num(sheetPv.borrowedUsd)})`} emphasis />
+              <Row label="Collateral" value={`${num(Number(formatUnits(sheetPv.collateral, 6)))} USDG`} />
+              {sheetPv.swap && <Row label="You receive (min)" value={`${num(Number(formatUnits(sheetPv.swap.minOut, 6)))} USDG · ${pct(sheetPv.swap.priceImpact)} price impact`} />}
             </>
           }
           plan={f.plan}

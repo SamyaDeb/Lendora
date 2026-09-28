@@ -37,7 +37,7 @@ export function StockView({symbol, initial, hourly, daily, initialTab}: {symbol:
   return (
     <div className="space-y-6 pb-24 lg:pb-0">
       <nav aria-label="Breadcrumb" className="text-[13px] text-muted">
-        <Link href="/" className="hover:text-fg">
+        <Link href="/markets" className="hover:text-fg">
           Markets
         </Link>{" "}
         / <span className="text-dim">{symbol}</span>

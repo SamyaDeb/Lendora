@@ -1,7 +1,7 @@
 import type {Metadata, Viewport} from "next";
 import {headers} from "next/headers";
 import {Instrument_Sans} from "next/font/google";
-import "./globals.css";
+import "../globals.css";
 import {Providers} from "./providers";
 import {Header} from "@/components/shell/Header";
 import {Footer} from "@/components/shell/Footer";

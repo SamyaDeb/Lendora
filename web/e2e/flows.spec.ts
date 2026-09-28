@@ -42,12 +42,12 @@ test.describe.serial("Lendora app on anvil", () => {
   test.beforeAll(async ({browser}) => {
     client = createPublicClient({transport: http(rpc())}) as PublicClient;
     page = await browser.newPage();
-    await page.goto("/");
+    await page.goto("/markets");
     await expect(page.getByTestId("account")).toBeVisible(); // the e2e mock connector (anvil account #7) connects
   });
 
   test("APP-R5 markets: every stock with status, sortable by utilization", async () => {
-    await page.goto("/");
+    await page.goto("/markets");
     const rows = page.getByTestId("markets").locator("tbody tr");
     await expect(rows).toHaveCount(3);
     await expect(page.getByTestId("markets").getByTestId("ease")).toHaveCount(3); // Easy / Tight / Hard to borrow
@@ -175,7 +175,7 @@ test.describe("APP-R2 restricted region", () => {
   test.use({extraHTTPHeaders: {"x-vercel-ip-country": "US"}});
 
   test("sees the block page on markets and borrow, but can reach the portfolio to exit", async ({page: p}) => {
-    await p.goto("/");
+    await p.goto("/markets");
     await expect(p.getByTestId("restricted")).toBeVisible();
     await p.goto("/short/NVDA");
     await expect(p.getByTestId("restricted")).toBeVisible();

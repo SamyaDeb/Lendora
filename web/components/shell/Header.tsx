@@ -11,7 +11,7 @@ import {ConnectButton} from "./ConnectButton";
 import {SessionBar} from "./SessionBar";
 
 export const NAV = [
-  {href: "/", label: "Markets"},
+  {href: "/markets", label: "Markets"},
   {href: "/portfolio", label: "Portfolio"},
   ...(FEATURES.vault ? [{href: "/vault", label: "Vault"}] : []),
   {href: "/data", label: "Short interest"},
@@ -19,7 +19,7 @@ export const NAV = [
   {href: "/alerts", label: "Alerts"},
 ];
 
-const isActive = (path: string, href: string) => (href === "/" ? path === "/" || path.startsWith("/stock") : path.startsWith(href));
+const isActive = (path: string, href: string) => (href === "/markets" ? path === "/markets" || path.startsWith("/stock") : path.startsWith(href));
 
 /** Sticky app header: session bar, brand (as on the landing page), navigation and wallet. */
 export function Header() {
@@ -29,7 +29,7 @@ export function Header() {
       <SessionBar />
       <div className="border-b border-line">
         <div className="mx-auto flex h-16 max-w-[1320px] items-center gap-6 px-4 md:px-6">
-          <Link href="/" className="inline-flex shrink-0 items-center gap-[9px] text-[19px] font-semibold tracking-[-0.01em]" aria-label="Lendora markets">
+          <Link href="/markets" className="inline-flex shrink-0 items-center gap-[9px] text-[19px] font-semibold tracking-[-0.01em]" aria-label="Lendora markets">
             <Image src={logo} alt="" width={26} height={23} priority />
             <span className="relative top-px">Lendora</span>
           </Link>
