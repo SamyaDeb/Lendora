@@ -28,4 +28,4 @@ environment variables, so the required ones per service are listed here and set 
 |---|---|
 | compliance | `STOCKLINE_NETWORK`, `COMPLIANCE_SIGNER_KEY` (or remote signer), `PROXY_SECRET`, `TRUST_PROXY=true`, `ALLOWED_ORIGINS`, `SANCTIONS_PROVIDER` + `SANCTIONS_API_KEY` (mainnet refuses `deny-list`), `ATTEST_RPM` (per IP and per wallet) |
 | web | `COMPLIANCE_URL`, `PROXY_SECRET` (same value), `GEO_PLATFORM`, `API_URL_INTERNAL`, `ALERTS_URL`, `NEXT_PUBLIC_*` build args |
-| monitor | `DATABASE_URL` (same Postgres as the indexer), `INDEXER_SCHEMA`, `MONITOR_KEEPERS`, one pager at least (`PAGERDUTY_ROUTING_KEY` or `OPSGENIE_API_KEY`; Telegram/webhook optional) |
+| monitor | `DATABASE_URL` (same Postgres as the indexer), `INDEXER_SCHEMA`, `MONITOR_KEEPERS`, `MONITOR_GAS_WATCH` + `GAS_BURN_WEI_PER_DAY` (MON-R15), one pager at least (`PAGERDUTY_ROUTING_KEY` or `OPSGENIE_API_KEY`; Telegram/webhook optional) |

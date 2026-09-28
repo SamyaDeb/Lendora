@@ -1,7 +1,7 @@
 # Runbooks
 
 One page per P0/P1 alert of the ops monitor ([10 "Monitoring and paging"](../prd/10-risk-compliance.md#monitoring-and-paging),
-MON-R1…R14), plus the operational procedures they share. Every page has the same shape: **trigger → impact → first 5
+MON-R1…R15), plus the operational procedures they share. Every page has the same shape: **trigger → impact → first 5
 minutes → decision tree → exact commands → who signs → comms → post-mortem**.
 
 | Alert (rule) | Sev | Runbook | Rehearsed on anvil |
@@ -15,6 +15,7 @@ minutes → decision tree → exact commands → who signs → comms → post-mo
 | issuer pause / blocklist (`GUARD_TRIPPED` TOKEN_PAUSED, WRAPPER_BLOCKED) | P1 | [issuer-pause-or-blocklist.md](issuer-pause-or-blocklist.md) | pause → USDG exit → unpause: runbooks test |
 | `L2_GAP` (MON-R8) | P1 | [sequencer-l2-gap.md](sequencer-l2-gap.md) | detection: monitor test |
 | `KEEPER_DOWN` (MON-R9) | P1 | [keeper-down.md](keeper-down.md) | detection: monitor test |
+| `LOW_GAS` / `LOW_GAS_CRITICAL` (MON-R15) | P1 / P0 | [low-gas.md](low-gas.md) | detection (configured and measured burn): monitor test |
 | `DIRECT_BORROW` (MON-R10) | P1 | [direct-borrow.md](direct-borrow.md) | detection: monitor test; global cap through the timelock: runbooks test |
 | `CALENDAR_RUNWAY` (MON-R13) | P2 | [calendar-push.md](calendar-push.md) | detection: monitor test; event push through the timelock: runbooks test |
 | multiplier change (`GUARD_TRIPPED` MULTIPLIER) | P1 | [multiplier-change.md](multiplier-change.md) | latch → confirm through the timelock: runbooks test |

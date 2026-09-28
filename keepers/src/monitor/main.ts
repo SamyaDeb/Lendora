@@ -14,7 +14,8 @@ import {MonitorStore} from "./store.js";
  * `pnpm --filter @stockline/keepers monitor` (MON-R1…R14). Read-only: no signer, no dry run. Env (keepers/.env.example):
  * DATABASE_URL, INDEXER_SCHEMA, MONITOR_SCHEMA, MONITOR_INTERVAL_MS (default 2000), PORT (42073), MONITOR_KEEPERS
  * ("allocator=http://…/health,guard=…"), pagers (PAGERDUTY_ROUTING_KEY, OPSGENIE_API_KEY, MONITOR_TELEGRAM_*,
- * MONITOR_WEBHOOK_*), L2_GAP_SEC, RECONCILE_EVERY_MS (SI-R5 in-process; 0 disables).
+ * MONITOR_WEBHOOK_*), L2_GAP_SEC, RECONCILE_EVERY_MS (SI-R5 in-process; 0 disables), MONITOR_GAS_WATCH
+ * ("operator=0x…", MON-R15), GAS_BURN_WEI_PER_DAY.
  */
 const cfg = loadConfig();
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
@@ -25,13 +26,15 @@ const client = publicClient(cfg.rpcUrl, cfg.deploymentKey);
 const health = new Health(cfg.maxStaleMs);
 const pagers = pagersFromEnv();
 const indexerSchema = process.env.INDEXER_SCHEMA ?? "stockline";
-const keepers = Object.fromEntries(
-  (process.env.MONITOR_KEEPERS ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map((kv) => kv.split("=") as [string, string]),
-);
+const parseList = (v: string | undefined): Record<string, string> =>
+  Object.fromEntries(
+    (v ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((kv) => kv.split("=") as [string, string]),
+  );
+const keepers = parseList(process.env.MONITOR_KEEPERS);
 const reconcileEveryMs = Number(process.env.RECONCILE_EVERY_MS ?? 24 * 3600_000);
 const monitor = new Monitor(
   client,
@@ -42,6 +45,8 @@ const monitor = new Monitor(
   {
     keepers,
     l2GapSec: BigInt(process.env.L2_GAP_SEC ?? 300),
+    gasWatch: parseList(process.env.MONITOR_GAS_WATCH) as Record<string, `0x${string}`>,
+    gasBurnWeiPerDay: BigInt(process.env.GAS_BURN_WEI_PER_DAY ?? 0),
     reconcileEveryMs,
     // SI-R5 hooked into the pager: diffs become an INDEXER_LAG incident (MON-R14) instead of a separate page.
     reconcile:

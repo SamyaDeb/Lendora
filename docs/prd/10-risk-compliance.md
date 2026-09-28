@@ -81,6 +81,7 @@ anvil from real chain conditions).
 | MON-R12 | `UTILIZATION_HIGH` | Vault-level utilization > 95% for 1h | P2 | – |
 | MON-R13 | `CALENDAR_RUNWAY` | < 7 days of sessions stored, or an earnings window within 30 days not pushed | P2 | [calendar-push](../runbooks/calendar-push.md) |
 | MON-R14 | `INDEXER_LAG` | Indexed head > 20 blocks behind, or an SI-R5 reconciliation diff (run inside the monitor) | P2 | [keeper-down](../runbooks/keeper-down.md) |
+| MON-R15 | `LOW_GAS` / `LOW_GAS_CRITICAL` | A keeper signer's ETH lasts < 3 days (P1) / < 1 day (P0) at max(configured `GAS_BURN_WEI_PER_DAY`, burn measured over the last day, ≥ 1h window; a top-up restarts it) | P1 / P0 | [low-gas](../runbooks/low-gas.md) |
 
 **Weekend log.** For every closure ≥ 24h and every market the monitor records, once, the ramp-in start, full buffer,
 close, first fresh round and ramp-out, plus guard trips/clears from the ramp start to 24h after the reopen, and serves

@@ -23,7 +23,7 @@ const call = (abi: readonly unknown[], functionName: string, args: readonly unkn
  * truncated calendar, a stopped indexer process and a real reconciliation diff from a vault donation), plus the weekend
  * log over a full closure. Only the pager is a test double (it records instead of calling PagerDuty).
  */
-describe("ops monitor (MON-R1…R14)", () => {
+describe("ops monitor (MON-R1…R15)", () => {
   let s: Stack;
   let pool: pg.Pool;
   let store: MonitorStore;
@@ -372,6 +372,57 @@ describe("ops monitor (MON-R1…R14)", () => {
     expect(p.details.diffs).toBe(1);
     await tick();
     expect(count("INDEXER_LAG", "trigger") - t0, "deduped while the diff persists").toBe(1);
+  });
+
+  it("MON_R15 LOW_GAS / LOW_GAS_CRITICAL: keeper signer ETH below 3 / 1 days of burn (configured, then measured), resolved by a top-up", async () => {
+    const signer = "0x5700000000000000000000000000000000000a15" as const;
+    const gasPager = new FakePager();
+    const gasClock = {t: Date.now()};
+    const gasStore = new MonitorStore(pool, `monitor_gas_${Date.now()}`);
+    await gasStore.migrate();
+    const setBalance = (eth: bigint) => s.anvil.test.setBalance({address: signer, value: eth * E18});
+    const gasMonitor = (burn: bigint) =>
+      new Monitor(s.anvil.client, s.config.d, gasStore, [gasPager], {borrowers: async () => []}, {gasWatch: {operator: signer}, gasBurnWeiPerDay: burn, now: () => gasClock.t, reconcileEveryMs: 0, log: () => {}});
+    const n = (rule: RuleId, action: "trigger" | "resolve") => gasPager.of(rule, action).filter((p) => p.subject === "operator").length;
+
+    // Configured burn 1 ETH/day: 10 ETH quiet; 2 ETH → P1 only; 0.5 ETH → P0 too; top-up → both resolve.
+    let m = gasMonitor(E18);
+    await setBalance(10n);
+    await m.tick();
+    expect(n("LOW_GAS", "trigger") + n("LOW_GAS_CRITICAL", "trigger")).toBe(0);
+    await setBalance(2n);
+    await m.tick();
+    await m.tick();
+    expect(n("LOW_GAS", "trigger")).toBe(1);
+    expect(n("LOW_GAS_CRITICAL", "trigger")).toBe(0);
+    expect(gasPager.of("LOW_GAS", "trigger")[0].severity).toBe("P1");
+    await s.anvil.test.setBalance({address: signer, value: E18 / 2n});
+    await m.tick();
+    expect(n("LOW_GAS_CRITICAL", "trigger")).toBe(1);
+    expect(gasPager.of("LOW_GAS_CRITICAL", "trigger")[0].severity).toBe("P0");
+    await setBalance(10n);
+    await m.tick();
+    expect(n("LOW_GAS", "resolve")).toBe(1);
+    expect(n("LOW_GAS_CRITICAL", "resolve")).toBe(1);
+
+    // No configured burn: a runaway keeper spending 1 ETH/hour is measured (over ≥ 1h) and pages P0.
+    m = gasMonitor(0n);
+    await setBalance(20n);
+    await m.tick();
+    gasClock.t += 1800_000;
+    await setBalance(19n);
+    await m.tick(); // 30 min: not measured yet
+    expect(n("LOW_GAS", "trigger")).toBe(1);
+    gasClock.t += 1800_000;
+    await setBalance(18n);
+    await m.tick(); // 2 ETH/h → 18 ETH lasts 9h
+    expect(n("LOW_GAS", "trigger")).toBe(2);
+    expect(n("LOW_GAS_CRITICAL", "trigger")).toBe(2);
+    expect(gasPager.of("LOW_GAS_CRITICAL", "trigger").at(-1)!.details.burnWeiPerDay).toBe((48n * E18).toString());
+    await setBalance(50n); // top-up restarts the measurement
+    await m.tick();
+    expect(n("LOW_GAS", "resolve")).toBe(2);
+    expect(n("LOW_GAS_CRITICAL", "resolve")).toBe(2);
   });
 
   it("MON re-notifies an open incident after the interval and retries a failed delivery", async () => {

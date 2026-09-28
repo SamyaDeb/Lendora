@@ -20,7 +20,9 @@ export type RuleId =
   | "PULL_NOT_EFFECTIVE"
   | "UTILIZATION_HIGH"
   | "CALENDAR_RUNWAY"
-  | "INDEXER_LAG";
+  | "INDEXER_LAG"
+  | "LOW_GAS"
+  | "LOW_GAS_CRITICAL";
 
 export interface RuleMeta {
   req: string;
@@ -54,6 +56,9 @@ export const RULES: Record<RuleId, RuleMeta> = {
   UTILIZATION_HIGH: {req: "MON-R12", severity: "P2", forSec: 3600n},
   CALENDAR_RUNWAY: {req: "MON-R13", severity: "P2", runbook: rb("calendar-push.md")},
   INDEXER_LAG: {req: "MON-R14", severity: "P2", runbook: rb("keeper-down.md")},
+  // Keeper signer ETH below N days of burn (Phase 2 testnet: one operator key pays every keeper).
+  LOW_GAS: {req: "MON-R15", severity: "P1", runbook: rb("low-gas.md")},
+  LOW_GAS_CRITICAL: {req: "MON-R15", severity: "P0", runbook: rb("low-gas.md")},
 };
 
 /** Oracle guard reason bits (StocklineOracleBase), by name. */

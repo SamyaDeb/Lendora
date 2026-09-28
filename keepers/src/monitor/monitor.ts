@@ -76,6 +76,13 @@ export interface MonitorOptions {
   eventHorizonSec: bigint;
   /** MON-R14. */
   indexerLagBlocks: bigint;
+  /** MON-R15: keeper signer name → address whose ETH pays for keeper transactions. */
+  gasWatch: Record<string, `0x${string}`>;
+  /** MON-R15: expected burn (wei/day) of the whole stack; the measured burn over the last day is used when higher. */
+  gasBurnWeiPerDay: bigint;
+  /** MON-R15: LOW_GAS (P1) below this many days of burn, LOW_GAS_CRITICAL (P0) below `gasCriticalDays`. */
+  gasLowDays: number;
+  gasCriticalDays: number;
   /** MON-R14 SI-R5 hook: runs the reconciliation (returns its diff count) at most every `reconcileEveryMs`. */
   reconcile?: () => Promise<{block: bigint; diffs: number}>;
   reconcileEveryMs: number;
@@ -97,6 +104,10 @@ export const defaultMonitorOptions: MonitorOptions = {
   runwaySec: 7n * 86_400n,
   eventHorizonSec: 30n * 86_400n,
   indexerLagBlocks: 20n,
+  gasWatch: {},
+  gasBurnWeiPerDay: 0n,
+  gasLowDays: 3,
+  gasCriticalDays: 1,
   reconcileEveryMs: 24 * 3600_000,
   eventLookbackBlocks: 1000n,
   logChunkBlocks: 5000n,
@@ -120,6 +131,8 @@ export class Monitor {
   private readonly tickerByMarket = new Map<string, string>();
   private readonly tickerByOracle = new Map<string, string>();
   private lastReconcileAt = 0;
+  /** MON-R15: balance samples per watched address over the last day (memory; a restart re-measures). */
+  private readonly gasSamples = new Map<string, {at: number; balance: bigint}[]>();
 
   constructor(
     private readonly client: PublicClient,
@@ -177,6 +190,7 @@ export class Monitor {
     await section("keepers", () => this.keeperHealth(obs));
     await section("calendar", () => this.calendarRunway(block.timestamp, obs));
     await section("indexer", () => this.indexerLag(block.number, obs));
+    await section("gas", () => this.gasRunway(obs));
 
     for (const o of obs) await this.apply(o, block.number, block.timestamp);
     const pages = await this.notify(block.number);
@@ -358,6 +372,28 @@ export class Monitor {
       const r = await this.o.reconcile();
       this.lastReconcileAt = this.o.now();
       obs.push({rule: "INDEXER_LAG", subject: "reconcile", active: r.diffs > 0, title: `Indexer reconciliation: ${r.diffs} diff(s)`, details: {block: r.block.toString(), diffs: r.diffs}});
+    }
+  }
+
+  /** MON-R15: days of ETH left per keeper signer at max(configured, measured) burn. A top-up restarts the measurement. */
+  private async gasRunway(obs: Observation[]): Promise<void> {
+    const DAY_MS = 86_400_000;
+    const now = this.o.now();
+    for (const [name, address] of Object.entries(this.o.gasWatch)) {
+      const balance = await this.client.getBalance({address});
+      let samples = (this.gasSamples.get(name) ?? []).filter((x) => now - x.at <= DAY_MS);
+      if (samples.length > 0 && balance > samples[samples.length - 1].balance) samples = [];
+      samples.push({at: now, balance});
+      this.gasSamples.set(name, samples);
+      const first = samples[0];
+      const spanMs = now - first.at;
+      // Measured only over ≥ 1h, so a single large test transaction does not read as a daily rate.
+      const measured = spanMs >= 3_600_000 && first.balance > balance ? ((first.balance - balance) * BigInt(DAY_MS)) / BigInt(spanMs) : 0n;
+      const burn = measured > this.o.gasBurnWeiPerDay ? measured : this.o.gasBurnWeiPerDay;
+      const days = burn > 0n ? Number((balance * 1000n) / burn) / 1000 : Infinity;
+      const details = {signer: name, address, balanceWei: balance.toString(), burnWeiPerDay: burn.toString(), measuredWeiPerDay: measured.toString(), daysLeft: Number.isFinite(days) ? days : null};
+      obs.push({rule: "LOW_GAS", subject: name, active: days < this.o.gasLowDays, title: `Keeper signer ${name} has < ${this.o.gasLowDays} days of gas`, details});
+      obs.push({rule: "LOW_GAS_CRITICAL", subject: name, active: days < this.o.gasCriticalDays, title: `Keeper signer ${name} has < ${this.o.gasCriticalDays} day of gas`, details});
     }
   }
 
