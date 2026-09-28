@@ -1,5 +1,5 @@
 "use client";
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {useQuery} from "@tanstack/react-query";
 import {formatUnits} from "viem";
 import {useAccount} from "wagmi";
@@ -54,6 +54,13 @@ function Positions({address, restricted}: {address: `0x${string}`; restricted: b
   const collateral = borrows.reduce((a, r) => a + Number(formatUnits(r.st!.user!.collateral, 6)), 0);
   const lowest = borrows.find((r) => r.hf !== undefined)?.hf;
   const errors = all.filter((p) => p.error).map((p) => p.symbol);
+  // Symbols that had a position this visit, riskiest current ones first, then any just closed.
+  const borrowSeen = useRef(new Set<string>());
+  const lendSeen = useRef(new Set<string>());
+  borrows.forEach((r) => borrowSeen.current.add(r.symbol));
+  lends.forEach((r) => lendSeen.current.add(r.symbol));
+  const borrowOrder = [...borrows.map((r) => r.symbol), ...[...borrowSeen.current].filter((t) => !borrows.some((r) => r.symbol === t))];
+  const lendOrder = [...lends.map((r) => r.symbol), ...[...lendSeen.current].filter((t) => !lends.some((r) => r.symbol === t))];
 
   return (
     <div className="space-y-8">
@@ -75,34 +82,34 @@ function Positions({address, restricted}: {address: `0x${string}`; restricted: b
       <div className="space-y-4" data-testid="positions">
         {loading && borrows.length + lends.length === 0 ? (
           <PortfolioSkeleton />
-        ) : borrows.length + lends.length === 0 ? (
-          <EmptyState title="You're not lending or borrowing anything yet" icon="layers" action={!restricted && <ButtonLink href="/markets" variant="secondary">Pick a stock from the board</ButtonLink>}>
-            Lend a Stock Token to earn what borrowers pay, or borrow one to short or hedge.
-          </EmptyState>
         ) : (
-          <>
-            {borrows.length > 0 && (
-              <section className="space-y-3" aria-label="Borrows and shorts">
-                <h2 className="t-label flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-borrow" aria-hidden /> Borrows and shorts
-                </h2>
-                {borrows.map((r) => (
-                  <BorrowSlot key={r.symbol} symbol={r.symbol} restricted={restricted} />
-                ))}
-              </section>
-            )}
-            {lends.length > 0 && (
-              <section className="space-y-3" aria-label="Lending">
-                <h2 className="t-label flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-supply" aria-hidden /> Lending
-                </h2>
-                {lends.map((r) => (
-                  <LendSlot key={r.symbol} symbol={r.symbol} />
-                ))}
-              </section>
-            )}
-          </>
+          borrows.length + lends.length === 0 && (
+            <EmptyState title="You're not lending or borrowing anything yet" icon="layers" action={!restricted && <ButtonLink href="/markets" variant="secondary">Pick a stock from the board</ButtonLink>}>
+              Lend a Stock Token to earn what borrowers pay, or borrow one to short or hedge.
+            </EmptyState>
+          )
         )}
+        {/* Slots stay mounted after a position closes (the card hides itself), so its review sheet can show the result. */}
+        <section className="space-y-3" aria-label="Borrows and shorts" hidden={borrows.length === 0 && !borrowSeen.current.size}>
+          {borrows.length > 0 && (
+            <h2 className="t-label flex items-center gap-2">
+              <span className="size-2 rounded-full bg-borrow" aria-hidden /> Borrows and shorts
+            </h2>
+          )}
+          {borrowOrder.map((sym) => (
+            <BorrowSlot key={sym} symbol={sym} restricted={restricted} active={borrows.some((r) => r.symbol === sym)} />
+          ))}
+        </section>
+        <section className="space-y-3" aria-label="Lending" hidden={lends.length === 0 && !lendSeen.current.size}>
+          {lends.length > 0 && (
+            <h2 className="t-label flex items-center gap-2">
+              <span className="size-2 rounded-full bg-supply" aria-hidden /> Lending
+            </h2>
+          )}
+          {lendOrder.map((sym) => (
+            <LendSlot key={sym} symbol={sym} active={lends.some((r) => r.symbol === sym)} />
+          ))}
+        </section>
         {FEATURES.vault && (
           <EmptyState title="No USDG vault shares" icon="layers" action={<ButtonLink href="/vault" variant="secondary">See the vault</ButtonLink>}>
             Vault positions appear here once the delta-neutral vault launches.
@@ -115,13 +122,13 @@ function Positions({address, restricted}: {address: `0x${string}`; restricted: b
   );
 }
 
-function BorrowSlot({symbol, restricted}: {symbol: string; restricted: boolean}) {
+function BorrowSlot({symbol, restricted, active}: {symbol: string; restricted: boolean; active: boolean}) {
   const f = usePositionFlow(symbol);
-  return <BorrowCard f={f} restricted={restricted} />;
+  return <BorrowCard f={f} restricted={restricted} active={active} />;
 }
-function LendSlot({symbol}: {symbol: string}) {
+function LendSlot({symbol, active}: {symbol: string; active: boolean}) {
   const f = usePositionFlow(symbol);
-  return <LendCard f={f} />;
+  return <LendCard f={f} active={active} />;
 }
 
 /** One row per user action: the router's events (plus Morpho liquidations). Morpho and vault events of the same
