@@ -1,6 +1,6 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {NextRequest} from "next/server";
-import {complianceProxyHeaders} from "@/lib/complianceProxy";
+import {complianceProxyHeaders, geoPlatform, staticGeo} from "@/lib/complianceProxy";
 
 const SECRET = "web-proxy-secret-0123456789abcdef";
 
@@ -61,5 +61,39 @@ describe("CP-R8 through the Next route handler", () => {
     expect(seen[0].get("cf-ipcountry")).toBeNull();
     expect(seen[0].get("x-forwarded-for")).toBe("192.0.2.46");
     expect(seen[0].get("x-stockline-proxy")).toBe(SECRET);
+  });
+});
+
+describe("CP-R8 GEO_PLATFORM=static (local testnet stack only)", () => {
+  const dev = {NODE_ENV: "development", GEO_STATIC_COUNTRY: "DE"} as NodeJS.ProcessEnv;
+
+  it("CP_R8 static in development forwards GEO_STATIC_COUNTRY (and region/IP if set), never the client's headers", () => {
+    expect(geoPlatform("static", dev)).toBe("static");
+    const h = complianceProxyHeaders(
+      new Headers({"cf-ipcountry": "US", "x-geo-country": "US", "x-forwarded-for": "198.51.100.7", "x-stockline-proxy": "forged"}),
+      "static",
+      SECRET,
+      staticGeo({...dev, GEO_STATIC_REGION: "BE", GEO_STATIC_IP: "192.0.2.10"}),
+    );
+    expect(h.get("x-geo-country")).toBe("DE");
+    expect(h.get("x-geo-region")).toBe("BE");
+    expect(h.get("x-forwarded-for")).toBe("192.0.2.10");
+    expect(h.get("x-stockline-proxy")).toBe(SECRET);
+    expect(h.get("cf-ipcountry")).toBeNull();
+  });
+
+  it("CP_R8 static throws in a production build (NODE_ENV=production or test)", () => {
+    expect(() => geoPlatform("static", {...dev, NODE_ENV: "production"})).toThrow(/development/);
+    expect(() => geoPlatform("static", {...dev, NODE_ENV: "test"})).toThrow(/development/);
+  });
+
+  it("CP_R8 static throws on a hosting platform (VERCEL or RAILWAY_ENVIRONMENT set), even in development", () => {
+    expect(() => geoPlatform("static", {...dev, VERCEL: "1"})).toThrow(/hosting/);
+    expect(() => geoPlatform("static", {...dev, RAILWAY_ENVIRONMENT: "production"})).toThrow(/hosting/);
+  });
+
+  it("CP_R8 static needs a two-letter GEO_STATIC_COUNTRY", () => {
+    expect(() => geoPlatform("static", {NODE_ENV: "development"} as NodeJS.ProcessEnv)).toThrow(/GEO_STATIC_COUNTRY/);
+    expect(() => geoPlatform("static", {...dev, GEO_STATIC_COUNTRY: "Germany"})).toThrow(/GEO_STATIC_COUNTRY/);
   });
 });
