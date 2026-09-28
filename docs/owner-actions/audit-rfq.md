@@ -4,6 +4,11 @@ Scope and package: [`docs/audit/README.md`](../audit/README.md) (1,668 nSLOC in 
 `docs/audit/FREEZE`), threat model, known issues. Plan (11 Phase 3): two independent audits plus a formal review of
 the oracle math (OR-R1, OR-R20).
 
+**Round 2 / delta (Phase 3):** `FeeSplitter` + `FeeConverter` (270 nSLOC new `src/`), the mainnet deploy scripts
+(`MainnetConfig`, `DeployMainnet`, `VerifyRoles`, 615 nSLOC, deployment logic) and the fee wiring in
+`StocklineDeploy`; no frozen file changed. Details: [`docs/audit/README.md` §8](../audit/README.md#8-round-2--delta-scope-phase-3-2026-09-28).
+Bug bounty draft: [`bug-bounty.md`](../audit/bug-bounty.md).
+
 **Shortlist** — firms that reviewed Morpho Vault V2, the code we integrate unmodified (Morpho's published audit list:
 Spearbit, ChainSecurity, Zellic, Blackthorn, a Cantina competition; Certora formal verification):
 

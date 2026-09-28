@@ -41,7 +41,8 @@ LM-R20…R23) and `script/DeployTestnet.s.sol` role defaults (A27 must not carry
 equality is fork-tested: `test/fork/phase1/VaultV2CodeHash.fork.t.sol`), OpenZeppelin (`lib/openzeppelin-contracts`),
 forge-std, MetaMorpho v1.1 (`lib/metamorpho-v1.1`, kept only for the scaffold smoke test; removal pending the owner's
 call), everything under `test/` (mocks included) and `script/` except the files named above, and all offchain code
-(keepers, indexer, API, web, compliance) — those have their own review item in the Phase 3 plan.
+(keepers, indexer, API, web, compliance) — those have their own review: [offchain-review.md](offchain-review.md) (Phase 3
+task 9). Round 2 / delta scope (fee contracts, mainnet deploy scripts): §8.
 
 **Size note.** `StocklineRouter` runtime is 24,092 bytes: 484 bytes under EIP-170. Any fix that grows it must be
 checked with `forge build --sizes`.
@@ -153,10 +154,78 @@ forge doc                                                # NatSpec site → docs
 6. **No sequencer uptime feed on 4663.** `sequencerFeed = address(0)`; the guard keeper's L2 block-gap trip is the
    mitigation (OR-R6). Liquidations right after an outage cannot be delayed.
 7. **OR-R14 event timing.** The event buffer is released on the first round at/after `endTs`; a wrong `endTs` (early or
-   late) lets an earnings jump through unbuffered. Anchored alternative under study (`sim/event_timing`, Q2).
+   late) lets an earnings jump through unbuffered. Study done (Q2, [event-timing.md](../../sim/reports/event-timing.md)):
+   keep release-on-round; the 24/5 feed delivers prints as ≤ 1.5% steps.
 8. **Per-address cap is soft.** Enforced on router entries only (and valued at the feed price, A11); direct Morpho
    borrows bypass it (item 1).
 9. **Router refund branch.** `repay`'s refund of `pull − repaidAssets` is unreachable with Morpho's identical rounding;
    kept as a defensive refund (coverage note).
 10. **Issuer pause blocks stock-moving exits** (A25): `repay`, `closeShort`, `withdrawLend`, `unwrap` revert in the token
     while it is paused; USDG-side exits keep working.
+
+## 8. Round 2 / delta scope (Phase 3, 2026-09-28)
+
+Round 2 (or a delta review by a round-1 firm) covers everything added or changed after the freeze
+(`84bfc62`), **up to the round-2 freeze commit recorded when the owner confirms the round** (proposed: the Part A exit
+commit of Phase 3). nSLOC counted as in §1.
+
+### 8.1 New contracts (new audit scope)
+
+| File | nSLOC | What it is | Requirements |
+|---|---:|---|---|
+| `src/fees/FeeSplitter.sol` | 69 | Permissionless `distribute(token)`: splits the contract's whole balance of any ERC-20 by bps weights (sum 10,000), rounding by running sum so each recipient is within 1 wei; revert-all on a failing recipient (A32); owner = 48h timelock; no upgradeability | FE-R1…R3 |
+| `src/fees/FeeConverter.sol` | 131 | One per fee recipient (A33). Keeper-only `convert`: redeem `rSTOCK` → unwrap → sell through an allowlisted target (Approve or Transfer mode) → **onchain floor: oracle value × (1 − 1%)** → USDG only to the owner-set destination; market hours (feed session) and guard clear only (A34); balance-delta measurement | FE-R4 |
+| `src/interfaces/IFeeSplitter.sol` | 21 | Interface, events, errors | – |
+| `src/interfaces/IFeeConverter.sol` | 49 | Interface, events, errors, `SwapMode` | – |
+| **Total new `src/`** | **270** | | |
+
+### 8.2 Deployment changes (deployment logic in scope, as in round 1)
+
+| File | nSLOC | Change |
+|---|---:|---|
+| `script/StocklineDeploy.sol` | 395 (70 changed lines since the freeze) | Deploys `FeeSplitter` (owner = timelock) and the two `FeeConverter`s in `_deployCore`; sets `performanceFeeRecipient = FeeSplitter` and `performanceFee = 10%` per vault **before** `_lockVault` timelocks them; registers each vault with both converters; hands the converters to the timelock in `_finalize`; `_chainJson` split out of `_writeAddresses` (no behavior change) |
+| `script/MainnetConfig.sol` | 180 | New. Mainnet config and the refusal rules MN-R1…MN-R3 (distinct, non-zero, non-deployer, non-placeholder roles; Safe thresholds; 48h; caps at 25% of D8; `Transfer` mode; no sequencer feed) |
+| `script/DeployMainnet.s.sol` | 27 | New. Chain 4663 only and only with `I_HAVE_THE_OWNERS_GO=1` (MN-R4) |
+| `script/VerifyRoles.s.sol` | 408 | New, read-only. Every mainnet-launch §3.4 check plus the Vault V2 code (MN-R5) |
+| `script/DeployTestnet.s.sol`, `DeployLocal.s.sol`, `ForkConfig.sol` | – | New role fields (treasury, `BackstopReserve`, fee keeper) with defaults for 31337/46630 only |
+
+### 8.3 Post-freeze diff of frozen files
+
+**None.** No file listed in §1 changed after `84bfc62` (`git diff 84bfc62 HEAD -- contracts/src` shows only the four
+new files above). Router runtime is unchanged at 24,092 bytes. Any fix during round 2 is recorded here as
+`file · commit · why · failing-first test`, following [fix-workflow.md](fix-workflow.md).
+
+| File | Commit | Why | Test |
+|---|---|---|---|
+| – | – | – | – |
+
+### 8.4 New invariants and properties
+
+| ID | Property | Tests |
+|---|---|---|
+| FE-R2 | Weights always sum to 10,000; `distribute` pays out the whole balance, each recipient within 1 wei of its exact share, for any weights and balance | `test/fees/FeeSplitter.invariant.t.sol` `invariant_FE_R2_weightsSumTo10000`, `invariant_FE_R2_conservation`; `testFuzz_FE_R2_splitIsExactAndWithinOneWei`; `test_FE_R2_oneWeiGoesToLastRecipient`, `test_FE_R2_reentrantTokenCannotDoubleDistribute`, `test_FE_R2_revertingRecipientRevertsAll`, `test_FE_R2_zeroBalanceDistributeIsNoOp` |
+| FE-R4 | The keeper (or anyone else) never receives value; USDG leaves only to the destination; no conversion below the onchain 1% floor; nothing stranded (no stock, wSTOCK, USDG or approval left behind); a conversion meeting the floor always goes through while the gates are open | `test/fees/FeeConverter.invariant.t.sol` `invariant_FE_R4_keeperAndOthersNeverReceiveValue`, `invariant_FE_R4_neverBelowTheOnchainFloor`, `invariant_FE_R4_usdgOnlyToDestinationAndNothingStranded`, `invariant_FE_R4_conversionAtTheFloorAlwaysGoesThrough` (random conversions, DEX rates, ±10% price moves, donations, non-keeper callers); `testFuzz_FE_R4_floorIsExactlyOnePercentBelowValue`; `test_FE_R4_dexUnderpayingIsRejected`, `test_FE_R4_lyingReturnDataIsIgnored`, `test_FE_R4_onlyKeeper`, `test_FE_R4_onlyDuringMarketHours`, `test_FE_R4_onlyWithGuardClear`, `test_FE_R4_transferModeTarget` |
+| FE-R1 | Fee recipient and 10% fee set before the timelocks; 30 days of accrual mint `fee × interest` to the splitter | `test_FE_R1_deployWiresFeeToSplitterBehindTheTimelock`, `test_FE_R1_R2_thirtyDaysOfInterestSplitExactly`, `test_FE_R1_R4_accrueSplitConvertEndToEnd`; fork: `test_FE_R1_R2_fork_thirtyDaysAccrualMintsFeeSharesToSplitterAndDistributes`, `test_FE_R4_fork_convertThroughLiveUniversalRouter` |
+| MN-R1…R5 | The mainnet deploy refuses any non-launch config and `VerifyRoles` passes every check on the exact config | `test/deploy/DeployMainnet.t.sol` (13, anvil); `test/fork/phase3/DeployMainnet.fork.t.sol` (4663 fork) |
+
+`FOUNDRY_PROFILE=deep forge test --match-contract 'FeeSplitterInvariantTest|FeeConverterInvariantTest'` runs them at
+1,000 × 1,000.
+
+### 8.5 New known issues (round 2)
+
+11. **Revert-all splitter (A32).** A recipient whose transfer reverts (e.g. a blocklisted converter) blocks every
+    `distribute` of that token until the owner replaces it through the 48h timelock; fees stay in the splitter, safe.
+12. **Converter sells at up to 1% below the feed price**, and only the Chainlink feed (no buffer) values it; a keeper
+    or a sandwich can capture at most that 1% per conversion. Conversions are weekly or above $1k (Q10).
+13. **Market hours = the feed session** onchain (24/5); the keeper's regular-hours rule (A34) is offchain only.
+14. **Converter redeems only idle liquidity** (A35): fee shares can wait while utilization is high.
+15. **Donations to the splitter** are split like fees; donations of other tokens to a converter can be forwarded by the
+    owner (`forwardUnconverted`) only to the destination.
+16. **Performance fee dilutes lenders by 10% of interest by design** (FE-R1); shown in the UI as net yield (CP-R7).
+
+### 8.6 Other round-2 material
+
+- Threat model additions for the fee path: [threat-model.md §9](threat-model.md).
+- Offchain review (keepers, API, web, compliance, supply chain): [offchain-review.md](offchain-review.md).
+- Bug bounty scope and payouts (Q14): [bug-bounty.md](bug-bounty.md).
+- Finding-to-fix workflow and the findings table: [fix-workflow.md](fix-workflow.md), [findings.md](findings.md).

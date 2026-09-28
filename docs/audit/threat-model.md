@@ -63,8 +63,9 @@ exits. Recovery: owner rotates `setGuardian` and the vault sentinel through the 
 
 The strongest role: a malicious router upgrade could abuse router allowances and Morpho authorizations granted by users.
 Controls: 4-of-7 multisig on hardware wallets; 48h delay on every action (users can revoke approvals and Morpho
-authorization, and exit, in that window; the UI explains revocation, RT-R7); the monitor watches the timelock (planned
-Phase 3: page on any `CallScheduled`). Tests: `test_RT_R7_upgradeOnlyByTimelockAndInitializeOnce`,
+authorization, and exit, in that window; the UI explains revocation, RT-R7); the monitor pages every `CallScheduled`,
+`CallExecuted` (P0 if the schedule was never seen) and role change on every Stockline contract, with the call decoded
+(MON-R16…R18, `keepers/test/monitor.test.ts`). Tests: `test_RT_R7_upgradeOnlyByTimelockAndInitializeOnce`,
 `test_RT_R7_R8_upgradeFromPhase2ImplementationThroughTimelock`, `packages/devnet/test/runbooks.test.ts` (real timelock
 operations).
 
@@ -77,3 +78,18 @@ operations).
 | `adminBurn` from the wrapper | wSTOCK under-backed; last unwrappers lose (known issue 4) | `test_LM_R7_R8_adminBurnBreaksBackingAndShowsShortfall`, `test_phase1_exit_adminBurnShowsShortfall` (fork); MON-R3 |
 | Multiplier change without a pause window | MULTIPLIER guard latched; owner confirms (OR-R3) | oracle OR-R3 tests; runbooks test multiplier confirm |
 | Paxos freeze / wipe (USDG) | Unwrap blocked / `clUSDG` under-backed (known issue 5) | `test/fork/phase1/CollateralTokenFreeze.fork.t.sol`; MON-R4 |
+
+## 9. Fee path (Phase 3: `FeeSplitter`, `FeeConverter`, fee keeper)
+
+| Attempt | Control | Test |
+|---|---|---|
+| Fee keeper (or a stolen keeper key) routes USDG to itself | The keeper can only call `convert`; the destination is owner-set (48h timelock) and USDG is sent only there; the keeper never holds funds | `invariant_FE_R4_keeperAndOthersNeverReceiveValue`, `invariant_FE_R4_usdgOnlyToDestinationAndNothingStranded`, `test_FE_R4_convertForwardsUsdgToDestinationOnly` |
+| Keeper passes crafted swap data / a malicious target | Targets owner-allowlisted (UniversalRouter only, Q4); output measured by the USDG balance delta; return data ignored; approval reset | `test_FE_R4_unlistedTargetVaultAndZeroShares`, `test_FE_R4_lyingReturnDataIsIgnored`, `test_FE_R4_dexUnderpayingIsRejected`, `test_FE_R4_transferModeTarget` |
+| Keeper (or MEV) sets `minUsdgOut = 0` and sandwiches the conversion | `minUsdgOut` must be ≥ the **onchain** floor (feed value × 99%); worst case 1% of one conversion (known issue 12); conversions only in the feed session with the guard clear, keeper additionally in NYSE regular hours for depth | `test_FE_R4_minOutBelowOracleFloorRejected`, `testFuzz_FE_R4_floorIsExactlyOnePercentBelowValue`, `invariant_FE_R4_neverBelowTheOnchainFloor`, `test_FE_R4_onlyDuringMarketHours`, `test_FE_R4_onlyWithGuardClear` |
+| Manipulate the oracle to lower the floor | The floor uses the Chainlink feed (no DEX input); a stale feed or any guard reason blocks `convert` | `test_FE_R4_onlyWithGuardClear`; oracle suite (OR-R1…R8) |
+| Reenter through a malicious token or target | `nonReentrant` on `distribute` and `convert`; splitter reentrancy with a malicious token cannot pay twice | `test_FE_R2_reentrantTokenCannotDoubleDistribute` |
+| Grief `distribute` with a reverting recipient | Revert-all (A32): fees stay in the splitter until the owner replaces the recipient (48h); `FEE_NOT_DISTRIBUTED` pages after 8 days (MON-R20) | `test_FE_R2_revertingRecipientRevertsAll`; `keepers/test/monitor.test.ts` MON-R20 |
+| Change the weights or recipients (e.g. 100% to an attacker) | Owner only = 48h timelock; weights must sum to 10,000; every change emits and pages (`ROLE_CHANGED` on `RecipientsSet`, `TIMELOCK_SCHEDULED` when scheduled) | `test_FE_R2_onlyOwnerSetsRecipients`, `test_FE_R2_rejectsBadConfigurations`, `invariant_FE_R2_weightsSumTo10000`; MON-R16/R18 tests |
+| Change a vault's fee or fee recipient | Vault V2 curator actions behind the 48h vault timelock, set before `increaseTimelock`; `Submit`/`Accept` page | `test_FE_R1_deployWiresFeeToSplitterBehindTheTimelock`, `test_FE_R1_recipientSwitchThroughVaultTimelock`; MON-R16 |
+| Drain borrowers' liquidity by converting | The keeper redeems only what idle covers (A35); no `forceDeallocate` | `keepers/src/feeConverter/feeConverter.ts` `planConversion` (no dedicated test yet: listed for round 2) |
+
