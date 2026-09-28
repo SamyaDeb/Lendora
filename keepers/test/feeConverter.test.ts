@@ -4,7 +4,7 @@ import {anvil as anvilChain} from "viem/chains";
 import {erc20Abi, mockUsdgAbi, vaultV2FullAbi} from "@stockline/sdk";
 import {ChainDriver} from "@stockline/devnet";
 import {startAnvil, type Anvil} from "./anvil.js";
-import {DEPLOYER, freshRounds, lend, WED} from "./helpers.js";
+import {allocation, DEPLOYER, freshRounds, lend, WED} from "./helpers.js";
 import {Allocator} from "../src/allocator/allocator.js";
 import {DryRunSender, rpcUnlockedSender} from "../src/common/signer.js";
 import {defaultFeeConverterOptions, FeeConverterBot, mockDexSellBuilder, UR_CONTRACT_BALANCE, universalRouterSellBuilder} from "../src/feeConverter/feeConverter.js";
@@ -83,6 +83,81 @@ describe("fee-converter keeper on anvil (FE-R4)", () => {
     await accrue(SAT + 37n * DAY); // Monday 12:00 ET
     const later = await bot().tick();
     expect(later.filter((p) => p.kind === "convert")).toHaveLength(2);
+  }, 120_000);
+});
+
+/**
+ * A35 on anvil: a conversion redeems only what the vault's idle `wSTOCK` covers. The allocation (borrowers'
+ * liquidity) is never touched: no `forceDeallocate`, the adapter's allocation is unchanged, the rest waits.
+ */
+describe("fee-converter redeems idle only (A35, FE-R4)", () => {
+  let a: Anvil;
+  const lender = "0x00000000000000000000000000000000000000d1" as const;
+  const borrower = "0x00000000000000000000000000000000000000d2" as const;
+  const opts = {...defaultFeeConverterOptions, minUsdg: 1_000n, regularHoursOnly: true};
+  const s = () => a.d.stocks.NVDA;
+  const idle = () => a.client.readContract({address: s().wrapper, abi: erc20Abi, functionName: "balanceOf", args: [s().vault]});
+  const sharesOf = (who: `0x${string}`) => a.client.readContract({address: s().vault, abi: erc20Abi, functionName: "balanceOf", args: [who]});
+  const needed = async (who: `0x${string}`) => a.client.readContract({address: s().vault, abi: vaultV2FullAbi, functionName: "previewRedeem", args: [await sharesOf(who)]});
+  const bot = () => new FeeConverterBot(a.client, rpcUnlockedSender(a.client, a.url, anvilChain, a.d.roles.feeKeeper!), a.d, mockDexSellBuilder(a.d.mocks!.swapAggregator), opts, undefined, () => {});
+  /** The lender withdraws idle down to `leave` raw wNVDA (a plain Vault V2 withdraw never deallocates). */
+  async function drainIdleTo(leave: bigint) {
+    const i = await idle();
+    if (i > leave) await a.send(lender, s().vault, encodeFunctionData({abi: vaultV2FullAbi, functionName: "withdraw", args: [i - leave, lender, lender]}));
+  }
+  async function forceDeallocations(fromBlock: bigint) {
+    const logs = await a.client.getLogs({address: s().vault, event: parseAbi(["event ForceDeallocate(address indexed sender, address adapter, uint256 assets, address indexed onBehalf, bytes32[] ids, uint256 penaltyAssets)"])[0], fromBlock});
+    return logs.length;
+  }
+
+  beforeAll(async () => {
+    a = await startAnvil();
+    await freshRounds(a, WED);
+    await lend(a, "NVDA", lender, 500n * E18);
+    await a.test.impersonateAccount({address: a.d.roles.allocator});
+    await new Allocator(a.client, rpcUnlockedSender(a.client, a.url, anvilChain, a.d.roles.allocator), a.d, undefined, undefined, () => {}).tick();
+    await new ChainDriver(a, {log: () => {}}).borrow("NVDA", borrower, 60_000n * 10n ** 6n, 150n * E18);
+    await a.test.impersonateAccount({address: a.d.roles.feeKeeper!});
+    await a.send(DEPLOYER, a.d.mocks!.swapAggregator, encodeFunctionData({abi: dexAbi, functionName: "setRate", args: [s().stockToken, a.d.usdg, 225_66000000n / 100n]}));
+    await a.send(DEPLOYER, a.d.usdg, encodeFunctionData({abi: mockUsdgAbi, functionName: "mint", args: [a.d.mocks!.swapAggregator, 10n ** 15n]}));
+    await freshRounds(a, WED + 30n * DAY);
+    await a.send(DEPLOYER, s().vault, encodeFunctionData({abi: vaultV2FullAbi, functionName: "accrueInterest"}));
+    // Split the fee shares to the converters (permissionless), so both hold shares to convert.
+    await a.send(DEPLOYER, a.d.feeSplitter!, encodeFunctionData({abi: parseAbi(["function distribute(address token)"]), functionName: "distribute", args: [s().vault]}));
+  }, 300_000);
+  afterAll(() => a?.stop());
+
+  it("A35 with no idle liquidity the conversion waits and nothing is deallocated", async () => {
+    const from = await a.client.getBlockNumber();
+    const alloc0 = await allocation(a, "NVDA");
+    const conv0 = await sharesOf(a.d.treasuryConverter!);
+    expect(conv0).toBeGreaterThan(0n);
+    await drainIdleTo(0n);
+    expect(await idle()).toBe(0n);
+    const plans = await bot().tick();
+    expect(plans.filter((p) => p.kind === "convert")).toHaveLength(0);
+    expect(await sharesOf(a.d.treasuryConverter!)).toBe(conv0);
+    expect(await allocation(a, "NVDA")).toBe(alloc0);
+    expect(await forceDeallocations(from)).toBe(0);
+  }, 120_000);
+
+  it("A35 with idle below the fee shares it converts only what idle covers; the allocation is unchanged", async () => {
+    const from = await a.client.getBlockNumber();
+    const alloc0 = await allocation(a, "NVDA");
+    const want = await needed(a.d.treasuryConverter!);
+    // Idle covers a third of the treasury converter's shares (a new lender's deposit; the vault has no liquidity adapter).
+    await lend(a, "NVDA", "0x00000000000000000000000000000000000000d3", want / 3n);
+    const idle0 = await idle();
+    expect(idle0).toBeLessThan(want);
+    const conv0 = await sharesOf(a.d.treasuryConverter!);
+    const plans = await bot().tick();
+    const treasury = plans.find((p) => p.kind === "convert" && p.converter === "treasury");
+    expect(treasury).toBeDefined();
+    expect(treasury!.shares).toBeLessThan(conv0); // partial
+    expect(await sharesOf(a.d.treasuryConverter!)).toBeGreaterThan(0n); // the rest waits for the next tick
+    expect(await idle()).toBeLessThanOrEqual(idle0);
+    expect(await allocation(a, "NVDA")).toBe(alloc0); // borrowers' liquidity untouched
+    expect(await forceDeallocations(from)).toBe(0);
   }, 120_000);
 });
 
