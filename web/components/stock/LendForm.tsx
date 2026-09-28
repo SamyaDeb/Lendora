@@ -5,7 +5,7 @@ import type {LendFlow} from "@/lib/flows/useLendFlow";
 import {num, pct, wad} from "@/lib/format";
 import {AmountInput, Button, Icon, Notice, NumberTicker, Row, Segmented, Stat} from "@/components/ui";
 import {ReviewSheet} from "@/components/review/ReviewSheet";
-import {WalletGate} from "./WalletGate";
+import {NeedFunds, WalletGate} from "./WalletGate";
 
 /** Lend tab: deposit Stock Tokens into rSTOCK, or withdraw. The yield source is always spelled out. */
 export function LendForm({f}: {f: LendFlow}) {
@@ -70,6 +70,7 @@ export function LendForm({f}: {f: LendFlow}) {
         </div>
       )}
 
+      <NeedFunds token={symbol} show={f.mode === "deposit" && f.u?.stockBalance === 0n} />
       <WalletGate>
         <Button
           size="lg"

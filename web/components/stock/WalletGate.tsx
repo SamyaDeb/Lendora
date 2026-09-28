@@ -1,7 +1,8 @@
 "use client";
 import {useEffect, useState, type ReactNode} from "react";
 import {useAccount, useSwitchChain} from "wagmi";
-import {chain} from "@/lib/env";
+import Link from "next/link";
+import {CHAIN_ID, chain, deployment} from "@/lib/env";
 import {Button, Icon} from "@/components/ui";
 import {ConnectButton, useWrongNetwork} from "@/components/shell/ConnectButton";
 
@@ -32,4 +33,18 @@ export function WalletGate({children}: {children: ReactNode}) {
       </div>
     );
   return <>{children}</>;
+}
+
+/** Local and testnet: point an empty wallet to the test funds on the portfolio page. */
+export function NeedFunds({token, show}: {token: string; show: boolean}) {
+  const testChain = CHAIN_ID === 31337 || Boolean(deployment().mocks?.faucet);
+  if (!show || !testChain) return null;
+  return (
+    <p className="flex items-center gap-2 text-[13px] text-muted">
+      <Icon name="info" size={14} className="text-accent-text" /> No {token} in this wallet.{" "}
+      <Link href="/portfolio" className="text-accent-text hover:underline">
+        Get test funds
+      </Link>
+    </p>
+  );
 }

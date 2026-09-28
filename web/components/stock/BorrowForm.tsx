@@ -8,7 +8,7 @@ import {et, num, pct, until, wad} from "@/lib/format";
 import {cn} from "@/lib/cn";
 import {AmountInput, Button, GuardBanner, HealthFactor, HealthMeter, Icon, NumberTicker, Row} from "@/components/ui";
 import {ReviewSheet} from "@/components/review/ReviewSheet";
-import {WalletGate} from "./WalletGate";
+import {NeedFunds, WalletGate} from "./WalletGate";
 
 const liqText = (x?: bigint) => (x === undefined || x === 0n ? "–" : `$${num(Number(formatUnits(x, 8)), 2)}`);
 
@@ -44,6 +44,7 @@ export function BorrowForm({f, price, available}: {f: BorrowFlow; price?: number
         </div>
       </div>
 
+      <NeedFunds token="USDG" show={f.u?.usdgBalance === 0n} />
       <AmountInput label="Collateral" value={f.collateral} onChange={f.setCollateral} decimals={6} unit="USDG" max={f.u?.usdgBalance} maxLabel="Wallet balance" usdPrice={1} testId="collateral" disabled={!f.address} />
 
       <div className="space-y-1.5">
