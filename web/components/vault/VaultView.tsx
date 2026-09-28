@@ -1,6 +1,6 @@
 "use client";
 import {useState} from "react";
-import type {VaultData} from "@/lib/fixtures";
+import {splitFor, type VaultOverview, type VaultUser} from "@/lib/vault";
 import {et, num, pct, usd} from "@/lib/format";
 import {cn} from "@/lib/cn";
 import {AmountInput, AssetIcon, Badge, Button, Icon, Notice, Segmented, StackBar, Stat, UtilBar} from "@/components/ui";
@@ -10,10 +10,12 @@ import {AmountInput, AssetIcon, Badge, Button, Icon, Notice, Segmented, StackBar
  * funding), what the vault holds, hedge status and the risks in plain words. Phase 4: no contracts yet, so this runs
  * on labelled preview data and the actions are disabled.
  */
-export function VaultView({v, weekend}: {v: VaultData; weekend?: boolean}) {
+export function VaultView({v, user}: {v: VaultOverview; user?: VaultUser}) {
+  const weekend = v.marketClosed;
+  const split = splitFor(v, "30d");
   const [mode, setMode] = useState<"deposit" | "withdraw">("deposit");
   const [amount, setAmount] = useState("");
-  const netDelta = Math.max(...v.sleeves.map((s) => Math.abs(s.delta)));
+  const netDelta = Math.max(0, ...v.sleeves.map((s) => Math.abs(s.delta)));
   const minMargin = Math.min(...v.sleeves.map((s) => s.marginRatio));
   return (
     <div className="space-y-6">
@@ -30,9 +32,9 @@ export function VaultView({v, weekend}: {v: VaultData; weekend?: boolean}) {
           </p>
         </div>
         <dl className="flex gap-8">
-          <Stat label="Net APY (variable, 30d)" size="lg" tone="supply" value={pct(v.netApy)} />
+          <Stat label="Net APY (variable, 30d)" size="lg" tone="supply" value={pct(v.apy.d30)} />
           <Stat label="Deposits" size="lg" value={usd(v.tvl, 0)} hint={`of ${usd(v.cap, 0)} cap`} />
-          <Stat label="Share price" size="lg" value={`${num(v.navPerShare, 4)}`} hint="USDG per share" />
+          <Stat label="Share price" size="lg" value={`${num(v.sharePrice, 4)}`} hint="USDG per share" />
         </dl>
       </div>
 
@@ -51,10 +53,10 @@ export function VaultView({v, weekend}: {v: VaultData; weekend?: boolean}) {
               <StackBar
                 label="Yield split"
                 items={[
-                  {label: "Lending fees", value: v.yieldSplit.lending, color: "var(--supply)", note: "Paid by borrowers of the Stock Tokens the vault lends (90% of spot)"},
-                  {label: "Perp funding", value: v.yieldSplit.funding, color: "var(--accent-text)", note: "Paid by perp longs to the vault's short hedge; can turn negative"},
-                  {label: "Cash buffer", value: v.yieldSplit.buffer, color: "var(--violet-200)", note: "USDG yield on the 5% kept for withdrawals"},
-                  {label: "Costs", value: v.yieldSplit.costs, color: "var(--danger)", note: "Swaps, rebalancing and venue fees"},
+                  {label: "Lending fees", value: split.lending, color: "var(--supply)", note: "Paid by borrowers of the Stock Tokens the vault lends (90% of spot)"},
+                  {label: "Perp funding", value: split.funding, color: "var(--accent-text)", note: "Paid by perp longs to the vault's short hedge; can turn negative"},
+                  {label: "Cash buffer", value: split.buffer, color: "var(--violet-200)", note: "USDG yield on the 5% kept for withdrawals"},
+                  {label: "Costs", value: split.costs, color: "var(--danger)", note: "Swaps, rebalancing and venue fees"},
                 ]}
               />
             </div>
@@ -70,7 +72,7 @@ export function VaultView({v, weekend}: {v: VaultData; weekend?: boolean}) {
                 items={[
                   {label: "Stocks lent (rSTOCK)", value: v.allocation.lent, color: "var(--supply)", note: "Earning lending fees"},
                   {label: "Stocks held", value: v.allocation.held, color: "var(--violet-400)", note: "Kept wrapped for fast unwinds"},
-                  {label: "Perp hedge margin", value: v.allocation.perpMargin, color: "var(--borrow)", note: `On ${v.venue}`},
+                  {label: "Perp hedge margin", value: v.allocation.perpMargin, color: "var(--borrow)", note: `On ${v.venue.name}`},
                   {label: "Cash buffer", value: v.allocation.cash, color: "var(--violet-200)", note: "Pays instant withdrawals"},
                 ]}
               />
@@ -139,18 +141,15 @@ export function VaultView({v, weekend}: {v: VaultData; weekend?: boolean}) {
               {value: "withdraw", label: "Withdraw"},
             ]}
           />
-          <AmountInput label={mode === "deposit" ? "Amount to deposit" : "Amount to withdraw"} value={amount} onChange={setAmount} decimals={6} unit="USDG" usdPrice={1} max={mode === "withdraw" && v.user ? BigInt(Math.round(v.user.value * 1e6)) : undefined} maxLabel="Your balance" />
-          {mode === "withdraw" && <p className="text-[13px] text-muted">Instant up to the cash buffer ({usd(v.tvl * v.allocation.cash, 0)} now). More is queued until the next settlement.</p>}
+          <AmountInput label={mode === "deposit" ? "Amount to deposit" : "Amount to withdraw"} value={amount} onChange={setAmount} decimals={6} unit="USDG" usdPrice={1} max={mode === "withdraw" && user ? BigInt(Math.round(user.value * 1e6)) : undefined} maxLabel="Your balance" />
+          {mode === "withdraw" && <p className="text-[13px] text-muted">Instant up to the cash buffer ({usd(v.instantCapacity, 0)} now). More is queued until the next settlement.</p>}
           {weekend && <Notice tone="weekend">Deposits and withdrawals pause while markets are closed if the perp price data is stale.</Notice>}
           <Button size="lg" className="w-full" disabled title="The vault launches in Phase 4">
             {mode === "deposit" ? "Deposit" : "Withdraw"} · opens in Phase 4
           </Button>
-          {v.user && (
+          {user && (
             <dl className="space-y-3 border-t border-line pt-4">
-              <Stat size="sm" label="Your vault balance" value={`${num(v.user.value)} USDG`} hint={`${num(v.user.shares, 2)} shares`} />
-              {v.user.queued > 0 && (
-                <Stat size="sm" label="Withdrawal queued" tone="caution" value={`${num(v.user.queued)} USDG`} hint={`Ready ${et(Date.parse(v.user.queuedReadyAt) / 1000)}`} />
-              )}
+              <Stat size="sm" label="Your vault balance" value={`${num(user.value)} USDG`} hint={`${num(user.shares, 2)} shares`} />
             </dl>
           )}
         </aside>
