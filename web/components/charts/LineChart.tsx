@@ -13,6 +13,10 @@ export interface Series {
   unit?: "%" | "" | "$";
   color?: string;
   dashed?: boolean;
+  /** Start the axis at 0 (default). False fits the axis to the data (share prices). */
+  zero?: boolean;
+  /** Overrides the unit formatting (axis and readout). */
+  format?: (v: number) => string;
 }
 
 const W = 720;
@@ -61,13 +65,19 @@ export function LineChart({a, b, title, subtitle}: {a: Series; b?: Series; title
   const t0 = Math.min(...all.map((p) => p.t));
   const t1 = Math.max(...all.map((p) => p.t));
   const x = (t: number) => PAD.l + ((t - t0) / Math.max(1, t1 - t0)) * (W - PAD.l - PAD.r);
-  const scale = (pts: {v: number}[]) => {
-    const lo = Math.min(0, ...pts.map((p) => p.v));
-    const hi = Math.max(...pts.map((p) => p.v), lo + 1e-12) * 1.08;
+  const scale = (s: Series) => {
+    const vs = s.points.map((p) => p.v);
+    const min = Math.min(...vs);
+    const max = Math.max(...vs);
+    const pad = (max - min || Math.abs(max) || 1) * 0.08;
+    const lo = s.zero === false ? min - pad : Math.min(0, min);
+    const hi = s.zero === false ? max + pad : Math.max(max, lo + 1e-12) * 1.08;
     return {lo, hi, y: (v: number) => PAD.t + (1 - (v - lo) / (hi - lo)) * (H - PAD.t - PAD.b)};
   };
-  const sa = scale(a.points);
-  const sb = b ? scale(b.points) : undefined;
+  const sa = scale(a);
+  const sb = b ? scale(b) : undefined;
+  const fa = (v: number) => (a.format ? a.format(v) : fmtValue(v, a.unit));
+  const fb = (v: number) => (b?.format ? b.format(v) : fmtValue(v, b?.unit));
   const path = (pts: {t: number; v: number}[], y: (v: number) => number) => pts.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
   const area = `${path(a.points, sa.y)} L${x(a.points[a.points.length - 1].t).toFixed(1)},${H - PAD.b} L${x(a.points[0].t).toFixed(1)},${H - PAD.b} Z`;
   const closures = feedSessions
@@ -92,16 +102,16 @@ export function LineChart({a, b, title, subtitle}: {a: Series; b?: Series; title
       {head}
       <div className="mt-2 flex items-baseline gap-4 text-[13px]" aria-live="polite">
         <span className="num text-[20px] font-medium tracking-[-0.02em]" style={{color: ca}}>
-          {fmtValue((hp ?? last).v, a.unit)}
+          {fa((hp ?? last).v)}
         </span>
-        {b && <span className="num text-[15px]" style={{color: cb}}>{fmtValue((hb ?? b.points[b.points.length - 1]).v, b.unit)}</span>}
+        {b && <span className="num text-[15px]" style={{color: cb}}>{fb((hb ?? b.points[b.points.length - 1]).v)}</span>}
         <span className="text-muted">{new Date((hp ?? last).t * 1000).toUTCString().slice(5, 22)} UTC</span>
       </div>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="mt-1 h-auto w-full touch-pan-y outline-none"
         role="img"
-        aria-label={`${title}: ${a.label}${b ? ` and ${b.label}` : ""} over time. Latest ${a.label} ${fmtValue(last.v, a.unit)}.`}
+        aria-label={`${title}: ${a.label}${b ? ` and ${b.label}` : ""} over time. Latest ${a.label} ${fa(last.v)}.`}
         tabIndex={0}
         onMouseMove={onMove}
         onMouseLeave={() => setHover(null)}
@@ -125,14 +135,14 @@ export function LineChart({a, b, title, subtitle}: {a: Series; b?: Series; title
           <g key={v}>
             <line x1={PAD.l} x2={W - PAD.r} y1={sa.y(v)} y2={sa.y(v)} stroke="var(--border)" />
             <text x={PAD.l - 8} y={sa.y(v) + 4} textAnchor="end" fontSize="11" fill="var(--text-muted)" className="num">
-              {fmtValue(v, a.unit)}
+              {fa(v)}
             </text>
           </g>
         ))}
         {sb &&
           [sb.lo, sb.hi].map((v) => (
             <text key={v} x={W - PAD.r + 8} y={sb.y(v) + 4} fontSize="11" fill="var(--text-muted)" className="num">
-              {fmtValue(v, b!.unit)}
+              {fb(v)}
             </text>
           ))}
         {ticks.map((t) => (

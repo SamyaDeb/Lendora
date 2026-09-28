@@ -1,18 +1,28 @@
 "use client";
-import {useVaultOverview, useVaultUser} from "@/lib/vault/hooks";
-import {Button, EmptyState, Skeleton} from "@/components/ui";
-import {VaultView} from "./VaultView";
+import {useState} from "react";
+import {isFixtureSource} from "@/lib/vault";
+import {useVaultAccount, useVaultOverview, useVaultSource, useVaultUser} from "@/lib/vault/hooks";
+import {VaultView, type PanelMode} from "./VaultView";
+import {VaultPanel} from "./VaultPanel";
 
-/** `/vault` container: the overview and the wallet's position from the selected vault source (lib/vault). */
+/** `/vault` container: overview and position from the selected vault source (lib/vault), the flows for the panel. */
 export function VaultScreen() {
+  const source = useVaultSource();
   const o = useVaultOverview();
   const u = useVaultUser();
-  if (o.data) return <VaultView v={o.data} user={u.data} />;
-  if (o.isError)
-    return (
-      <EmptyState title="Vault data didn't load" tone="danger" icon="alert" action={<Button variant="secondary" onClick={() => o.refetch()}>Try again</Button>}>
-        The vault&apos;s data source didn&apos;t respond. Your balance is unchanged.
-      </EmptyState>
-    );
-  return <Skeleton className="block h-96 w-full" />;
+  const {address} = useVaultAccount();
+  const [mode, setMode] = useState<PanelMode>("deposit");
+  return (
+    <VaultView
+      o={o.data}
+      u={address ? u.data : undefined}
+      connected={Boolean(address)}
+      error={o.isError}
+      onRetry={() => o.refetch()}
+      fixture={isFixtureSource(source)}
+      fetchedAt={o.dataUpdatedAt}
+      onMode={setMode}
+      panel={<VaultPanel mode={mode} onMode={setMode} deposit={<p className="text-[14px] text-muted">Deposit form: step 4.</p>} withdraw={<p className="text-[14px] text-muted">Withdraw form: step 5.</p>} />}
+    />
+  );
 }
