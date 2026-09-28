@@ -157,6 +157,27 @@
     transform: scale(0.98);
   }
 
+  /* Text field (forms outside the amount input) */
+  .field {
+    width: 100%;
+    min-height: 42px;
+    padding: 0 12px;
+    border-radius: var(--r-xs);
+    background: var(--surface-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    color: var(--text);
+    font-size: 15px;
+    outline: none;
+    transition: box-shadow var(--dur-fast);
+  }
+  .field:focus-visible {
+    box-shadow: inset 0 0 0 1px var(--accent);
+    outline: none;
+  }
+  .field::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+  }
+
   /* Hide number input spinners on amount fields */
   .no-spin::-webkit-outer-spin-button,
   .no-spin::-webkit-inner-spin-button {

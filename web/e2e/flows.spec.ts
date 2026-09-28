@@ -21,6 +21,13 @@ async function stepsDone(p: Page) {
   await expect(steps.locator('li[data-status="failed"]'), await steps.innerText()).toHaveCount(0);
 }
 
+/** Every action opens the review sheet: confirm there, wait for the steps, close the sheet. */
+async function confirmReview(p: Page, close = true) {
+  await p.getByTestId("confirm").click();
+  await stepsDone(p);
+  if (close) await p.getByRole("button", {name: "Done"}).click();
+}
+
 async function position(ticker: string) {
   return client.readContract({address: d.morpho, abi: morphoAbi, functionName: "position", args: [d.stocks[ticker].marketId, E2E_ACCOUNT]});
 }
@@ -31,7 +38,7 @@ function within01pct(a: bigint, b: bigint) {
   return diff * 1000n <= b;
 }
 
-test.describe.serial("Stockline app on anvil", () => {
+test.describe.serial("Lendora app on anvil", () => {
   test.beforeAll(async ({browser}) => {
     client = createPublicClient({transport: http(rpc())}) as PublicClient;
     page = await browser.newPage();
@@ -43,7 +50,7 @@ test.describe.serial("Stockline app on anvil", () => {
     await page.goto("/");
     const rows = page.getByTestId("markets").locator("tbody tr");
     await expect(rows).toHaveCount(3);
-    await expect(page.getByTestId("markets")).toContainText("Open");
+    await expect(page.getByTestId("markets").getByTestId("ease")).toHaveCount(3); // Easy / Tight / Hard to borrow
     const utils = await page.locator('[data-col="utilization"]').allInnerTexts();
     const nums = utils.map((u) => Number(u.replace("%", "")));
     expect([...nums].sort((a, b) => b - a)).toEqual(nums);
@@ -53,7 +60,7 @@ test.describe.serial("Stockline app on anvil", () => {
     await page.goto("/lend/NVDA");
     await page.getByTestId("amount").fill("25");
     await page.getByTestId("submit").click();
-    await stepsDone(page);
+    await confirmReview(page);
     const shares = await client.readContract({address: d.stocks.NVDA.vault, abi: erc20Abi, functionName: "balanceOf", args: [E2E_ACCOUNT]});
     expect(shares).toBeGreaterThan(0n);
   });
@@ -70,7 +77,8 @@ test.describe.serial("Stockline app on anvil", () => {
     const previewHf = BigInt((await hf.getAttribute("data-wad"))!);
     const previewDebt = BigInt((await page.getByTestId("pv-borrowed").getAttribute("data-wad"))!);
     await page.getByTestId("submit").click();
-    await stepsDone(page);
+    await expect(page.getByTestId("rv-liq-now")).toContainText("$"); // liquidation price shown before confirming
+    await confirmReview(page);
     const block = await client.getBlock();
     const onchainHf = await client.readContract({address: d.router!, abi: stocklineRouterAbi, functionName: "healthFactorAt", args: [d.stocks.NVDA.stockToken, E2E_ACCOUNT, block.timestamp]});
     const pos = await position("NVDA");
@@ -83,14 +91,14 @@ test.describe.serial("Stockline app on anvil", () => {
 
   test("US-B1 just borrow AAPL; preview matches onchain within 0.1%", async () => {
     await page.goto("/short/AAPL");
-    await page.getByTestId("mode-borrow").check({force: true});
+    await page.getByTestId("tab-borrow").click();
     await page.getByTestId("collateral").fill("5000");
     await page.getByTestId("borrow-amount").fill("3");
     const hf = page.getByTestId("pv-hf-now").locator("[data-wad]");
     await expect(hf).toHaveAttribute("data-wad", /\d+/);
     const previewHf = BigInt((await hf.getAttribute("data-wad"))!);
     await page.getByTestId("submit").click();
-    await stepsDone(page);
+    await confirmReview(page);
     const block = await client.getBlock();
     const onchainHf = await client.readContract({address: d.router!, abi: stocklineRouterAbi, functionName: "healthFactorAt", args: [d.stocks.AAPL.stockToken, E2E_ACCOUNT, block.timestamp]});
     expect(within01pct(previewHf, onchainHf)).toBe(true);
@@ -103,15 +111,16 @@ test.describe.serial("Stockline app on anvil", () => {
     const before = (await position("NVDA")).collateral;
     await page.getByTestId("add-amount-NVDA").fill("1000");
     await page.getByTestId("add-NVDA").click();
-    await stepsDone(page);
+    await confirmReview(page);
     expect((await position("NVDA")).collateral).toBe(before + 1000n * 10n ** 6n);
 
     await page.getByTestId("repay-AAPL").click();
-    await expect(page.getByTestId("position-AAPL").getByTestId("steps").locator('li[data-status="done"]').last()).toBeVisible({timeout: 60_000});
+    await confirmReview(page);
     await expect.poll(async () => (await position("AAPL")).borrowShares, {timeout: 30_000}).toBe(0n);
     // RT-R8: without debt, "Add collateral" is gone (rescue top-up only); withdrawing stays available.
     await expect(page.getByTestId("add-AAPL")).toHaveCount(0, {timeout: 30_000});
     await page.getByTestId("withdraw-collateral-AAPL").click();
+    await page.getByTestId("confirm").click();
     await expect.poll(async () => (await position("AAPL")).collateral, {timeout: 60_000}).toBe(0n);
   });
 
@@ -135,10 +144,12 @@ test.describe.serial("Stockline app on anvil", () => {
   test("US-B4 close the short (buy back with USDG) and US-L3 withdraw the lend", async () => {
     await page.goto("/portfolio");
     await page.getByTestId("close-NVDA").click();
+    await page.getByTestId("confirm").click();
     await expect.poll(async () => (await position("NVDA")).borrowShares, {timeout: 60_000}).toBe(0n);
     expect((await position("NVDA")).collateral).toBe(0n);
     await page.reload();
     await page.getByTestId("withdraw-lend-NVDA").click();
+    await page.getByTestId("confirm").click();
     await expect.poll(async () => client.readContract({address: d.stocks.NVDA.vault, abi: erc20Abi, functionName: "balanceOf", args: [E2E_ACCOUNT]}), {timeout: 60_000}).toBe(0n);
   });
 
@@ -153,7 +164,7 @@ test.describe.serial("Stockline app on anvil", () => {
   });
 
   test("07 dashboard: leaderboard, chart and weekend panel", async () => {
-    await page.goto("/short-interest");
+    await page.goto("/data");
     await expect(page.getByTestId("leaderboard").locator("tbody tr")).toHaveCount(3);
     await expect(page.getByText("Weekend panel")).toBeVisible();
     await expect(page.getByText("Built on this data")).toBeVisible();

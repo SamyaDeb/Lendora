@@ -1,12 +1,9 @@
-import Link from "next/link";
+import {ButtonLink, EmptyState} from "@/components/ui";
 
 export default function NotFound() {
   return (
-    <div className="card mx-auto max-w-md p-6 text-center">
-      <h1 className="text-xl font-bold">Not found</h1>
-      <Link href="/" className="mt-3 inline-block underline">
-        Back to markets
-      </Link>
-    </div>
+    <EmptyState title="This page doesn't exist" icon="search" className="mx-auto max-w-md" action={<ButtonLink href="/" variant="secondary">Back to markets</ButtonLink>}>
+      The link may be old. Stock pages live at /stock/TICKER.
+    </EmptyState>
   );
 }

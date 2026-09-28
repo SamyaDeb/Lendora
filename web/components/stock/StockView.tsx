@@ -7,7 +7,7 @@ import {browserApi, type HistoryPoint, type MarketDetail} from "@/lib/api";
 import {availableToBorrow, borrowEase} from "@/lib/market";
 import {et, num, pct, usd} from "@/lib/format";
 import {cn} from "@/lib/cn";
-import {Address, AssetIcon, Button, EaseBadge, EmptyState, GuardBanner, Icon, NumberTicker, Skeleton, Stat, StatusBadge, UtilBar, useMediaQuery} from "@/components/ui";
+import {Address, AssetIcon, Button, EaseBadge, EmptyState, Icon, Notice, NumberTicker, Skeleton, Stat, StatusBadge, UtilBar, useMediaQuery} from "@/components/ui";
 import {MarketCharts} from "@/components/charts/MarketCharts";
 import {ActionPanel, type ActionTab} from "./ActionPanel";
 
@@ -59,7 +59,15 @@ export function StockView({symbol, initial, hourly, daily, initialTab}: {symbol:
         </div>
       </header>
 
-      {m?.guard.tripped && <GuardBanner reasons={m.guard.reasons} />}
+      {m?.guard.tripped && (
+        <Notice tone="danger" title="Borrowing is paused here">
+          The oracle&apos;s safety guard is tripped. Lending, repaying, closing and withdrawing still work. The Borrow tab and the{" "}
+          <Link href="/status" className="underline underline-offset-2">
+            status page
+          </Link>{" "}
+          say why.
+        </Notice>
+      )}
 
       {m ? (
         <dl className="panel grid grid-cols-2 gap-x-6 gap-y-5 p-5 sm:grid-cols-4">
