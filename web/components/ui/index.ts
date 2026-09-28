@@ -15,4 +15,5 @@ export {StepList} from "./Stepper";
 export {Segmented, TabPanel, Tabs, type TabItem} from "./Tabs";
 export {ToastProvider, useToast, type ToastStatus} from "./Toast";
 export {InfoTip, Tooltip, TooltipProvider} from "./Tooltip";
-export {UtilBar} from "./UtilBar";
+export {ProgressBar, UtilBar} from "./UtilBar";
+export {StackBar} from "./StackBar";

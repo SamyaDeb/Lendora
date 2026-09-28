@@ -6,6 +6,9 @@ import {FX_MARKETS, FX_MARKETS_PAUSED, FX_MARKETS_WEEKEND, fxChain, fxDetail, fx
 import {E2E_ACCOUNT} from "@/lib/env";
 import {StockView} from "@/components/stock/StockView";
 import {Portfolio} from "@/components/portfolio/Portfolio";
+import {VaultView} from "@/components/vault/VaultView";
+import {BackstopView} from "@/components/backstop/BackstopView";
+import {FX_BACKSTOP, FX_VAULT} from "@/lib/fixtures";
 
 /** Portfolio fixture: an at-risk NVDA short, a healthy AAPL borrow with lending, SPY lending only. */
 const PORTFOLIO: Record<string, {debt?: number; collateral?: number; lent?: number}> = {NVDA: {debt: 10, collateral: 2600, lent: 0}, AAPL: {debt: 3, collateral: 5000, lent: 4.2}, SPY: {lent: 12.3}};
@@ -41,6 +44,8 @@ export function Preview({page, state, tab}: {page: string; state: string; tab?: 
       />
     ),
     portfolio: <Portfolio />,
+    vault: <VaultView v={FX_VAULT} weekend={state === "weekend"} />,
+    backstop: <BackstopView b={FX_BACKSTOP} now={1_791_317_952} />,
     markets: <MarketsBoardView markets={state === "loading" || state === "error" ? undefined : markets} histories={histories} asOf={state === "loading" || state === "error" ? undefined : {block: "10181", time: "2026-10-06T20:19:12.000Z", confirmed: true}} error={state === "error"} onRetry={() => {}} />,
   };
   return views[page] ?? <p>Unknown preview “{page}”. Try: {Object.keys(views).join(", ")}.</p>;

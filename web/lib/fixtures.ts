@@ -157,3 +157,62 @@ export function fxChain(ticker: string, price: number, o: {weekend?: boolean; de
     },
   };
 }
+
+/** Delta-neutral vault (08, Phase 4): preview data until the contracts exist. */
+export interface VaultData {
+  navPerShare: number;
+  netApy: number;
+  tvl: number;
+  cap: number;
+  yieldSplit: {lending: number; funding: number; buffer: number; costs: number};
+  allocation: {held: number; lent: number; perpMargin: number; cash: number};
+  sleeves: {symbol: string; weight: number; delta: number; marginRatio: number}[];
+  venue: string;
+  lastRebalance: string;
+  bandPct: number;
+  marginTarget: number;
+  user?: {shares: number; value: number; queued: number; queuedReadyAt: string};
+}
+export const FX_VAULT: VaultData = {
+  navPerShare: 1.0412,
+  netApy: 0.0934,
+  tvl: 1_284_000,
+  cap: 2_000_000,
+  yieldSplit: {lending: 0.0461, funding: 0.0512, buffer: 0.0021, costs: -0.006},
+  allocation: {held: 0.0534, lent: 0.6589, perpMargin: 0.2375, cash: 0.05},
+  sleeves: [
+    {symbol: "SPY", weight: 0.5, delta: 0.004, marginRatio: 3.1},
+    {symbol: "NVDA", weight: 0.25, delta: -0.012, marginRatio: 2.6},
+    {symbol: "AAPL", weight: 0.25, delta: 0.007, marginRatio: 2.9},
+  ],
+  venue: "Perp venue (to be selected)",
+  lastRebalance: "2026-10-06T19:30:00.000Z",
+  bandPct: 0.02,
+  marginTarget: 2,
+  user: {shares: 4_802.1, value: 5_000, queued: 1_200, queuedReadyAt: "2026-10-12T13:30:00.000Z"},
+};
+
+/** Backstop pool (09 §2, Phase 5): preview data. */
+export interface BackstopData {
+  apy: number;
+  poolAssets: number;
+  borrowedUsd: number;
+  targetRatio: number;
+  coverCap: number;
+  cooldownDays: number;
+  user?: {staked: number; earned: number; cooldownEndsAt?: string};
+  payouts: {time: string; symbol: string; amount: number; tx: string}[];
+}
+export const FX_BACKSTOP: BackstopData = {
+  apy: 0.071,
+  poolAssets: 184_000,
+  borrowedUsd: 2_406_809,
+  targetRatio: 0.05,
+  coverCap: 0.3,
+  cooldownDays: 14,
+  user: {staked: 10_000, earned: 132.4, cooldownEndsAt: "2026-10-15T20:19:12.000Z"},
+  payouts: [
+    {time: "2026-09-14T15:02:00.000Z", symbol: "NVDA", amount: 3_120.55, tx: "0x" + "3a".repeat(32)},
+    {time: "2026-08-02T21:44:00.000Z", symbol: "SPY", amount: 812.1, tx: "0x" + "7c".repeat(32)},
+  ],
+};

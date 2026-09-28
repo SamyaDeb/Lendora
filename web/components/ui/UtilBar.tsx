@@ -34,3 +34,16 @@ export function UtilBar({value, cap = 0.9, showLabel = true, className, ...rest}
     </span>
   );
 }
+
+/** Progress toward a goal (e.g. backstop coverage target): fills in the positive color; reaching 100% is good. */
+export function ProgressBar({value, label}: {value: number; label: string}) {
+  const v = Math.round(Math.max(0, Math.min(1, value)) * 1e4) / 1e4;
+  return (
+    <span className="flex w-full items-center gap-2.5">
+      <span className="num w-[52px] text-right">{pct(v, 0)}</span>
+      <span className="relative block h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(v * 100)} aria-label={label}>
+        <motion.span className="absolute inset-y-0 left-0 w-full origin-left rounded-full bg-success" initial={false} animate={{scaleX: v}} transition={{duration: DUR.num, ease: EASE_OUT}} />
+      </span>
+    </span>
+  );
+}
