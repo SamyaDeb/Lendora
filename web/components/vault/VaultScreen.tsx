@@ -4,6 +4,8 @@ import {isFixtureSource} from "@/lib/vault";
 import {useVaultAccount, useVaultOverview, useVaultSource, useVaultUser} from "@/lib/vault/hooks";
 import {VaultView, type PanelMode} from "./VaultView";
 import {VaultPanel} from "./VaultPanel";
+import {DepositForm} from "./DepositForm";
+import {useDepositFlow} from "@/lib/vault/useDepositFlow";
 
 /** `/vault` container: overview and position from the selected vault source (lib/vault), the flows for the panel. */
 export function VaultScreen() {
@@ -12,6 +14,7 @@ export function VaultScreen() {
   const u = useVaultUser();
   const {address} = useVaultAccount();
   const [mode, setMode] = useState<PanelMode>("deposit");
+  const deposit = useDepositFlow();
   return (
     <VaultView
       o={o.data}
@@ -22,7 +25,7 @@ export function VaultScreen() {
       fixture={isFixtureSource(source)}
       fetchedAt={o.dataUpdatedAt}
       onMode={setMode}
-      panel={<VaultPanel mode={mode} onMode={setMode} deposit={<p className="text-[14px] text-muted">Deposit form: step 4.</p>} withdraw={<p className="text-[14px] text-muted">Withdraw form: step 5.</p>} />}
+      panel={<VaultPanel mode={mode} onMode={setMode} deposit={<DepositForm f={deposit} />} withdraw={<p className="text-[14px] text-muted">Withdraw form: step 5.</p>} />}
     />
   );
 }

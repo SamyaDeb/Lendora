@@ -31,3 +31,4 @@ export function vaultSource(): VaultSource {
 
 /** True while the vault screens run on fixtures (the page shows a "Preview" badge). */
 export const isFixtureSource = (s: VaultSource) => s.kind === "fixture";
+export {depositBlocker, withdrawBlocker} from "./rules";
