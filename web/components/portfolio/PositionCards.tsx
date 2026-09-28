@@ -169,7 +169,7 @@ export function LendCard({f, active = true}: {f: PositionFlow; active?: boolean}
       </header>
       <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
         <Stat size="sm" label="Lent" value={`${wad(u.vaultAssets, 4)} ${symbol}`} hint={`$${num(value)}`} />
-        <Stat size="sm" label="Fees earned" tone="supply" value={f.fees !== undefined ? `${num(f.fees, 6)} ${symbol}` : "–"} hint={f.fees !== undefined ? `$${num(f.fees * f.price)}` : "Needs the data API"} />
+        <Stat size="sm" label="Fees earned" tone="supply" value={f.fees !== undefined ? `${num(f.fees, 6)} ${symbol}` : "–"} hint={f.fees !== undefined ? `$${num(f.fees * f.price)}` : "Waiting for the indexer"} />
         <Stat size="sm" label="Shares of stock" value={wad(underlyingEquivalent(u.vaultAssets, st.multiplier), 4)} />
         <Stat size="sm" label={`r${symbol} balance`} value={wad(u.vaultShares, 4)} />
       </dl>

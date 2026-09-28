@@ -128,8 +128,9 @@ export function usePositionFlow(symbol: string) {
   }
 
   const price = st ? Number(st.stockAnswer) / 1e8 : 0;
-  const accrued = principal.data !== undefined ? Number(formatUnits(debt, 18)) - principal.data : undefined;
-  const fees = lendFlows.data !== undefined && u ? Number(formatUnits(u.vaultAssets, 18)) - lendFlows.data : undefined;
+  // No indexed opening event yet (the indexer is behind the chain): unknown, not "everything is profit".
+  const accrued = principal.data !== undefined && principal.data > 0 ? Number(formatUnits(debt, 18)) - principal.data : undefined;
+  const fees = lendFlows.data !== undefined && lendFlows.data > 0 && u ? Number(formatUnits(u.vaultAssets, 18)) - lendFlows.data : undefined;
   return {symbol, st, u, debt, price, accrued, fees, add, setAdd, addAmt, plan, confirm, steps, paused: st ? tokenPaused(st.guardReasons) : false, guard: st ? guardReasonList(st.guardReasons) : [], ready: w.ready};
 }
 

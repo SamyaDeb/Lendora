@@ -45,7 +45,7 @@ export function useLendFlow(symbol: string) {
   const market = apiQ.data?.data;
   const price = market ? Number(market.price.usdPerToken) : 0;
   const value = u ? Number(u.vaultAssets) / 1e18 : 0;
-  const earnings = flows.data !== undefined && u ? value - flows.data : undefined;
+  const earnings = flows.data !== undefined && flows.data > 0 && u ? value - flows.data : undefined; // unknown until the deposit is indexed
   const max = mode === "deposit" ? u?.stockBalance : withdrawable;
   const invalid = !parsed || parsed === 0n || (max !== undefined && parsed > max);
 
