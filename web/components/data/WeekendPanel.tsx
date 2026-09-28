@@ -5,7 +5,7 @@ import {getExternal, priceFromTick, twapTick, uniswapV3PoolAbi} from "@stockline
 import {deployment} from "@/lib/env";
 import type {Market} from "@/lib/api";
 import {num, pct} from "@/lib/format";
-import {StatusBadge} from "./ui";
+import {StatusBadge} from "@/components/ui";
 
 /** 07 §4 weekend panel: the Stock Token's DEX price (30-min TWAP, the guard keeper's view) vs the Chainlink reference,
  * the premium, and the buffer in force. */
@@ -39,32 +39,23 @@ export function WeekendPanel({markets}: {markets: Market[]}) {
     },
   });
   return (
-    <section className="card p-4" aria-labelledby="wk">
-      <h2 id="wk" className="mb-2 font-semibold">
-        Weekend panel
-      </h2>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[560px] text-sm">
-          <thead className="text-xs text-[var(--color-muted)]">
-            <tr>
-              <th scope="col" className="py-2 text-left">
-                Stock
-              </th>
-              <th scope="col" className="py-2 text-right">
-                DEX (30m TWAP)
-              </th>
-              <th scope="col" className="py-2 text-right">
-                Chainlink
-              </th>
-              <th scope="col" className="py-2 text-right">
-                Premium
-              </th>
-              <th scope="col" className="py-2 text-right">
-                Buffer in force
-              </th>
-              <th scope="col" className="py-2 text-left pl-3">
-                Status
-              </th>
+    <section className="space-y-3" aria-labelledby="wk">
+      <div>
+        <h2 id="wk" className="t-title">
+          Weekend panel
+        </h2>
+        <p className="mt-1 text-[13.5px] text-muted">The Stock Token&apos;s DEX price (30-minute TWAP) vs the Chainlink reference, the premium, and the safety buffer the oracle adds while markets are closed.</p>
+      </div>
+      <div className="panel overflow-x-auto">
+        <table className="w-full min-w-[620px] border-separate border-spacing-0 text-[14px]">
+          <thead>
+            <tr className="[&>th]:border-b [&>th]:border-line [&>th]:px-4 [&>th]:py-3 [&>th]:text-[13px] [&>th]:font-normal [&>th]:text-muted">
+              <th scope="col" className="text-left">Stock</th>
+              <th scope="col" className="text-right">DEX (30m TWAP)</th>
+              <th scope="col" className="text-right">Chainlink</th>
+              <th scope="col" className="text-right">Premium</th>
+              <th scope="col" className="text-right">Buffer in force</th>
+              <th scope="col" className="text-left">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -72,15 +63,13 @@ export function WeekendPanel({markets}: {markets: Market[]}) {
               const feed = Number(m.price.usdPerToken);
               const dex = q.data?.[m.symbol] ?? null;
               return (
-                <tr key={m.symbol} className="border-t border-[var(--color-line)]">
-                  <th scope="row" className="py-2 text-left">
-                    {m.symbol}
-                  </th>
-                  <td className="num py-2 text-right">{dex === null ? "–" : `$${num(dex)}`}</td>
-                  <td className="num py-2 text-right">${num(feed)}</td>
-                  <td className="num py-2 text-right">{dex === null ? "–" : pct(dex / feed - 1)}</td>
-                  <td className="num py-2 text-right">{pct(m.buffer)}</td>
-                  <td className="py-2 pl-3">
+                <tr key={m.symbol} className="[&>*]:border-b [&>*]:border-line [&>*]:px-4 [&>*]:py-3 last:[&>*]:border-0">
+                  <th scope="row" className="text-left font-medium">{m.symbol}</th>
+                  <td className="num text-right">{dex === null ? "–" : `$${num(dex)}`}</td>
+                  <td className="num text-right">${num(feed)}</td>
+                  <td className="num text-right">{dex === null ? "–" : pct(dex / feed - 1)}</td>
+                  <td className={`num text-right ${Number(m.buffer) > 0 ? "text-weekend" : ""}`}>{pct(m.buffer)}</td>
+                  <td>
                     <StatusBadge status={m.marketStatus} />
                   </td>
                 </tr>

@@ -7,6 +7,7 @@ import {E2E_ACCOUNT} from "@/lib/env";
 import {StockView} from "@/components/stock/StockView";
 import {Portfolio} from "@/components/portfolio/Portfolio";
 import {VaultView} from "@/components/vault/VaultView";
+import {DataView} from "@/components/data/DataView";
 import {BackstopView} from "@/components/backstop/BackstopView";
 import {FX_BACKSTOP, FX_VAULT} from "@/lib/fixtures";
 
@@ -44,6 +45,7 @@ export function Preview({page, state, tab}: {page: string; state: string; tab?: 
       />
     ),
     portfolio: <Portfolio />,
+    data: <DataView markets={state === "error" ? undefined : markets} histories={histories} asOf={{block: "10181", confirmed: true}} apiUrl="https://api.lendora.example" />,
     vault: <VaultView v={FX_VAULT} weekend={state === "weekend"} />,
     backstop: <BackstopView b={FX_BACKSTOP} now={1_791_317_952} />,
     markets: <MarketsBoardView markets={state === "loading" || state === "error" ? undefined : markets} histories={histories} asOf={state === "loading" || state === "error" ? undefined : {block: "10181", time: "2026-10-06T20:19:12.000Z", confirmed: true}} error={state === "error"} onRetry={() => {}} />,
