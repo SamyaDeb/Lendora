@@ -14,10 +14,11 @@ const usdg = (x: bigint) => num(Number(formatUnits(x, 6)));
 const liq = (x?: bigint) => (x === undefined || x === 0n ? "–" : `$${num(Number(formatUnits(x, 8)))}`);
 
 /** Borrow / short position: health meter, liquidation price now and during the next closure, and the exits. */
-export function BorrowCard({f, restricted}: {f: PositionFlow; restricted: boolean}) {
+export function BorrowCard({f, restricted, active = true}: {f: PositionFlow; restricted: boolean; active?: boolean}) {
   const [action, setAction] = useState<PositionAction | null>(null);
   const {st, u, symbol, debt} = f;
-  if (!st || !u) return null;
+  // Closed positions stay mounted only while their review sheet shows the result.
+  if (!st || !u || (!active && action === null)) return null;
   const pv = preview(st, {collateralIn: 0n, borrowAmount: 0n});
   const tone = debt > 0n ? hfTone(pv.hfNow) : "none";
   const addPv = f.addAmt > 0n ? preview(st, {collateralIn: f.addAmt, borrowAmount: 0n}) : undefined;
@@ -145,10 +146,10 @@ export function BorrowCard({f, restricted}: {f: PositionFlow; restricted: boolea
 }
 
 /** Lending receipt (rSTOCK): value, fees earned, what can be withdrawn now vs what is lent out. */
-export function LendCard({f}: {f: PositionFlow}) {
+export function LendCard({f, active = true}: {f: PositionFlow; active?: boolean}) {
   const [open, setOpen] = useState(false);
   const {st, u, symbol} = f;
-  if (!st || !u || u.vaultShares === 0n) return null;
+  if (!st || !u || ((!active || u.vaultShares === 0n) && !open)) return null;
   const withdrawable = withdrawableAssets(u.vaultAssets, st.vaultIdle, st.adapterAssets, st.market.totalSupplyAssets, st.market.totalBorrowAssets);
   const lentOut = u.vaultAssets > withdrawable ? u.vaultAssets - withdrawable : 0n;
   const value = Number(formatUnits(u.vaultAssets, 18)) * f.price;
