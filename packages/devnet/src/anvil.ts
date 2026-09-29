@@ -1,5 +1,9 @@
 import {spawn, spawnSync, type ChildProcess} from "node:child_process";
-import {readFileSync} from "node:fs";
+import {existsSync, readFileSync, writeFileSync} from "node:fs";
+import {createHash} from "node:crypto";
+import {tmpdir} from "node:os";
+import {join} from "node:path";
+import {gunzipSync} from "node:zlib";
 import {createServer} from "node:net";
 import {fileURLToPath} from "node:url";
 import {
@@ -213,7 +217,11 @@ export interface StartOptions {
  * chose from its output: picking a "free" port first races when suites run in parallel (`pnpm -r test`), and a
  * suite could end up talking to another suite's chain. */
 export async function startAnvil(opts: StartOptions = {}): Promise<Anvil> {
-  const proc: ChildProcess = spawn("anvil", ["--port", String(opts.port ?? 0), ...(opts.args ?? [])], {stdio: ["ignore", "pipe", "ignore"]});
+  const state = opts.state ?? "fixture";
+  // The fixture is loaded at startup (`--load-state`), not over RPC: `anvil_loadState` refuses request bodies above
+  // ~2 MB, which the Phase 4 deployment (vault + receipt market) crossed.
+  const load = state === "fixture" ? ["--load-state", fixtureStateFile()] : [];
+  const proc: ChildProcess = spawn("anvil", ["--port", String(opts.port ?? 0), ...load, ...(opts.args ?? [])], {stdio: ["ignore", "pipe", "ignore"]});
   const port = await new Promise<number>((resolve, reject) => {
     let buf = "";
     const timer = setTimeout(() => reject(new Error(`anvil did not report a port: ${buf.slice(-500)}`)), 30_000);
@@ -230,10 +238,8 @@ export async function startAnvil(opts: StartOptions = {}): Promise<Anvil> {
   proc.stdout!.resume(); // keep draining so anvil never blocks on a full pipe
   const url = `http://127.0.0.1:${port}`;
   const a = await connectAnvil(url, () => proc.kill());
-  const state = opts.state ?? "fixture";
   try {
-    if (state === "fixture") await loadFixture(a);
-    else if (state === "deploy") deployLocal(url);
+    if (state === "deploy") deployLocal(url);
   } catch (e) {
     // Never leave anvil running on a failed start: it keeps the test process alive (a CI job hung this way when a
     // newer anvil could not decode the fixture). The fixture is written by the Foundry version pinned in CI.
@@ -241,6 +247,18 @@ export async function startAnvil(opts: StartOptions = {}): Promise<Anvil> {
     throw e;
   }
   return a;
+}
+
+/** `FIXTURE_STATE` (gzipped `anvil_dumpState` hex) as the JSON file `anvil --load-state` reads, cached in the OS temp
+ * dir by content hash. */
+export function fixtureStateFile(path = FIXTURE_STATE): string {
+  const hex = readFileSync(path, "utf8").trim();
+  const file = join(tmpdir(), `stockline-anvil-state-${createHash("sha256").update(hex).digest("hex").slice(0, 16)}.json`);
+  if (!existsSync(file)) {
+    const raw = Buffer.from(hex.replace(/^0x/, ""), "hex");
+    writeFileSync(file, raw[0] === 0x1f && raw[1] === 0x8b ? gunzipSync(raw) : raw);
+  }
+  return file;
 }
 
 export async function loadFixture(a: Anvil, path = FIXTURE_STATE): Promise<void> {

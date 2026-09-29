@@ -62,7 +62,15 @@
           "perAddressCapUsd": 250000,
           "stockToken": "0x322813Fd9A801c5507c9de605d63CEA4f2CE6c44",
           "vault": "0xEACaE9B530365395E07Fc9549bd8de0171C0D035",
-          "wrapper": "0x927b167526bAbB9be047421db732C663a0b77B11"
+          "wrapper": "0x927b167526bAbB9be047421db732C663a0b77B11",
+          "receipt": {
+            "adapterMarketCapId": "0x7b1b6de66521081209d5bf5bf10579f0f704d77aa977dd30ddfd897281a3e073",
+            "lltv": 625000000000000000,
+            "marketId": "0x061a15cb2af4c656ba4a14137287aa75c1a0b482df6f77c12f6ebc72defdf145",
+            "oracle": "0x90c84237fDdf091b1E63f369AF122EB46000bc70",
+            "usdgAdapter": "0xBc25EE7a5dEB7662afED6AF553eEa16777D99EC1",
+            "usdgVault": "0x00f67Bc4288bAAB3049AcdA58FeCdC50341DB10F"
+          }
         },
         "SPY": {
           "adapter": "0xf92ADa0B0A5667978d905c30566e37CA2C496FC5",
@@ -82,7 +90,13 @@
       "treasuryConverter": "0x82e01223d51Eb87e16A03E24687EDF0F294da6f1",
       "usdg": "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318",
       "usdgFeed": "0x610178dA211FEF7D417bC0e6FeD39F05609AD788",
-      "vaultV2Factory": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"
+      "vaultV2Factory": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
+      "dnVault": {
+        "navOracle": "0x4951A1C579039EbfCBA0BE33D2cd3A6D30b0f802",
+        "perpAdapter": "0x3f9A1B67F3a3548e0ea5c9eaf43A402d12b6a273",
+        "strategy": "0x00CAC06Dd0BB4103f8b62D280fE9BCEE8f26fD59",
+        "vault": "0xAD2935E147b61175D5dc3A9e7bDa93B0975A43BA"
+      }
     },
     "fork-4663": {
       "adapterFactory": "0x79370Ed003CE325C088E530d5e8655c99c2993e1",
