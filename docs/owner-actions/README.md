@@ -24,3 +24,14 @@ mainnet-readiness checklist is in [11 · Mainnet-readiness checklist](../prd/11-
 | 11 | Mainnet hosting (Q15) | Railway configs, pinned images | Create the mainnet project and secrets |
 | 12 | Decisions still open | – | Q5 provider, Q6 brand, Q7 archive RPC, Q9 addresses, Q13 MetaMorpho submodule, Q14 payouts, Q15 hosting |
 
+
+## Added at the Phase 4 engineering exit (2026-09-29)
+
+| # | Item | Done by engineering | Left for you |
+|---|---|---|---|
+| 13 | "Go testnet" and hosting OK | Fee + DN vault deploy scripts, `live-drills` runner, `testnetSmoke`, all rehearsed on a 46630 fork; deployer has 0.00839 ETH (≈ 0.0003 needed); commands in [`testnet.md` §2](../runbooks/testnet.md#2-for-operators) | Say "go testnet"; OK a Railway testnet project (`railway login`); decide whether testnet gets a USDG Earn cap > 0 (default 0) |
+| 14 | DN vault sim sign-off | Report INSUFFICIENT DATA (94 days of funding), DN-R13 trigger proposal, dynamic `LEND_RATIO`: [`dn-vault-signoff.md`](dn-vault-signoff.md) | Risk owner: accept, extend the data window, or reject; pick the kill-switch trigger |
+| 15 | Perp venue (Lighter) | Research + 5 `[VERIFY]` items ([`01-perp-venue.md`](../phase4/01-perp-venue.md)); no production adapter | Ask Lighter for the verified 4663 source, key permissions and EIP-1271 behavior; approve a $10 canary |
+| 16 | Phase 4 audit | Package + freeze: [`audit/phase4`](../audit/phase4/README.md) (1,022 nSLOC) | Book a firm (can extend round 2), confirm `audit-p4-freeze` |
+| 17 | Launch gates | [`launch-gates.json`](launch-gates.json): the launcher refuses until each of the 7 gates has a person, date and evidence | Each gate owner fills their entry; then run `scripts/mainnet-launch.sh --dry-run` on a fork, then the real run ([mainnet-launch.md §3](../runbooks/mainnet-launch.md)) |
+| 18 | Tester recruitment | Post + feedback-form fields: [`messages.md`](messages.md) | Create the form, post the message after the go |

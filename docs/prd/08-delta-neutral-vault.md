@@ -66,7 +66,15 @@ Yield = lending APY on 90% of S + funding on S (positive when longs pay shorts) 
 
 ## Acceptance criteria
 
-- [ ] Sim report meets the gate above and is signed off.
-- [ ] Fork tests: deposit, rebalance, instant and queued withdrawal, funding kill switch, perp margin top-up.
-- [ ] 30-day testnet or small-cap mainnet run with delta held inside the band ≥ 99% of the time.
-- [ ] Separate audit of vault and strategy contracts.
+- [ ] Sim report meets the gate above and is signed off. *(Phase 4 task 13: verdict **INSUFFICIENT DATA**, 94 days of
+  Lighter funding; [report](../../sim/reports/phase4-dn-vault.md), [sign-off sheet](../owner-actions/dn-vault-signoff.md).
+  Risk owner.)*
+- [x] Fork tests: deposit, rebalance, instant and queued withdrawal, funding kill switch, perp margin top-up.
+  *(Task 17: [`DnVault.fork.t.sol`](../../contracts/test/fork/phase4/DnVault.fork.t.sol) 6/6 on a 4663 fork at `latest`:
+  lifecycle through the live UniversalRouter, feeds and rSTOCK vault, margin top-up, and 4 stresses; the perp side is
+  the mock venue, since no production adapter exists yet.)*
+- [ ] 30-day testnet or small-cap mainnet run with delta held inside the band ≥ 99% of the time. *(Engineering
+  rehearsal only: a seeded 7-day keeper week on anvil with real Lighter funding, 100% of 1,008 sleeve-ticks in band,
+  `keepers/test/dnWeek.test.ts`. The real run needs the testnet go, and a cap > 0 from the owner.)*
+- [ ] Separate audit of vault and strategy contracts. *(Package ready: [`docs/audit/phase4`](../audit/phase4/README.md),
+  1,022 nSLOC, freeze `6dc13f3`. Owner books the firm.)*

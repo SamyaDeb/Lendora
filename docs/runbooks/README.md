@@ -1,7 +1,7 @@
 # Runbooks
 
 One page per P0/P1 alert of the ops monitor ([10 "Monitoring and paging"](../prd/10-risk-compliance.md#monitoring-and-paging),
-MON-R1…R20), plus the operational procedures they share. Every page has the same shape: **trigger → impact → first 5
+MON-R1…R25), plus the operational procedures they share. Every page has the same shape: **trigger → impact → first 5
 minutes → decision tree → exact commands → who signs → comms → post-mortem**.
 
 | Alert (rule) | Sev | Runbook | Rehearsed on anvil | Rehearsed on a fork of 46630 | Drilled on testnet |
@@ -22,6 +22,11 @@ minutes → decision tree → exact commands → who signs → comms → post-mo
 | `TIMELOCK_SCHEDULED` / `TIMELOCK_EXECUTED` (`_UNTRACKED`) / `ROLE_CHANGED` (MON-R16…R18) | P1 / P0 | [governance-change.md](governance-change.md) | detection through the real timelock (tracked and untracked), `SetIsSentinel`: monitor test | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #10: decode + cancel) | ⏳ needs "go testnet" |
 | `LIQUIDATION_UNPROFITABLE` (MON-R19) | P1 | [missed-liquidation.md](missed-liquidation.md) | detection (HF < 1, DEX route 20% worse): monitor test | – | ⏳ needs "go testnet" |
 | `FEE_NOT_DISTRIBUTED` (MON-R20) | P2 | [keeper-down.md](keeper-down.md) | detection (fee shares waiting), resolved by `distribute`: monitor test | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #1–4: fee on through the 24h timelock, first distribution and conversion) | ⏳ needs "go testnet" |
+| `DN_DELTA_BREACH` (MON-R21) | P1 | [dn-delta-breach.md](dn-delta-breach.md) | detection: `monitorDn.test.ts`; realignment: `dnVault.test.ts` | vault flows: fork 46630, 2026-09-29 ([report](fork-drills-46630.md)) | ⏳ needs "go testnet" and a cap |
+| `DN_MARGIN_LOW` (MON-R22) | P0 | [dn-margin-low.md](dn-margin-low.md) | detection: monitor test; top-up from cash then spot: `dnVault.test.ts`, fork `test_DN_R3_fork_marginTopUp` | – | ⏳ |
+| `DN_NAV_STALE` (MON-R23) | P1 | [dn-nav-stale.md](dn-nav-stale.md) | detection: monitor test; co-signer refusals: `dnVault.test.ts` | – | ⏳ |
+| `DN_QUEUE_OVERDUE` (MON-R24) | P0 | [dn-queue-overdue.md](dn-queue-overdue.md) | detection: monitor test; raise cash and settle: `dnVault.test.ts` | queued withdrawal → settle → claim: fork 46630, 2026-09-29 | ⏳ |
+| `DN_KILL_SWITCH` (MON-R25) | P1 | [dn-kill-switch.md](dn-kill-switch.md) | detection: monitor test; kill + unwind: `dnVault.test.ts` | – | ⏳ |
 
 Rehearsals: `pnpm --filter @stockline/devnet test` (runbooks.test.ts, real TimelockController with the calldata from
 the SDK tool) and `pnpm --filter @stockline/keepers test` (monitor.test.ts). **Fork rehearsal (Phase 3 task 11, no "go testnet"):**
@@ -33,8 +38,19 @@ anvil fork of 46630 against the real testnet deployment and its 24h timelocks, 8
 are deployed there with `contracts/script/DeployTestnetFees.s.sol` (`TESTNET_GO=yes`). Weekend log:
 [testnet-weekends.md](testnet-weekends.md).
 
+**Phase 4 Part C (2026-09-29, still no "go testnet"):** the fork report now also covers `DeployTestnetVault` and the
+USDG Earn flows (9/9 drills, 14 steps). The live path is `pnpm --filter @stockline/devnet drive live-drills` (see
+[testnet.md](testnet.md) §2): immediate drills at once, timelocked halves on a re-run after 24h, refusing 4663 and
+refusing 46630 without `TESTNET_GO=yes`, the key and `DRILL_RAN_BY`; evidence goes to `live-drills-46630.json` and the
+markdown row it prints goes in the table below. Rehearsed in two passes on a fork (`test/liveDrills.test.ts`).
+
+| Date | Chain | Drills (live-drills) | Ran by | Evidence |
+|---|---|---|---|---|
+| – | 46630 | not run yet (needs the go) | – | – |
+
 Other runbooks: [list-stock.md](list-stock.md), [testnet.md](testnet.md), [testnet-dry-run.md](testnet-dry-run.md),
-[mainnet-launch.md](mainnet-launch.md).
+[mainnet-launch.md](mainnet-launch.md) (§3: `scripts/mainnet-launch.sh`, the only launch path),
+[list-receipt-market.md](list-receipt-market.md) (G5, launch + 30 days), [testnet-smoke.md](testnet-smoke.md).
 
 ## Roles and who signs
 

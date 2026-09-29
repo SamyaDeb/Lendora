@@ -176,6 +176,30 @@ Lighthouse `/markets` 82, `/data` 83 (accessibility and best practices 100) — 
 the Lendora redesign's (LCP ≈ 4.4 s); an A/B run without the new CSP scored 83 / 84, so the CSP is not the cause.
 Open item for the web owner.
 
+### Phase 4 status (engineering, 2026-09-29)
+
+Session plan: [`docs/prompts/phase4-testnet-mainnet.md`](../prompts/phase4-testnet-mainnet.md). Nothing was sent to
+mainnet or testnet (no "go testnet", no hosting OK); every Phase 4 cap is 0 in every deploy config.
+
+| Session task | Status | Evidence |
+|---|---|---|
+| A1/A2 · Services on 4663 (MN-R6) | Done: `resolveDeployment` in every service; refuses 4663 until published | per-package network tests — `f2fa372` |
+| A3 · G5 receipt market | Done: stage 1 with caps 0, timelocked listing, CL-R10 window; indexer/API/web behind a flag | `ReceiptMarket.t.sol` 11, fork on 4663 — `6451be8`, `734b7d8` |
+| A4 · Fee converter idle-only | Done | `feeConverter.test.ts` — `109844c` |
+| A5 · Lighthouse | Done: `/markets` 90, `/data` 89 | `1023b18` |
+| 12 · Perp venue research | Done: Lighter contract-held accounts viable, 5 `[VERIFY]` items (A39–A41) | [`01-perp-venue.md`](../phase4/01-perp-venue.md) — `8d2f5c4` |
+| 13 · Sim gate | **INSUFFICIENT DATA** (94 days of funding); findings DN-R12, DN-R13 (proposal), dynamic `LEND_RATIO`, 1.54% entry cost | [`phase4-dn-vault.md`](../../sim/reports/phase4-dn-vault.md), [sign-off sheet](../owner-actions/dn-vault-signoff.md) — `e3ff104` |
+| 14 · Contracts | Done: vault, strategy, NAV oracle, mock venue; DN-R1…R14; coverage 95.3 / 97.5 / 100% | `test/vault/*` 49 + 4 invariants — `a7390d4` |
+| 15 · Keepers | Done: rebalancer, NAV reporter + co-signer, MON-R21…R25 | `dnVault.test.ts`, `monitorDn.test.ts` — `3f86e5e` |
+| 16 · Indexer, API, web | Done: `/v1/vault/*`, USDG Earn on the real vault | `api/test/vault.test.ts`, e2e `vault.spec.ts` 9/9 — `734b7d8` |
+| 17 · Tests | Done: fork lifecycle + 4 stresses on 4663 (6/6); seeded keeper week on anvil (100% in band) | `DnVault.fork.t.sol`, `dnWeek.test.ts` — `5a8a8ae` |
+| 18 · Audit package | Done: 1,022 nSLOC; NAV single-signer drift bound; OFF-18…22 | [`audit/phase4`](../audit/phase4/README.md), freeze `6dc13f3` |
+| C · Testnet | **Rehearsed on a fork of 46630 only**: fees + DN vault deploy and flows, drills 9/9 (14 steps), live-drill runner (two passes); smoke on the local stack, all checks pass | [`fork-drills-46630.md`](../runbooks/fork-drills-46630.md), [`testnet-smoke.md`](../runbooks/testnet-smoke.md) — `4ed9a8e` |
+| D · Mainnet launcher | Built and rehearsed (dry run on a local 4663 fork: VerifyRoles 111/111), **never run**; found and fixed a VerifyRoles launch blocker | `packages/launch`, [`mainnet-launch.md` §3](../runbooks/mainnet-launch.md#3-deploy-scriptsmainnet-launchsh-the-only-supported-path) — `e390233` |
+
+Phase 4 exit (08: sim gate, audit, 30-day run) is **not met**: the sim gate is INSUFFICIENT DATA and needs the risk
+owner, the audit is not booked, and a 30-day run needs a verified venue adapter and a cap above 0.
+
 ### Mainnet-readiness checklist (gates of [`mainnet-launch.md`](../runbooks/mainnet-launch.md) §0 and what §1–§4 need)
 
 ✅ = engineering done, with evidence. ⏳ = needs a person, money or time (owner and next step). Nothing that needs
@@ -188,12 +212,14 @@ people, time or mainnet is marked ✅.
 | Sanctions provider live (Q5) | ✅ engineering / ⏳ contract | Adapters and mainnet refusals tested (task 6). **Owner:** sign Chainalysis or TRM, put `SANCTIONS_PROVIDER` + `SANCTIONS_API_KEY` in the secret store; for TRM confirm the chain name (A37) |
 | Risk owner signs the sim report and the weekday depth run | ✅ engineering / ⏳ sign-off | Reports and pre-filled evidence (task 8). **Risk owner:** sign [`risk-signoff.md`](../owner-actions/risk-signoff.md); decide the flagged items (D8 full caps SPY/AAPL, NVDA per-address cap on weekday depth, z); rerun weekday depth on 2 more sessions |
 | 2 clean testnet weekends + 20 external testers | ⏳ | 0 of 2 accrued ([`testnet-weekends.md`](../runbooks/testnet-weekends.md)); first eligible Oct 2–4. **Owner:** start the testnet services live (keys), post the recruitment message, create the feedback form |
-| Runbooks drilled on testnet | ✅ fork rehearsal / ⏳ testnet | 8/8 on a 46630 fork ([report](../runbooks/fork-drills-46630.md)). **Owner:** say "go testnet" (deployer gas ~0.0084 ETH, check first), then run the same drills live and record tx hashes |
+| Runbooks drilled on testnet | ✅ fork rehearsal / ⏳ testnet | 9/9 on a 46630 fork incl. Phase 4 ([report](../runbooks/fork-drills-46630.md)); live runner `drive live-drills` rehearsed in two passes. **Owner:** say "go testnet" (deployer 0.00839 ETH on 2026-09-29, enough), then run `live-drills`, re-run after 24h, record in runbooks/README.md |
 | Bug bounty live, payout sized to caps (Q14) | ✅ draft / ⏳ listing | [`bug-bounty.md`](../audit/bug-bounty.md) (Critical max $450k proposed). **Owner:** confirm payouts, budget in the treasury Safe, choose platform, publish after deploy |
 | Multisigs on hardware wallets (owner 4-of-7, guardian 2-of-4, curator, treasury, `BackstopReserve`) | ⏳ | `DeployMainnet` refuses anything weaker (MN-R2). **Owner:** create the five Safes with independent signers |
 | Treasury and `BackstopReserve` addresses (Q9) | ⏳ | Config fields, refused if zero/EOA/placeholder (MN-R1/R2). **Owner:** provide the two Safe addresses |
 | KMS keys (allocator, guard keeper, fee keeper, liquidator, compliance signer) | ✅ code / ⏳ keys | Remote signer on every signing service (OFF-4), gas cap, timeouts. **Owner:** create KMS keys and the signing bridge; fund keepers |
-| Mainnet deploy script and role verification | ✅ | `DeployMainnet`, `VerifyRoles`, fork rehearsal on 4663 (task 7). Broadcast only after every ⏳ above and the owner's go |
+| Mainnet deploy script and role verification | ✅ | `DeployMainnet`, `VerifyRoles`, fork rehearsal on 4663 (task 7); **one-command launcher** `scripts/mainnet-launch.sh`, dry run on a local 4663 fork (Part D). Broadcast only after every ⏳ above and the owner's go |
+| Gates recorded in [`launch-gates.json`](../owner-actions/launch-gates.json) | ⏳ | The launcher refuses until each gate has a person, date and evidence. **Each gate owner** fills their entry |
+| USDG Earn (Phase 4) on mainnet | ✅ caps 0 / ⏳ gate | Ships with no venue adapter and caps 0 (MN-R7). **Risk owner:** sim sign-off (INSUFFICIENT DATA), DN-R13 trigger; **eng lead + Lighter:** the 5 `[VERIFY]` items and a $10 canary |
 | Paging / on-call (PagerDuty or Opsgenie) | ✅ code / ⏳ accounts | Monitor MON-R1…R20, pagers. **Owner:** create the account, routing key, on-call rotation; start the monitor **before** the first governance action |
 | Archive RPC (Q7) | ⏳ | Pinned fork runs pending. **Owner:** pick a provider ([`accounts.md`](../owner-actions/accounts.md#archive-rpc)), set `ROBINHOOD_RPC_URL` |
 | Hosting (Q15) | ⏳ | Railway configs in `infra/railway/`, pinned images (OFF-15). **Owner:** create the mainnet project and secrets |
