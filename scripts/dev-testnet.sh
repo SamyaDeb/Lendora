@@ -144,13 +144,13 @@ TSX="$ROOT/node_modules/.bin/tsx"
 bin() { if [ -x "$ROOT/$1/node_modules/.bin/$2" ]; then echo "./node_modules/.bin/$2"; else echo "$ROOT/node_modules/.bin/$2"; fi; }
 pnpm --silent --filter @stockline/sdk build >/dev/null
 
-COMMON=(STOCKLINE_NETWORK=46630 DEPLOYMENT_KEY=46630 RPC_URL="$RPC" DATABASE_URL="$DATABASE_URL" REDIS_URL="$REDIS_URL")
+# Reads pinned to past blocks (indexer snapshots, the NAV co-signer's checks) fall back to ROBINHOOD_TESTNET_RPC_URL
+# when the services use another RPC: the public endpoint keeps no historical state (A24).
+ARCHIVE=""; [ "$RPC" = "$ROBINHOOD_TESTNET_RPC_URL" ] || ARCHIVE="$ROBINHOOD_TESTNET_RPC_URL"
+COMMON=(STOCKLINE_NETWORK=46630 DEPLOYMENT_KEY=46630 RPC_URL="$RPC" RPC_URL_ARCHIVE="$ARCHIVE" DATABASE_URL="$DATABASE_URL" REDIS_URL="$REDIS_URL")
 INDEXER_VIEWS=stockline_testnet
 
-# Reads pinned to old blocks fall back to ROBINHOOD_TESTNET_RPC_URL when the services use another RPC (the public
-# endpoint has no archive state, A24).
-ARCHIVE=""; [ "$RPC" = "$ROBINHOOD_TESTNET_RPC_URL" ] || ARCHIVE="$ROBINHOOD_TESTNET_RPC_URL"
-start indexer indexer "${COMMON[@]}" RPC_URL_ARCHIVE="$ARCHIVE" PONDER_POLLING_MS="${PONDER_POLLING_MS:-1000}" \
+start indexer indexer "${COMMON[@]}" PONDER_POLLING_MS="${PONDER_POLLING_MS:-1000}" \
   -- "$(bin indexer ponder)" start --schema stockline_46630 --views-schema "$INDEXER_VIEWS" --port 42069
 start api api "${COMMON[@]}" INDEXER_SCHEMA="$INDEXER_VIEWS" API_SCHEMA=stockline_api_testnet PORT=42070 SIWE_DOMAIN=localhost:3000 \
   -- "$TSX" src/index.ts

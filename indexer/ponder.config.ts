@@ -82,5 +82,9 @@ export default createConfig({
   },
   blocks: {
     Tick: {chain, startBlock, interval: n.tickInterval},
+    // MON-R14 / SI-R4: the indexed head every block from the live head on (no backfill cost). With Tick alone the head
+    // row moved only every TICK_INTERVAL_BLOCKS (600 on 46630 ≈ 84 s), so `lagBlocks` read up to 600 and paged
+    // INDEXER_LAG while the indexer was current. Anvil ticks every block already.
+    ...(n.tickInterval > 1 ? {Head: {chain, startBlock: "latest" as const, interval: 1}} : {}),
   },
 });

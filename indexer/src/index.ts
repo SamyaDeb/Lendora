@@ -427,3 +427,9 @@ ponder.on("Tick:block", async ({event, context}) => {
   for (const t of net.tickers) await writeSnapshot(context, t, event.block, "tick");
   await writeHead(context, event.block);
 });
+
+if (net.tickInterval > 1) {
+  ponder.on("Head:block", async ({event, context}) => {
+    await writeHead(context, event.block);
+  });
+}

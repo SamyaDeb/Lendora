@@ -15,7 +15,7 @@ if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
 const pool = new pg.Pool({connectionString: process.env.DATABASE_URL, max: 5});
 const store = new SettingsStore(pool, process.env.ALERTS_SCHEMA ?? "stockline_alerts");
 await store.migrate();
-const client = publicClient(cfg.rpcUrl, cfg.deploymentKey);
+const client = publicClient(cfg.rpcUrl, cfg.deploymentKey, cfg.archiveRpcUrl);
 const health = new Health(cfg.maxStaleMs);
 const watcher = new AlertWatcher(client, cfg.deployment, store, new IndexerPositions(pool, process.env.INDEXER_SCHEMA ?? "stockline"), transportsFromEnv(), {dryRun: cfg.dryRun, health});
 const app = alertsApp(store, client, health, {allowHttpWebhooks: cfg.deploymentKey === 31337});

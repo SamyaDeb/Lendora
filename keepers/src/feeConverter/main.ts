@@ -8,7 +8,7 @@ import {defaultFeeConverterOptions, FeeConverterBot, mockDexSellBuilder, univers
 
 /** FE-R4 fee-converter keeper. Dry run by default; `/health` per stock (MON-R9 `KEEPER_DOWN`: FEE_CONVERTER). */
 const cfg = loadConfig();
-const client = publicClient(cfg.rpcUrl, cfg.deploymentKey);
+const client = publicClient(cfg.rpcUrl, cfg.deploymentKey, cfg.archiveRpcUrl);
 const sender = senderFromConfig(cfg, client, chainFor(cfg.deploymentKey));
 const d = cfg.deployment;
 if (!d.feeSplitter || !d.treasuryConverter || !d.backstopConverter) throw new Error(`deployment ${String(cfg.deploymentKey)} has no FeeSplitter / FeeConverters`);

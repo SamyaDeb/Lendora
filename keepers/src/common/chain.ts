@@ -1,4 +1,4 @@
-import {createPublicClient, http, type Chain, type PublicClient} from "viem";
+import {createPublicClient, fallback, http, type Chain, type PublicClient} from "viem";
 import {chainFor as sdkChainFor, chainIdOf, robinhoodChain, type DeploymentKey} from "@stockline/sdk";
 
 /** Robinhood Chain (4663; ~0.1 s blocks, receipts polled every 500 ms). Keepers send there only once the launch has
@@ -10,6 +10,9 @@ export function chainFor(key: DeploymentKey): Chain {
   return sdkChainFor(chainIdOf(key));
 }
 
-export function publicClient(rpcUrl: string, key: DeploymentKey): PublicClient {
-  return createPublicClient({chain: chainFor(key), transport: http(rpcUrl)}) as PublicClient;
+/** Reads go to `rpcUrl`; with `archiveRpcUrl` a failed read (e.g. state at a past block the node no longer has) is
+ * retried there. Transactions never use this client. */
+export function publicClient(rpcUrl: string, key: DeploymentKey, archiveRpcUrl?: string): PublicClient {
+  const transport = archiveRpcUrl ? fallback([http(rpcUrl), http(archiveRpcUrl)]) : http(rpcUrl);
+  return createPublicClient({chain: chainFor(key), transport}) as PublicClient;
 }

@@ -11,7 +11,7 @@ minutes → decision tree → exact commands → who signs → comms → post-mo
 | `BACKING_SHORTFALL` (MON-R3) | P0 | [wrapper-backing-shortfall.md](wrapper-backing-shortfall.md) | detection (`adminBurn`): monitor test; delist: runbooks test | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #11: P0 tabletop, adminBurn → delist) | ⏳ needs "go testnet" |
 | `CLUSDG_BACKING` (MON-R4) | P0 | [usdg-freeze.md](usdg-freeze.md) | detection (USDG wipe): monitor test; delist: runbooks test | – | ⏳ needs "go testnet" |
 | `ORACLE_STALE` / `FEED_REJECTED` (MON-R5/R6) | P1 | [oracle-stale-or-rejected.md](oracle-stale-or-rejected.md) | detection: monitor test; re-anchor through the timelock: runbooks test | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #8: `resetReferences`) | ⏳ needs "go testnet" |
-| `GUARD_TRIPPED` / `PULL_NOT_EFFECTIVE` (MON-R7/R11) | P1 | [guard-tripped.md](guard-tripped.md) | manual trip → pull → clear: runbooks + monitor tests | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #5) | ⏳ needs "go testnet" |
+| `GUARD_TRIPPED` / `PULL_NOT_EFFECTIVE` (MON-R7/R11) | P1 | [guard-tripped.md](guard-tripped.md) | manual trip → pull → clear: runbooks + monitor tests | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #5) | trip → clear live, 2026-09-29 (live-drills pass 1); monitor paged and resolved |
 | issuer pause / blocklist (`GUARD_TRIPPED` TOKEN_PAUSED, WRAPPER_BLOCKED) | P1 | [issuer-pause-or-blocklist.md](issuer-pause-or-blocklist.md) | pause → USDG exit → unpause: runbooks test | – | ⏳ needs "go testnet" |
 | `L2_GAP` (MON-R8) | P1 | [sequencer-l2-gap.md](sequencer-l2-gap.md) | detection: monitor test | – | ⏳ needs "go testnet" |
 | `KEEPER_DOWN` (MON-R9) | P1 | [keeper-down.md](keeper-down.md) | detection: monitor test | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #6: guardian deallocates by hand) | ⏳ needs "go testnet" |
@@ -19,7 +19,7 @@ minutes → decision tree → exact commands → who signs → comms → post-mo
 | `DIRECT_BORROW` (MON-R10) | P1 | [direct-borrow.md](direct-borrow.md) | detection: monitor test; global cap through the timelock: runbooks test | – | ⏳ needs "go testnet" |
 | `CALENDAR_RUNWAY` (MON-R13) | P2 | [calendar-push.md](calendar-push.md) | detection: monitor test; event push through the timelock: runbooks test | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #9) | ⏳ needs "go testnet" |
 | multiplier change (`GUARD_TRIPPED` MULTIPLIER) | P1 | [multiplier-change.md](multiplier-change.md) | latch → confirm through the timelock: runbooks test | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #7) | ⏳ needs "go testnet" |
-| `TIMELOCK_SCHEDULED` / `TIMELOCK_EXECUTED` (`_UNTRACKED`) / `ROLE_CHANGED` (MON-R16…R18) | P1 / P0 | [governance-change.md](governance-change.md) | detection through the real timelock (tracked and untracked), `SetIsSentinel`: monitor test | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #10: decode + cancel) | ⏳ needs "go testnet" |
+| `TIMELOCK_SCHEDULED` / `TIMELOCK_EXECUTED` (`_UNTRACKED`) / `ROLE_CHANGED` (MON-R16…R18) | P1 / P0 | [governance-change.md](governance-change.md) | detection through the real timelock (tracked and untracked), `SetIsSentinel`: monitor test | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #10: decode + cancel) | decode + cancel live, 2026-09-29; two-step scheduled (executes in pass 2); monitor paged `TIMELOCK_SCHEDULED` |
 | `LIQUIDATION_UNPROFITABLE` (MON-R19) | P1 | [missed-liquidation.md](missed-liquidation.md) | detection (HF < 1, DEX route 20% worse): monitor test | – | ⏳ needs "go testnet" |
 | `FEE_NOT_DISTRIBUTED` (MON-R20) | P2 | [keeper-down.md](keeper-down.md) | detection (fee shares waiting), resolved by `distribute`: monitor test | fork 46630, 2026-09-28 ([report](fork-drills-46630.md) #1–4: fee on through the 24h timelock, first distribution and conversion) | ⏳ needs "go testnet" |
 | `DN_DELTA_BREACH` (MON-R21) | P1 | [dn-delta-breach.md](dn-delta-breach.md) | detection: `monitorDn.test.ts`; realignment: `dnVault.test.ts` | vault flows: fork 46630, 2026-09-29 ([report](fork-drills-46630.md)) | ⏳ needs "go testnet" and a cap |
@@ -46,7 +46,7 @@ markdown row it prints goes in the table below. Rehearsed in two passes on a for
 
 | Date | Chain | Drills (live-drills) | Ran by | Evidence |
 |---|---|---|---|---|
-| – | 46630 | not run yet (needs the go) | – | – |
+| 2026-09-29 12:03 UTC | 46630 (live) | pass 1: guard trip → clear (`0x06dc…b21b`, `0x7ae8…9d8a`), governance-change decode + cancel (`0xdd19…94c`, `0xd723…361f`) done; owner-timelock two-step (`0x7173…c778`) and fee turn-on in 3 vaults (`0xc0f2…3940`, `0x8f67…3660`, `0xf769…3d76`) scheduled, executable after 2026-09-30 12:03 UTC (pass 2); USDG Earn cap read (1,000,000 test USDG, A49). Monitor paged `GUARD_TRIPPED` and `TIMELOCK_SCHEDULED` | SamyaDeb (via Claude Code) | [`live-drills-46630.json`](live-drills-46630.json) |
 
 Other runbooks: [list-stock.md](list-stock.md), [testnet.md](testnet.md), [testnet-dry-run.md](testnet-dry-run.md),
 [mainnet-launch.md](mainnet-launch.md) (§3: `scripts/mainnet-launch.sh`, the only launch path),

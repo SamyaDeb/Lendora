@@ -18,7 +18,7 @@ import {HttpCosigner, LighterAccountSource, MockVenueSource, NavCosigner, NavRep
 const cfg = loadConfig();
 const env = process.env;
 const nav = loadNavEnv(env);
-const client = publicClient(cfg.rpcUrl, cfg.deploymentKey);
+const client = publicClient(cfg.rpcUrl, cfg.deploymentKey, cfg.archiveRpcUrl);
 const chain = chainFor(cfg.deploymentKey);
 const d = cfg.deployment;
 if (!d.dnVault) throw new Error(`deployment ${String(cfg.deploymentKey)} has no dnVault`);

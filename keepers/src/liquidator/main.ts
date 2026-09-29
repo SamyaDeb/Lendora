@@ -7,7 +7,7 @@ import {runLoop} from "../common/loop.js";
 import {LiquidatorBot, liquidatorRecipient, mockDexBuilder, universalRouterBuilder} from "./liquidator.js";
 
 const cfg = loadConfig();
-const client = publicClient(cfg.rpcUrl, cfg.deploymentKey);
+const client = publicClient(cfg.rpcUrl, cfg.deploymentKey, cfg.archiveRpcUrl);
 const chain = chainFor(cfg.deploymentKey);
 // OFF-4: one sender factory for every signing keeper (env key, remote KMS signer, anvil-unlocked, dry run).
 const sender: TxSender = senderFromConfig(cfg, client, chain);

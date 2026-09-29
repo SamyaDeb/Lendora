@@ -19,6 +19,12 @@ describe("keeper plumbing", () => {
     expect(() => loadConfig({DEPLOYMENT_KEY: "4663"})).toThrow(/keeper: no deployment "4663".*MN-R6/);
   });
 
+  it("A24 optional archive RPC for past-block reads, validated like RPC_URL", () => {
+    expect(loadConfig({DEPLOYMENT_KEY: "31337"}).archiveRpcUrl).toBeUndefined();
+    expect(loadConfig({DEPLOYMENT_KEY: "31337", RPC_URL_ARCHIVE: "https://archive.example"}).archiveRpcUrl).toBe("https://archive.example");
+    expect(() => loadConfig({DEPLOYMENT_KEY: "31337", RPC_URL_ARCHIVE: "not a url"})).toThrow(/RPC_URL_ARCHIVE/);
+  });
+
   it("MN_R6 the feed mirror never runs on 4663 or its fork, nor without mock feeds", () => {
     const fork = loadConfig({DEPLOYMENT_KEY: "fork-4663"});
     expect(() => assertMirrorAllowed(4663, fork.deployment)).toThrow(/never runs on Robinhood Chain mainnet/);

@@ -5,6 +5,9 @@ import {resolveDeployment, type ChainDeployment, type DeploymentKey} from "@stoc
  * read only by the env-key signer and never logged. */
 export interface KeeperConfig {
   rpcUrl: string;
+  /** Archive RPC for reads pinned to past blocks (`RPC_URL_ARCHIVE`, optional): tried after `rpcUrl` fails, e.g. the
+   * public 46630 endpoint (no historical state, A24) paired with a capped free-tier archive provider. */
+  archiveRpcUrl?: string;
   deploymentKey: DeploymentKey;
   deployment: ChainDeployment;
   /** Dry run is the default: plans are logged, nothing is sent (Phase 1 hard rule). */
@@ -71,6 +74,7 @@ const gwei = z
 const EnvSchema = z.object({
   DEPLOYMENT_KEY: z.string().default("31337"),
   RPC_URL: httpUrl("RPC_URL", false).default("http://127.0.0.1:8545"),
+  RPC_URL_ARCHIVE: httpUrl("RPC_URL_ARCHIVE", false).optional(),
   DRY_RUN: z.enum(["true", "false", ""]).optional(),
   KEEPER_SIGNER: z.enum(["dry-run", "env-key", "rpc-unlocked", "remote"], {message: "unknown KEEPER_SIGNER (dry-run | env-key | rpc-unlocked | remote)"}).default("dry-run"),
   KEEPER_ADDRESS: address.optional(),
@@ -97,6 +101,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): KeeperConfig {
   }
   return {
     rpcUrl: e.RPC_URL,
+    archiveRpcUrl: e.RPC_URL_ARCHIVE,
     deploymentKey,
     deployment,
     dryRun,

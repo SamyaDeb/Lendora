@@ -11,7 +11,7 @@ import {assertVenueMirrorAllowed, LighterFundingFeed, VenueMirror} from "./mirro
 const cfg = loadConfig();
 assertVenueMirrorAllowed(cfg.deploymentKey, cfg.deployment);
 const env = z.object({LIGHTER_API_URL: httpUrl("LIGHTER_API_URL", true).default("https://api.rh.lighter.xyz")}).parse(Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== "")));
-const client = publicClient(cfg.rpcUrl, cfg.deploymentKey);
+const client = publicClient(cfg.rpcUrl, cfg.deploymentKey, cfg.archiveRpcUrl);
 // OFF-4: one sender factory for every signing keeper (env key, remote KMS signer, anvil-unlocked, dry run).
 const sender: TxSender = senderFromConfig(cfg, client, chainFor(cfg.deploymentKey));
 const health = new Health(Math.max(cfg.maxStaleMs, 3 * cfg.intervalMs));

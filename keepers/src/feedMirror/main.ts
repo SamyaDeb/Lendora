@@ -10,7 +10,7 @@ import {assertMirrorAllowed, ChainlinkSource, FeedMirror} from "./mirror.js";
 /** `pnpm --filter @stockline/keepers feed-mirror` (testnet only). Reads mainnet (MAINNET_RPC_URL) read-only. */
 const cfg = loadConfig();
 assertMirrorAllowed(cfg.deploymentKey, cfg.deployment);
-const client = publicClient(cfg.rpcUrl, cfg.deploymentKey);
+const client = publicClient(cfg.rpcUrl, cfg.deploymentKey, cfg.archiveRpcUrl);
 const chain = chainFor(cfg.deploymentKey);
 const mainnet = createPublicClient({chain: robinhoodChain, transport: http(process.env.MAINNET_RPC_URL ?? "https://rpc.mainnet.chain.robinhood.com")}) as PublicClient;
 // OFF-4: one sender factory for every signing keeper (env key, remote KMS signer, anvil-unlocked, dry run).

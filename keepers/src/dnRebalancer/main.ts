@@ -18,7 +18,7 @@ import {LighterFunding, MockVenueFunding} from "./funding.js";
  */
 const cfg = loadConfig();
 const dnEnv = loadDnEnv();
-const client = publicClient(cfg.rpcUrl, cfg.deploymentKey);
+const client = publicClient(cfg.rpcUrl, cfg.deploymentKey, cfg.archiveRpcUrl);
 const d = cfg.deployment;
 if (!d.dnVault) throw new Error(`deployment ${String(cfg.deploymentKey)} has no dnVault`);
 if (/^0x0{40}$/i.test(d.dnVault.perpAdapter)) throw new Error("the DN vault has no venue adapter (mainnet until one is verified): nothing to rebalance");
