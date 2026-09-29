@@ -478,10 +478,21 @@ export class DnRebalancer {
         return;
       }
       case "build": {
-        const spotUsdg = (a.usdg * this.p.leverage) / (this.p.leverage + 1n);
-        const marginUsdg = a.usdg - spotUsdg;
+        // Size from live numbers: strategy cash plus only what the vault holds above its buffer (the plan's snapshot
+        // can be a few trades old within a tick).
         const have = await this.rd<bigint>(this.d.usdg, erc20Abi, "balanceOf", [this.dn.strategy]);
-        if (have < a.usdg) await this.strat("pullFromVault", [a.usdg - have], `pull ${a.usdg - have} to build sleeve ${a.sleeve}`);
+        const [idle, nav, bufferBps] = await Promise.all([
+          this.rd<bigint>(this.dn.vault, deltaNeutralVaultAbi, "idleAssets"),
+          this.rd<bigint>(this.dn.vault, deltaNeutralVaultAbi, "totalAssets"),
+          this.rd<bigint>(this.dn.vault, deltaNeutralVaultAbi, "bufferBps"),
+        ]);
+        const minIdle = (nav * bufferBps + BPS - 1n) / BPS + 1n;
+        const pullable = idle > minIdle ? idle - minIdle : 0n;
+        const total = min(a.usdg, have + pullable);
+        if (total < this.p.minTradeUsdg) return;
+        const spotUsdg = (total * this.p.leverage) / (this.p.leverage + 1n);
+        const marginUsdg = total - spotUsdg;
+        if (have < total) await this.strat("pullFromVault", [total - have], `pull ${total - have} to build sleeve ${a.sleeve}`);
         const perUnit = await q(UNIT);
         const fair = (spotUsdg * UNIT) / perUnit;
         const minOut = (fair * (BPS - this.p.slippageBps)) / BPS;

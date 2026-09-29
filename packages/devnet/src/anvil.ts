@@ -1,5 +1,5 @@
 import {spawn, spawnSync, type ChildProcess} from "node:child_process";
-import {existsSync, readFileSync, writeFileSync} from "node:fs";
+import {existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from "node:fs";
 import {createHash} from "node:crypto";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
@@ -221,7 +221,12 @@ export async function startAnvil(opts: StartOptions = {}): Promise<Anvil> {
   // The fixture is loaded at startup (`--load-state`), not over RPC: `anvil_loadState` refuses request bodies above
   // ~2 MB, which the Phase 4 deployment (vault + receipt market) crossed.
   const load = state === "fixture" ? ["--load-state", fixtureStateFile()] : [];
-  const proc: ChildProcess = spawn("anvil", ["--port", String(opts.port ?? 0), ...load, ...(opts.args ?? [])], {stdio: ["ignore", "pipe", "ignore"]});
+  // Each node keeps its disk states in its own temp dir, removed when it stops: anvil otherwise leaves one
+  // `~/.foundry/anvil/tmp/anvil-state-*` per run behind (48 GB after a Phase 4 session filled the disk).
+  const cache = mkdtempSync(join(tmpdir(), "stockline-anvil-cache-"));
+  const cleanup = () => rmSync(cache, {recursive: true, force: true});
+  const proc: ChildProcess = spawn("anvil", ["--port", String(opts.port ?? 0), "--cache-path", cache, ...load, ...(opts.args ?? [])], {stdio: ["ignore", "pipe", "ignore"]});
+  proc.on("exit", cleanup);
   const port = await new Promise<number>((resolve, reject) => {
     let buf = "";
     const timer = setTimeout(() => reject(new Error(`anvil did not report a port: ${buf.slice(-500)}`)), 30_000);
@@ -237,7 +242,10 @@ export async function startAnvil(opts: StartOptions = {}): Promise<Anvil> {
   });
   proc.stdout!.resume(); // keep draining so anvil never blocks on a full pipe
   const url = `http://127.0.0.1:${port}`;
-  const a = await connectAnvil(url, () => proc.kill());
+  const a = await connectAnvil(url, () => {
+    proc.kill();
+    cleanup();
+  });
   try {
     if (state === "deploy") deployLocal(url);
   } catch (e) {
