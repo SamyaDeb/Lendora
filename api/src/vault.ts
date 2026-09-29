@@ -45,6 +45,7 @@ export interface DnLive {
 /** Live vault state from chain (cached per head block). */
 export class DnReader {
   private cache?: {at: number; v: DnLive};
+  private inflight?: {block: bigint; p: Promise<DnLive>};
   constructor(
     private readonly client: PublicClient,
     private readonly d: ChainDeployment,
@@ -58,6 +59,16 @@ export class DnReader {
     // Cached per head block (a chain that jumps in time, like anvil in tests, never serves a stale timestamp).
     const head = await this.client.getBlockNumber({cacheTime: 0});
     if (this.cache && this.cache.v.block === head) return this.cache.v;
+    // OFF-22: concurrent requests at a new block share one set of chain reads (no RPC fan-out per request).
+    if (this.inflight?.block === head) return this.inflight.p;
+    const p = this.read(head).finally(() => {
+      if (this.inflight?.p === p) this.inflight = undefined;
+    });
+    this.inflight = {block: head, p};
+    return p;
+  }
+
+  private async read(head: bigint): Promise<DnLive> {
     const dn = this.d.dnVault!;
     const b = await this.client.getBlock({blockNumber: head});
     const bn = b.number;

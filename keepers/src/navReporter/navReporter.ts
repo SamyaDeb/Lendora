@@ -149,11 +149,12 @@ export class NavReporter {
     if (!dn || /^0x0{40}$/i.test(dn.perpAdapter)) return {submitted: false, reason: "no venue adapter"};
     try {
       const r = await this.build();
-      const [last, perpNow, navNow, pending] = await Promise.all([
+      const [last, perpNow, navNow, pending, unconfirmed] = await Promise.all([
         this.client.readContract({address: dn.navOracle, abi: navOracleAbi, functionName: "lastReport"}),
         this.client.readContract({address: dn.navOracle, abi: navOracleAbi, functionName: "perpValue"}),
         this.client.readContract({address: dn.navOracle, abi: navOracleAbi, functionName: "nav"}),
         this.client.readContract({address: dn.perpAdapter, abi: perpAdapterAbi, functionName: "pending"}),
+        this.client.readContract({address: dn.navOracle, abi: navOracleAbi, functionName: "unconfirmedMoveBps"}),
       ]);
       const nextPerp = r.equity + pending; // flows since the report are zero: it carries the current totals
       const move = navMoveBps(perpNow, nextPerp, navNow);
@@ -171,10 +172,17 @@ export class NavReporter {
       }
       const td = navReportTypedData(this.chainId, dn.navOracle, r);
       const sigs: {addr: string; sig: Hex}[] = [{addr: this.signer.address.toLowerCase(), sig: await this.signer.signTypedData(td as never)}];
-      if (move > NAV_SECOND_SIGNER_BPS) {
-        if (!this.cosigner) throw new Error(`report moves NAV by ${move} bps (> 1%): a second signer is required (DN-R4) and none is configured`);
-        const sig = await this.cosigner.cosign(r);
-        sigs.push({addr: "", sig});
+      // DN-R4: single-signed moves add up onchain until a co-signed report; ask the co-signer every time (it resets
+      // the sum), and fail only when the report can't go through without it.
+      const needed = move + unconfirmed > NAV_SECOND_SIGNER_BPS;
+      if (needed && !this.cosigner) throw new Error(`report moves NAV by ${move} bps (+${unconfirmed} unconfirmed, > 1%): a second signer is required (DN-R4) and none is configured`);
+      if (this.cosigner) {
+        try {
+          sigs.push({addr: "", sig: await this.cosigner.cosign(r)});
+        } catch (e) {
+          if (needed) throw e;
+          this.log(`[nav-reporter] co-signer refused (single-signed, ${move + unconfirmed} bps unconfirmed): ${safeErrorLine(e, process.env)}`);
+        }
       }
       const ordered = await orderSignatures(sigs, td);
       const data = encodeFunctionData({abi: navOracleAbi, functionName: "submit", args: [r, ordered]});

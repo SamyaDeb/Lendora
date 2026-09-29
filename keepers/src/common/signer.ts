@@ -56,8 +56,18 @@ class ClientSender implements TxSender {
     const fees = {maxFeePerGas: est.maxFeePerGas, maxPriorityFeePerGas: est.maxPriorityFeePerGas};
     const hash = await this.sendRaw(to, data, fees);
     const receipt = await this.client.waitForTransactionReceipt({hash});
-    if (receipt.status !== "success") throw new Error(`${label} reverted: ${hash}`);
+    if (receipt.status !== "success") throw new Error(`${label} reverted: ${hash}${await this.replay(to, data, receipt.blockNumber)}`);
     return hash;
+  }
+  /** Why a mined transaction reverted: the same call on the block before (automine / one tx per block: exact). */
+  private async replay(to: `0x${string}`, data: Hex, block: bigint): Promise<string> {
+    try {
+      await this.client.call({account: this.address, to, data, blockNumber: block - 1n});
+      return " (the replay on the previous block succeeds: the state or the timestamp changed in between)";
+    } catch (e) {
+      const m = e instanceof Error ? ((e as {shortMessage?: string}).shortMessage ?? e.message) : String(e);
+      return ` (${m.split("\n")[0].slice(0, 200)})`;
+    }
   }
 }
 

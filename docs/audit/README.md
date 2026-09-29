@@ -4,6 +4,8 @@ Everything an auditor needs to start: scope, architecture, roles and trust, inte
 how to build and run every suite, and the known issues we accept. Threat model: [threat-model.md](threat-model.md).
 Requirements: [`docs/prd`](../prd/README.md) (IDs such as `RT-R8` are referenced in code comments and test names).
 
+**Phase 4 (USDG Earn, delta-neutral vault):** separate package, [phase4/README.md](phase4/README.md) (own freeze).
+
 *Prepared 2026-09-28 (remediation task 8). Working name "Stockline" (brand decision Q6 pending; nothing renamed).*
 
 ## 1. Scope

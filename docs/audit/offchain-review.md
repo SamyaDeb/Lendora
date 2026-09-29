@@ -74,3 +74,49 @@ pnpm audit --prod                                   # expect only the vite/esbui
 pnpm -r typecheck && pnpm -r lint && pnpm -r test   # OFF_* tests included
 docker buildx imagetools inspect node:22-alpine     # before bumping the pinned digest
 ```
+
+## 5. Phase 4 addendum (task 18, 2026-09-29)
+
+*Scope: the NAV reporter and co-signer (`keepers/src/navReporter`), the DN rebalancer (`keepers/src/dnRebalancer`),
+the monitor's DN rules (MON-R21…R25), the indexer's `dn_*` / `receipt_market` handlers, `/v1/vault/*` and
+`/v1/receipt-markets`, and the web app's USDG Earn source (`web/lib/vault/apiSource.ts`). The contract side is in
+[phase4/README.md](phase4/README.md).* Tests: `keepers/test/offchainReview.test.ts` (`OFF_18`…`OFF_21`),
+`api/test/dnReader.test.ts` (`OFF_22`).
+
+| ID | Sev | Area | Finding | Fix | Test |
+|---|---|---|---|---|---|
+| OFF-18 | Medium | nav co-signer | The co-signer compared its bearer token with `!==`: a timing side channel on the only credential between the reporter and the second NAV key | `cosignerApp` (`navReporter/server.ts`) compares SHA-256 digests with `timingSafeEqual` (length does not leak either); token ≥ 32 chars | `OFF_18_*` |
+| OFF-19 | Medium | nav co-signer | No body limit, and malformed JSON reached the RPC reads; a refusal returned the raw `Error.message` (viem errors carry the RPC URL with its key) to the caller, who logs it | 16 KiB body limit (413), shape checked before any read (400, ≤ 16 sizes), refusals are one `safeErrorLine` (422) | `OFF_19_*` |
+| OFF-20 | Medium | nav reporter, DN rebalancer | Env numbers were `Number()` / `BigInt()`: `NAV_REPORT_EVERY_MS=abc` became `NaN`, passed the 14-minute check, and the reporter only reported on moves (the oracle goes stale: deposits and settlement pause); bad `DN_KILL_*` silently disabled the kill switch | `loadNavEnv` / `loadDnEnv` (`common/dnEnv.ts`, zod, bounds, names the variable): report interval 1–14 min (DN-R5), move 1–100 bps, slippage 1–100 bps (DN-R10), kill window/hours, lending APY 0–1, venue ids, MMF list | `OFF_20_*` (and a source check that neither `main.ts` parses env directly) |
+| OFF-21 | Low | nav reporter | `COSIGNER_URL` accepted `http://` to any host (reports and the token in cleartext), and a URL without a token was accepted | https unless localhost / `*.railway.internal`; a co-signer URL needs a token; `LIGHTER_API_URL` https | `OFF_21_*` |
+| OFF-22 | Low | API | `/v1/vault/*` cached chain state per head block, but concurrent requests at a new block each ran the ~20 reads (RPC fan-out per request burst) | Single flight: requests at the same head share one read; a failed read is not cached | `OFF_22_*` |
+
+**Contract finding surfaced by this pass** (fixed before the Phase 4 freeze, [phase4/README.md](phase4/README.md) §8.1):
+a single NAV key could chain sub-1% reports; `NavOracle` now accumulates single-signed moves. The reporter asks the
+co-signer on every report (falls back to single-signed only while the accumulated move stays ≤ 1%).
+
+**Diagnostics.** A mined transaction that reverts is now replayed on the previous block and the reason is logged
+(`common/signer.ts`); before, the keeper logged only the hash.
+
+### 5.1 Checked, no change needed
+
+| Item | Result |
+|---|---|
+| Co-signer independence | Re-reads the venue from its own source, checks flows and `tradeNonce` against the chain, sizes exactly, equity within 25 bps + 1 USDG, timestamp ≤ 5 min old; never signs what it can't recompute (`dnVault.test.ts` refusal cases) |
+| NAV signer keys | `typedDataSignerFromEnv`: env key, key file, remote KMS (same OFF-3 timeout), anvil-unlocked only on 31337. EIP-712 domain binds chain id and the oracle address |
+| Rebalancer trades | All bounds are onchain (DN-R10 floors on measured balances, allowlist, caps); the keeper's `DN_SLIPPAGE_BPS` can only be tighter. On 4663 the swap builder is the UniversalRouter builder; the mock aggregator is never used there (MN-R6) |
+| Rebalancer without a venue | Refuses to start when the adapter is `address(0)` (mainnet until the venue is verified) |
+| `/v1/vault/account/{address}` | zod address param (400 otherwise), parameterized SQL, ≤ 200 requests returned; rate limits as every `/v1/*` route |
+| Vault numbers in the API | Rates are historical and labelled `variable`; APY windows are `null` until they have history (never a projection, CP-R7) |
+| Web vault source | Transactions simulated before the wallet prompt (APP-R3); deposits go through the same compliance proxy (terms, attestation); exits never ask for an attestation (CP-R4); the fixture source is only selectable by an e2e/dev session pin |
+| Indexer handlers | Pure event → row mappings; no external calls |
+
+### 5.2 Residual risks
+
+1. **Co-signer = second NAV key.** Its host, token and venue source must be independent of the reporter's (separate
+   Railway project or provider, separate API credentials). Documented in `docs/runbooks/dn-nav-stale.md` ("Co-signer
+   independence"); an ops control, not a code one.
+2. **Venue API trust.** Both NAV processes read Lighter's API; a wrong API answer to both is a wrong NAV within the
+   co-signer's view. An onchain equity read would remove it (A41).
+3. **Intermittent keeper test.** `dnVault.test.ts` "DN_R1 a withdrawal…" failed once (1 of 17 full runs) with a mined
+   `settle` that reverted; not reproduced since. The replay diagnostic above will name the reason if it recurs.

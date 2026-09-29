@@ -19161,6 +19161,19 @@ export const navOracleAbi = [
     "stateMutability": "nonpayable"
   },
   {
+    "type": "function",
+    "name": "unconfirmedMoveBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
     "type": "event",
     "name": "EIP712DomainChanged",
     "inputs": [],

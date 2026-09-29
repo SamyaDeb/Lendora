@@ -10,6 +10,8 @@ import {Health} from "../src/common/health.js";
 import {loadConfig} from "../src/common/config.js";
 import {envKeySender, GasPriceTooHigh, senderFromConfig} from "../src/common/signer.js";
 import {isPrivateAddress, WebhookTransport, type Alert} from "../src/alerts/transports.js";
+import {loadDnEnv, loadNavEnv} from "../src/common/dnEnv.js";
+import {cosignerApp} from "../src/navReporter/server.js";
 
 /** Offchain security pass (Phase 3 task 9, docs/audit/offchain-review.md): one test per keeper finding. */
 const alert: Alert = {kind: "ops", address: "", ticker: "NVDA", title: "t", body: "b", block: 1n, blockTime: 2n, data: {}};
@@ -155,5 +157,78 @@ describe("OFF-15 supply chain: pinned base images, non-root containers", () => {
       const lastStage = src.slice(src.lastIndexOf("\nFROM "));
       expect(lastStage, f).toMatch(/\nUSER (?!root)\w+/);
     }
+  });
+});
+
+/** Phase 4 task 18 (docs/audit/offchain-review.md §1, OFF-18…OFF-21): the NAV co-signer service and the DN keepers' env. */
+describe("OFF-18…OFF-21 NAV co-signer and DN keepers", () => {
+  const token = "t".repeat(40);
+  const report = {equity: "1", deposited: "0", requested: "0", tradeNonce: "0", timestamp: "1", shortSizes: ["0", "0", "0"]};
+  const post = (app: ReturnType<typeof cosignerApp>, body: string, auth?: string) =>
+    app.request("/cosign", {method: "POST", headers: {"content-type": "application/json", ...(auth ? {authorization: auth} : {})}, body});
+
+  it("OFF_18 the bearer token is required and checked (wrong, missing, prefix-only and longer tokens are 401)", async () => {
+    let called = 0;
+    const app = cosignerApp({cosign: async () => (called++, "0xsig")}, token);
+    for (const a of [undefined, "Bearer x", `Bearer ${token.slice(0, 39)}`, `Bearer ${token}x`, token]) expect((await post(app, JSON.stringify(report), a)).status).toBe(401);
+    expect(called).toBe(0);
+    const ok = await post(app, JSON.stringify(report), `Bearer ${token}`);
+    expect(ok.status).toBe(200);
+    expect(await ok.json()).toEqual({signature: "0xsig"});
+    expect(readFileSync(new URL("../src/navReporter/server.ts", import.meta.url), "utf8")).toMatch(/timingSafeEqual/);
+  });
+
+  it("OFF_19 oversized and malformed bodies are refused before any read; refusals carry no RPC key", async () => {
+    let called = 0;
+    const env = {RPC_URL: "https://rpc.example/v2/SuperSecretKey123"};
+    const app = cosignerApp(
+      {
+        cosign: async () => {
+          called++;
+          throw new Error(`HTTP request failed.\nURL: ${env.RPC_URL}`);
+        },
+      },
+      token,
+      undefined,
+      env,
+    );
+    const auth = `Bearer ${token}`;
+    expect((await post(app, "x".repeat(17 * 1024), auth)).status).toBe(413);
+    expect((await post(app, "{not json", auth)).status).toBe(400);
+    expect((await post(app, JSON.stringify({...report, shortSizes: Array(17).fill("0")}), auth)).status).toBe(400);
+    expect((await post(app, JSON.stringify({...report, equity: "abc"}), auth)).status).toBe(400);
+    expect(called).toBe(0);
+    const r = await post(app, JSON.stringify(report), auth);
+    expect(r.status).toBe(422);
+    const text = await r.text();
+    expect(text).not.toContain("SuperSecretKey123");
+    expect(called).toBe(1);
+  });
+
+  it("OFF_20 NAV and DN keeper numbers are validated with the variable's name", () => {
+    expect(() => loadNavEnv({NAV_REPORT_EVERY_MS: "abc"})).toThrow(/NAV_REPORT_EVERY_MS/);
+    expect(() => loadNavEnv({NAV_REPORT_EVERY_MS: String(15 * 60_000)})).toThrow(/NAV_REPORT_EVERY_MS/); // DN-R5 max age
+    expect(() => loadNavEnv({NAV_REPORT_MOVE_BPS: "0"})).toThrow(/NAV_REPORT_MOVE_BPS/);
+    expect(() => loadNavEnv({LIGHTER_MARKET_IDS: "26,x"})).toThrow(/LIGHTER_MARKET_IDS/);
+    expect(loadNavEnv({}).NAV_REPORT_EVERY_MS).toBe(5 * 60_000);
+    expect(loadNavEnv({COSIGNER_URL: "", COSIGNER_TOKEN: ""}).COSIGNER_URL).toBeUndefined(); // `.env.example` blanks
+    expect(() => loadDnEnv({DN_SLIPPAGE_BPS: "101"})).toThrow(/DN_SLIPPAGE_BPS/); // DN-R10: 1% onchain floor
+    expect(() => loadDnEnv({DN_KILL_HOURS: "NaN"})).toThrow(/DN_KILL_HOURS/);
+    expect(() => loadDnEnv({DN_KILL_LENDING_APY: "5"})).toThrow(/DN_KILL_LENDING_APY/);
+    expect(() => loadDnEnv({DN_ENTRY_CHUNK_USDG: "-1"})).toThrow(/DN_ENTRY_CHUNK_USDG/);
+    expect(() => loadDnEnv({DN_MMF_WAD: "1e16"})).toThrow(/DN_MMF_WAD/);
+    expect(loadDnEnv({}).DN_SLIPPAGE_BPS).toBe(50n);
+    for (const dir of ["navReporter", "dnRebalancer"]) {
+      const main = readFileSync(new URL(`../src/${dir}/main.ts`, import.meta.url), "utf8");
+      expect(main, dir).not.toMatch(/Number\(env\.|BigInt\(env\./);
+    }
+  });
+
+  it("OFF_21 the co-signer URL is https off localhost / *.railway.internal and always carries a token; the co-signer needs one", () => {
+    expect(() => loadNavEnv({COSIGNER_URL: "http://cosigner.example.com/cosign", COSIGNER_TOKEN: token})).toThrow(/COSIGNER_URL/);
+    expect(() => loadNavEnv({COSIGNER_URL: "https://cosigner.example.com/cosign"})).toThrow(/COSIGNER_TOKEN/);
+    expect(loadNavEnv({COSIGNER_URL: "http://nav-cosigner.railway.internal:8790/cosign", COSIGNER_TOKEN: token}).COSIGNER_URL).toContain("railway.internal");
+    expect(() => loadNavEnv({NAV_MODE: "cosigner", COSIGNER_TOKEN: "short"})).toThrow(/COSIGNER_TOKEN/);
+    expect(() => loadNavEnv({LIGHTER_API_URL: "http://api.rh.lighter.xyz"})).toThrow(/LIGHTER_API_URL/);
   });
 });

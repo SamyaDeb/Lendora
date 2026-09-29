@@ -29,6 +29,7 @@ interface INavOracle {
     error ZeroAddress();
     error BadSignature();
     error DuplicateSigner();
+    /// @dev `moveBps` includes the single-signed moves not yet confirmed by a co-signed report.
     error NeedsSecondSigner(uint256 moveBps);
     error StaleReport(uint64 timestamp);
     error FutureReport(uint64 timestamp);
@@ -54,6 +55,9 @@ interface INavOracle {
     function lastReport() external view returns (Report memory);
     /// @notice The feed value of 1e18 units of sleeve `i` (USDG raw) recorded when the last report was accepted.
     function refQuote(uint256 i) external view returns (uint256);
+    /// @notice Sum of the single-signed moves (bps of NAV) since the last report with two signers; a single-signed
+    /// report that would take it above `SECOND_SIGNER_BPS` needs a second signer (DN-R4).
+    function unconfirmedMoveBps() external view returns (uint256);
     /// @notice Perp side of the NAV: report equity + deposits − requests since it + pending withdrawals − the
     /// reported
     /// shorts' loss (or + gain) from the feed price move since the report.

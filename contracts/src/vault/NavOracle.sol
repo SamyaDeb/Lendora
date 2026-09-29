@@ -19,7 +19,9 @@ import {IStocklineOracle} from "../interfaces/IStocklineOracle.sol";
 /// claims no flow the adapter hasn't made. **Between reports** the short leg is marked to the Chainlink price move
 /// since the report with the reported sizes (the feed value is recorded at acceptance), so the NAV stays hedged: spot
 /// and short move together (DN-R14; without it a price move between reports would shift share prices by spot × move).
-/// A report that moves the perp side by more than 1% of NAV against that marked estimate needs two distinct signers.
+/// A report that moves the perp side by more than 1% of NAV against that marked estimate needs two distinct signers,
+/// and so does any single-signed report once the single-signed moves since the last co-signed report add up to more
+/// than 1% (one key can't walk the NAV with a chain of small reports).
 /// Owner = the timelock: signers and max ages.
 contract NavOracle is INavOracle, EIP712, Ownable {
     /// @inheritdoc INavOracle
@@ -51,6 +53,8 @@ contract NavOracle is INavOracle, EIP712, Ownable {
     Report internal _last;
     /// @inheritdoc INavOracle
     mapping(uint256 sleeve => uint256) public refQuote;
+    /// @inheritdoc INavOracle
+    uint256 public unconfirmedMoveBps;
 
     /// @param owner_ Deployer during deployment, then the timelock.
     /// @param vault The vault.
@@ -94,9 +98,10 @@ contract NavOracle is INavOracle, EIP712, Ownable {
         emit Reported(r.equity, r.deposited, r.requested, r.timestamp, navNext, signers);
     }
 
-    /// @dev DN-R4: a report moving the perp side by more than 1% of NAV against the marked estimate needs 2 signers.
+    /// @dev DN-R4: a report moving the perp side by more than 1% of NAV against the marked estimate needs 2 signers;
+    /// single-signed moves accumulate in `unconfirmedMoveBps` (also capped at 1%) until a co-signed report resets it.
     /// Returns the NAV with the report.
-    function _checkMove(Report calldata r, IPerpAdapter a, uint256 signers) internal view returns (uint256) {
+    function _checkMove(Report calldata r, IPerpAdapter a, uint256 signers) internal returns (uint256) {
         uint256 estimate = _perp(a);
         uint256 next = _flows(r.equity, r.deposited, r.requested, a); // its sizes are priced now
         uint256 base = _base();
@@ -104,7 +109,13 @@ contract NavOracle is INavOracle, EIP712, Ownable {
         uint256 diff = next > estimate ? next - estimate : estimate - next;
         // slither-disable-next-line incorrect-equality
         uint256 moveBps = navEstimate == 0 ? (diff == 0 ? 0 : BPS) : diff * BPS / navEstimate;
-        if (moveBps > SECOND_SIGNER_BPS && signers < 2) revert NeedsSecondSigner(moveBps);
+        if (signers < 2) {
+            moveBps += unconfirmedMoveBps;
+            if (moveBps > SECOND_SIGNER_BPS) revert NeedsSecondSigner(moveBps);
+            unconfirmedMoveBps = moveBps;
+        } else {
+            unconfirmedMoveBps = 0;
+        }
         return base + next;
     }
 

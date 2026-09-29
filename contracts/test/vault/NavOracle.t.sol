@@ -56,10 +56,40 @@ contract NavOracleTest is DnVaultBase {
         r.timestamp = uint64(t + 120);
         r.equity += 11_000e6; // +1.1%
         bytes[] memory sg1 = _one(r, signerB);
-        vm.expectRevert(abi.encodeWithSelector(INavOracle.NeedsSecondSigner.selector, 109));
+        // 109 bps on its own, plus the unconfirmed 90 bps of the first report.
+        vm.expectRevert(abi.encodeWithSelector(INavOracle.NeedsSecondSigner.selector, 199));
         nav.submit(r, sg1);
         nav.submit(r, _two(r));
         assertEq(nav.lastReport().equity, r.equity);
+    }
+
+    /// Phase 4 task 18 (audit prep): one signer can't walk NAV by chaining sub-1% reports; single-signed moves add up
+    /// until a report signed by two resets the sum.
+    function test_DN_R4_singleSignerMovesAccumulateUntilACosignedReport() public {
+        _deposit(alice, 1_000_000e6);
+        _build(1, 400_000e6);
+        INavOracle.Report memory r = nav.lastReport();
+        uint256 t = vm.getBlockTimestamp();
+        for (uint256 i = 1; i <= 2; i++) {
+            vm.warp(t + 60 * i);
+            r.timestamp = uint64(t + 60 * i);
+            r.equity -= 4000e6; // −0.4% of NAV each
+            nav.submit(r, _one(r, signerA));
+        }
+        assertEq(nav.unconfirmedMoveBps(), 80);
+        vm.warp(t + 180);
+        r.timestamp = uint64(t + 180);
+        r.equity -= 4000e6; // a third −0.4%: 1.2% since the last co-signed report
+        bytes[] memory sg1 = _one(r, signerA);
+        vm.expectRevert(abi.encodeWithSelector(INavOracle.NeedsSecondSigner.selector, 120));
+        nav.submit(r, sg1);
+        nav.submit(r, _two(r));
+        assertEq(nav.unconfirmedMoveBps(), 0, "a co-signed report confirms the NAV");
+        vm.warp(t + 240);
+        r.timestamp = uint64(t + 240);
+        r.equity -= 4000e6;
+        nav.submit(r, _one(r, signerA)); // single signer again, within 1% of the confirmed NAV
+        assertEq(nav.unconfirmedMoveBps(), 40);
     }
 
     function test_DN_R4_signaturesMustBeDistinctAllowedAndSorted() public {

@@ -25,7 +25,7 @@ export interface KeeperConfig {
   maxStaleMs: number;
 }
 
-const int = (name: string, min: number, max: number, dflt: number) =>
+export const int = (name: string, min: number, max: number, dflt: number) =>
   z
     .string()
     .optional()
@@ -39,7 +39,7 @@ const int = (name: string, min: number, max: number, dflt: number) =>
       return n;
     });
 const isLocal = (u: URL) => ["127.0.0.1", "localhost", "[::1]"].includes(u.hostname) || u.hostname.endsWith(".railway.internal");
-const httpUrl = (name: string, httpsUnlessLocal: boolean) =>
+export const httpUrl = (name: string, httpsUnlessLocal: boolean) =>
   z.string().refine(
     (v) => {
       try {

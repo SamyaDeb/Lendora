@@ -93,7 +93,7 @@ describe("USDG Earn and receipt-market API (DN-R11, A3)", () => {
     expect(Number(w7.funding)).toBeGreaterThan(0);
     expect(o.data.apy.d7).not.toBeNull();
     const total = Number(w7.funding) + Number(w7.costs) + Number(w7.lending);
-    expect(total).toBeCloseTo(Number(o.data.apy.d7), 6); // the parts add up to the net APY
+    expect(total).toBeCloseTo(Number(o.data.apy.d7), 5); // the parts add up to the net APY (each is rounded to 6 dp)
     expect(o.data.sharePriceSeries.length).toBeGreaterThanOrEqual(2);
   });
 
