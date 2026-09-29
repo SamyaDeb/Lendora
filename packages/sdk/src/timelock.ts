@@ -1,6 +1,6 @@
 import {encodeAbiParameters, encodeFunctionData, keccak256, parseAbi, type Hex} from "viem";
 import type {Address, ChainDeployment} from "./addresses.js";
-import {marketHoursAbi, stocklineOracleAbi, stocklineRouterAbi} from "./abis.js";
+import {deltaNeutralVaultAbi, marketHoursAbi, navOracleAbi, stocklineOracleAbi, stocklineRouterAbi, strategyManagerAbi} from "./abis.js";
 
 /**
  * Timelock calldata for the owner actions the runbooks reference (docs/runbooks/*, remediation task 4). The owner of
@@ -60,7 +60,10 @@ export type TimelockAction =
   | {kind: "router.setGlobalCap"; cap: bigint}
   | {kind: "router.setCapOverride"; user: Address; ticker: string; capUsdWad: bigint} // direct-borrow.md
   | {kind: "router.setAttestationSigner"; signer: Address} // compliance signer rotation
-  | {kind: "router.setSwapTarget"; target: Address; mode: 0 | 1 | 2};
+  | {kind: "router.setSwapTarget"; target: Address; mode: 0 | 1 | 2}
+  | {kind: "dnVault.setTotalCap"; cap: bigint} // USDG raw; 0 at launch until the sim gate and the risk owner (Q11)
+  | {kind: "dnStrategy.setSleeveCap"; sleeve: bigint; capUsdg: bigint}
+  | {kind: "navOracle.setSigner"; signer: Address; allowed: boolean}; // DN-R4 signer rotation
 
 export interface TimelockOperation {
   action: TimelockAction["kind"];
@@ -115,7 +118,18 @@ export function actionCall(d: ChainDeployment, a: TimelockAction): {target: Addr
       return {target: router(d), data: encodeFunctionData({abi: stocklineRouterAbi, functionName: "setAttestationSigner", args: [a.signer]})};
     case "router.setSwapTarget":
       return {target: router(d), data: encodeFunctionData({abi: stocklineRouterAbi, functionName: "setSwapTarget", args: [a.target, a.mode]})};
+    case "dnVault.setTotalCap":
+      return {target: dnVault(d).vault, data: encodeFunctionData({abi: deltaNeutralVaultAbi, functionName: "setTotalCap", args: [a.cap]})};
+    case "dnStrategy.setSleeveCap":
+      return {target: dnVault(d).strategy, data: encodeFunctionData({abi: strategyManagerAbi, functionName: "setSleeveCap", args: [a.sleeve, a.capUsdg]})};
+    case "navOracle.setSigner":
+      return {target: dnVault(d).navOracle, data: encodeFunctionData({abi: navOracleAbi, functionName: "setSigner", args: [a.signer, a.allowed]})};
   }
+}
+
+function dnVault(d: ChainDeployment) {
+  if (!d.dnVault) throw new Error("deployment has no DN vault");
+  return d.dnVault;
 }
 
 function router(d: ChainDeployment): Address {

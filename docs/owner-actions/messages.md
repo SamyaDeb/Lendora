@@ -7,9 +7,16 @@ Canada, UK, Switzerland, UAE, OFAC-sanctioned).
 
 > **Help test Stockline on Robinhood Chain testnet (2–3 weeks, test tokens only)**
 > We are building a stock lending layer on Morpho Blue: lend Stock Tokens for yield, or borrow them to short or hedge
-> over weekends. We are looking for 20 testers to lend, borrow, open and close a short, and tell us what breaks.
+> over weekends, plus USDG Earn, a delta-neutral USDG vault (variable, historical rates only). We are looking for 20
+> testers to lend, borrow, open and close a short, try the vault page, and tell us what breaks.
 > Everything uses testnet tokens from our faucet; nothing has real value. Not available to residents of the US, Canada,
 > UK, Switzerland, the UAE or sanctioned jurisdictions. Apply: `<form link>` · Guide: `<link to runbooks/testnet.md §1>`
+
+## Feedback form (placeholder, owner to create)
+
+Fields: wallet address (optional) · flow number from [testnet.md §1](../runbooks/testnet.md#1-for-testers) · what you
+did · what you expected · what happened · tx hash · browser and wallet · screenshot · severity (blocked / wrong /
+confusing / cosmetic). Put its link in place of `<FEEDBACK_FORM_URL>` in testnet.md and `<form link>` above.
 
 ## Interview outreach
 

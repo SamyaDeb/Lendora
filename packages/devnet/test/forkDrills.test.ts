@@ -19,13 +19,21 @@ import {
   timelockOperation,
   vaultCuratorOperation,
   vaultV2FullAbi,
+  attestationDomain,
+  attestationTypes,
+  deltaNeutralVaultAbi,
+  navOracleAbi,
+  strategyManagerAbi,
   type TimelockAction,
 } from "@stockline/sdk";
+import {generatePrivateKey, privateKeyToAccount} from "viem/accounts";
 import {CONTRACTS_DIR, startAnvil, type Anvil} from "../src/anvil.js";
 import {ChainDriver, GUARD} from "../src/driver.js";
+import {DnDriver, NAV_SIGNERS} from "../src/dn.js";
 
 /**
- * Phase 3 task 11 without "go testnet": the testnet fee turn-on and every runbook drill, rehearsed on an **anvil fork of
+ * Phase 3 task 11 and Phase 4 Part C without "go testnet": the testnet fee turn-on, the Phase 4 vault deploy and flows,
+ * and every runbook drill, rehearsed on an **anvil fork of
  * 46630** (the real testnet deployment and its 24h timelock; nothing is sent to the testnet). The testnet deployer holds
  * every testnet role (A27) and operates the gated mocks, so it is impersonated here as it would sign there.
  *
@@ -75,6 +83,21 @@ describe.skipIf(!RUN)("runbook drills and fee turn-on on an anvil fork of 46630 
     await drv.freshRounds(end + 1n);
     const e = await a.send(op, tl, o.executeCalldata);
     return {o, delay, rs: [s, e]};
+  }
+
+  /** Several owner actions scheduled in one timelock window, then executed after the delay. */
+  async function governedBatch(actions: TimelockAction[], label: string) {
+    const tl = a.d.timelock;
+    const delay = await a.client.readContract({address: tl, abi: timelockAbi, functionName: "getMinDelay"});
+    const ops = actions.map((x, i) => timelockOperation(a.d, x, {delay, salt: saltOf(`${label} ${i}`)}));
+    const rs: (TransactionReceipt | undefined)[] = [];
+    for (const o of ops) rs.push(await a.send(op, tl, o.scheduleCalldata));
+    await expect(a.send(op, tl, ops[0].executeCalldata), "not before the delay").rejects.toThrow();
+    const end = (await drv.now()) + delay;
+    for (let t = (await drv.now()) + 6n * H; t < end; t += 6n * H) await drv.freshRounds(t);
+    await drv.freshRounds(end + 1n);
+    for (const o of ops) rs.push(await a.send(op, tl, o.executeCalldata));
+    return {delay, rs};
   }
 
   beforeAll(async () => {
@@ -155,6 +178,70 @@ describe.skipIf(!RUN)("runbook drills and fee turn-on on an anvil fork of 46630 
     const got = (await bal(treasury, a.d.usdg)) - before;
     expect(got >= floor).toBe(true);
     await log("First conversion (treasury share, NVDA → USDG through the mock DEX)", "list-stock.md (fees), FE-R4", `oracle value ${value} USDG raw, floor ${floor}, received ${got}; non-keeper and below-floor calls refused`, [conv]);
+  }, 900_000);
+
+  it("Phase 4 (Part C): DeployTestnetVault (caps 0, mock venue) → NAV signers, compliance signer and a fork-only cap through the 24h timelock → deposit, build, instant and queued withdrawal, settle, claim", async () => {
+    // 1. The script exactly as after "go testnet" (TESTNET_GO=fork-dry-run on the fork), after DeployTestnetFees.
+    const r = spawnSync("forge", ["script", "script/DeployTestnetVault.s.sol", "--rpc-url", a.url, "--broadcast", "--unlocked", "--sender", op, "--slow"], {
+      cwd: CONTRACTS_DIR,
+      env: {...process.env, TESTNET_GO: "fork-dry-run"},
+      encoding: "utf8",
+    });
+    expect(r.status, r.stderr?.slice(-2000)).toBe(0);
+    const j = JSON.parse(readFileSync(`${CONTRACTS_DIR}/deployments/fork-46630-dn.json`, "utf8")) as Record<string, string>;
+    const dn = {vault: getAddress(j.vault), strategy: getAddress(j.strategy), navOracle: getAddress(j.navOracle), perpAdapter: getAddress(j.perpAdapter)};
+    a.d.dnVault = dn;
+    const rd = <T,>(address: `0x${string}`, abi: readonly unknown[], functionName: string, args: readonly unknown[] = []) => (a.client.readContract as (p: unknown) => Promise<T>)({address, abi, functionName, args});
+    for (const c of [dn.vault, dn.strategy, dn.navOracle]) expect(await rd<string>(c, deltaNeutralVaultAbi, "owner"), c).toBe(getAddress(a.d.timelock));
+    expect(await rd<bigint>(dn.vault, deltaNeutralVaultAbi, "totalCap")).toBe(0n);
+    expect(await rd<string>(dn.vault, deltaNeutralVaultAbi, "feeRecipient")).toBe(fees.feeSplitter);
+    expect(await rd<string>(dn.strategy, strategyManagerAbi, "adapter")).toBe(dn.perpAdapter);
+    const sleeves = Number(await rd<bigint>(dn.strategy, strategyManagerAbi, "sleeveCount"));
+    for (let i = 0; i < sleeves; i++) expect((await rd<{capUsdg: bigint}>(dn.strategy, strategyManagerAbi, "sleeve", [BigInt(i)])).capUsdg).toBe(0n);
+    await log("Deploy the DN vault, strategy, NAV oracle and gated mock venue (`DeployTestnetVault.s.sol`, TESTNET_GO=fork-dry-run)", "dn-*.md", `vault ${dn.vault}; owner = timelock; total and sleeve caps 0 (Q11); fee → FeeSplitter; ${sleeves} sleeves`, []);
+
+    // 2. Governance, one 24h window: the two NAV signers, the compliance signer the fork's tests can sign with, and a
+    //    fork-only cap (testnet caps stay 0 unless the owner says otherwise).
+    const att = privateKeyToAccount(generatePrivateKey());
+    const actions: TimelockAction[] = [
+      {kind: "navOracle.setSigner", signer: NAV_SIGNERS[0], allowed: true},
+      {kind: "navOracle.setSigner", signer: NAV_SIGNERS[1], allowed: true},
+      {kind: "navOracle.setSigner", signer: op, allowed: false},
+      {kind: "router.setAttestationSigner", signer: att.address},
+      {kind: "dnVault.setTotalCap", cap: 100_000n * E6},
+      ...Array.from({length: sleeves}, (_, i) => ({kind: "dnStrategy.setSleeveCap" as const, sleeve: BigInt(i), capUsdg: 50_000n * E6})),
+    ];
+    const g = await governedBatch(actions, "fork dn setup");
+    expect(await rd<boolean>(dn.navOracle, navOracleAbi, "isSigner", [NAV_SIGNERS[1]])).toBe(true);
+    expect(await rd<bigint>(dn.vault, deltaNeutralVaultAbi, "totalCap")).toBe(100_000n * E6);
+    await log("NAV signers (2), compliance signer rotation and a fork-only 100k cap in one 24h timelock window", "dn-nav-stale.md, key rotation", `${actions.length} operations scheduled together, refused before ${g.delay} s, executed after`, g.rs);
+
+    // 3. User flows with the operator = the testnet deployer (A27).
+    const d4 = new ChainDriver(a, {operator: op, log: () => {}, attestationProvider: async (user) => {
+      const expiry = (await drv.now()) + 3600n;
+      const signature = await att.signTypedData({domain: attestationDomain(46630, a.d.router!), types: attestationTypes, primaryType: "Attestation", message: {user, expiry}});
+      return {expiry, signature};
+    }});
+    const v = new DnDriver(d4, {operator: op});
+    const alice = "0x5700000000000000000000000000000000000c11" as const;
+    // Deposits and exits need an open feed session (DN-R12): move to the next one if the drills left us in a weekend.
+    let t = (await drv.now()) + 60n;
+    while (!(await rd<boolean>(a.d.marketHours, marketHoursAbi, "isOpen", [t]))) t += 3600n;
+    await drv.freshRounds(t + 60n);
+    await v.report();
+    const dep = await v.deposit(alice, 60_000n * E6);
+    await v.build(1, 20_000n * E6, 0n);
+    await v.report();
+    const w = await v.withdraw(alice, 5_000n * E6);
+    const id = await v.requestRedeem(alice, 30_000n * E18);
+    const idle = await rd<bigint>(dn.vault, deltaNeutralVaultAbi, "idleAssets");
+    await v.report();
+    const st = await v.settle();
+    const req = await rd<{status: number; assets: bigint}>(dn.vault, deltaNeutralVaultAbi, "request", [id]);
+    expect(req.status, `idle ${idle}`).toBe(2); // Claimable
+    const cl = await v.claim(id);
+    expect(await rd<bigint>(a.d.usdg, erc20Abi, "balanceOf", [alice])).toBe(5_000n * E6 + req.assets);
+    await log("USDG Earn flows on the fork: deposit (attested) → build NVDA sleeve → instant withdrawal → queued request → settle → claim", "dn-queue-overdue.md", `deposit 60k; instant 5k; request 30k shares settled at ${req.assets} USDG raw and claimed; NAV reports signed by both NAV signers`, [dep, w, st, cl]);
   }, 900_000);
 
   it("guard-tripped.md: guardian trips MANUAL → allocator pull → borrow refused, repay works → clear", async () => {
@@ -253,7 +340,7 @@ describe.skipIf(!RUN)("runbook drills and fee turn-on on an anvil fork of 46630 
   function writeReport() {
     const date = new Date().toISOString();
     const lines = [
-      "# Runbook drills on an anvil fork of 46630 (Phase 3 task 11)",
+      "# Runbook drills on an anvil fork of 46630 (Phase 3 task 11, Phase 4 Part C)",
       "",
       `Run ${date} by \`packages/devnet/test/forkDrills.test.ts\` (${Math.round((Date.now() - t0) / 1000)} s). **Rehearsed on a fork, not on testnet**: no`,
       `"go testnet" was given, so every transaction below ran on a local anvil fork of 46630 at block ${forkBlock} (the real`,

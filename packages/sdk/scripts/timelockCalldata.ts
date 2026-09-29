@@ -18,6 +18,9 @@
  *   router.setCapOverride            user=0x… ticker=NVDA capUsdWad=0              (direct-borrow.md)
  *   router.setAttestationSigner      signer=0x…
  *   router.setSwapTarget             target=0x… mode=0|1|2
+ *   dnVault.setTotalCap              cap=<USDG raw>              (Phase 4; 0 until the sim gate + risk owner, Q11)
+ *   dnStrategy.setSleeveCap          sleeve=<id> capUsdg=<USDG raw>
+ *   navOracle.setSigner              signer=0x… allowed=true|false (DN-R4 signer rotation)
  *
  * Vault V2 curator actions (the vault's own timelock, not the TimelockController; FE-R1):
  *   vault.setPerformanceFeeRecipient ticker=NVDA recipient=0x…                   (turn fees on: → FeeSplitter)
@@ -110,6 +113,12 @@ function action(): TimelockAction {
       return {kind, signer: need("signer") as Address};
     case "router.setSwapTarget":
       return {kind, target: need("target") as Address, mode: Number(need("mode")) as 0 | 1 | 2};
+    case "dnVault.setTotalCap":
+      return {kind, cap: big(need("cap"))};
+    case "dnStrategy.setSleeveCap":
+      return {kind, sleeve: big(need("sleeve")), capUsdg: big(need("capUsdg"))};
+    case "navOracle.setSigner":
+      return {kind, signer: need("signer") as Address, allowed: need("allowed") === "true"};
     default:
       throw new Error(`unknown action ${kind ?? "(none)"}; see the header of scripts/timelockCalldata.ts`);
   }

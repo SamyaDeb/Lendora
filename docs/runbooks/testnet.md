@@ -1,4 +1,4 @@
-# Testnet runbook (Phase 2)
+# Testnet runbook (Phases 2–4)
 
 Robinhood Chain testnet (chain id 46630). Everything here uses **test assets with no value**. Phase 2 exit needs
 2 clean testnet weekends and 20 external testers (docs/prd/11-milestones.md).
@@ -31,18 +31,21 @@ freeze from Friday 20:00 ET to Sunday 20:00 ET, like the real feeds.
 | # | Flow | Where |
 |---|---|---|
 | 0 | Open the app, pick a market from the list | `/markets` |
-| 1 | Lend a stock; see the variable APY and your `rSTOCK` balance | `/lend/NVDA` |
-| 2 | Withdraw part of your lend | `/lend/NVDA` → Withdraw |
-| 3 | Open a short: USDG collateral, borrow and sell NVDA; read the preview first (health factor now, at the next close, if the price rises 10%) | `/short/NVDA` |
-| 4 | Just borrow AAPL (no sale) | `/short/AAPL` → Just borrow |
-| 5 | Add collateral to a borrow | `/portfolio` |
-| 6 | Repay a borrow with the stock | `/portfolio` → Repay |
-| 7 | Close a short (buy back with USDG) | `/portfolio` → Close |
-| 8 | Withdraw collateral after repaying | `/portfolio` |
-| 9 | Set alerts (health factor, weekend warning) | `/alerts` |
-| 10 | Look at the short-interest dashboard and the API | `/short-interest`, `<API_URL>/v1/openapi.json` |
-| 11 | Hold a borrow over a weekend and watch the buffer ramp in on Friday afternoon (ET) | `/portfolio` |
-| 12 | After the fee is on (Phase 3): lender yield shown net of the 10% performance fee, in stock and USD; protocol revenue per day | `/lend/NVDA`, `/data` |
+| 1 | Get test funds with the faucet button (once per 24h) | header → Faucet |
+| 2 | Lend a stock; see the variable APY and your `rSTOCK` balance | `/stock/NVDA?tab=lend` |
+| 3 | Withdraw part of your lend | `/stock/NVDA?tab=lend` → Withdraw |
+| 4 | Open a short: USDG collateral, borrow and sell NVDA; read the preview first (health factor now, at the next close, if the price rises 10%) | `/stock/NVDA?tab=short` |
+| 5 | Just borrow AAPL (no sale) | `/stock/AAPL?tab=short` → Just borrow |
+| 6 | Add collateral to a borrow (the rescue top-up) | `/portfolio` |
+| 7 | Repay a borrow with the stock | `/portfolio` → Repay |
+| 8 | Close a short (buy back with USDG) | `/portfolio` → Close |
+| 9 | Withdraw collateral after repaying | `/portfolio` |
+| 10 | Set alerts (health factor, weekend warning) | `/alerts` |
+| 11 | Look at the short-interest data, protocol revenue and the API | `/data`, `<API_URL>/v1/openapi.json` |
+| 12 | Hold a borrow over a weekend and watch the buffer ramp in on Friday afternoon (ET) | `/portfolio` |
+| 13 | Lender yield net of the 10% performance fee, in stock and USD (once the fee is on) | `/stock/NVDA?tab=lend`, `/data` |
+| 14 | USDG Earn (Phase 4): read the page; while its cap is 0 (the default on testnet) deposits are refused and the page says so | `/vault` |
+| 15 | USDG Earn flows, **only if the owner opens a testnet cap**: deposit, instant withdrawal, queued withdrawal (settles within 72h or the next US open), claim | `/vault`, `/portfolio` |
 
 **Reporting bugs.** Use the feedback form: `<FEEDBACK_FORM_URL>` (placeholder, owner to create). Include: what you
 did, what you expected, what happened, the transaction hash (from your wallet or the app's step list), your browser
@@ -50,8 +53,10 @@ and wallet, and a screenshot. Never share your seed phrase or private key; nobod
 
 ## 2. For operators
 
-**Services** (infra/README.md): indexer (+ daily reconcile), API, compliance, web, keepers (allocator, guard,
-liquidator, alerts, feed-mirror). Health: `/ready` (indexer), `/health` (others). Keepers run with
+**Services** (infra/README.md): **monitor first** (before any governance action, MON-R16), indexer (+ daily
+reconcile), API, compliance, web (`NEXT_PUBLIC_FEATURE_*` as agreed; the vault page reads the API once `dnVault` is in
+the book), keepers (allocator, guard, liquidator, fee converter, feed-mirror, dn-rebalancer, nav-reporter, nav-cosigner
+on its own host, alerts). Health: `/ready` (indexer), `/health` (others). Keepers run with
 `DRY_RUN=false KEEPER_SIGNER=env-key` on testnet only after the go; keys come from the secret store.
 
 **Deployed 2026-09-28** (owner's go): 349 transactions, 0 failed, deployer `0x3394d7Be60302c9649c6E5A3c7fC7b989f521348`,
@@ -73,6 +78,29 @@ TESTNET_GO=yes STOCKLINE_ATTESTATION_SIGNER=<compliance signer address> \
 TESTNET_GO=yes SMOKE_KEY=$TESTNET_DEPLOYER_KEY PROXY_SECRET=$PROXY_SECRET pnpm --filter @stockline/devnet drive smoke \
   --rpc $ROBINHOOD_TESTNET_RPC_URL --compliance <COMPLIANCE_URL>
 ```
+
+**Phase 3–4 contracts on the existing deployment** (each after the owner's go; the deployer needs ~0.0003 ETH at
+0.01 gwei for both, 0.00839 ETH on 2026-09-29):
+
+```sh
+cd contracts
+TESTNET_GO=yes forge script script/DeployTestnetFees.s.sol --rpc-url $ROBINHOOD_TESTNET_RPC_URL --broadcast --slow \
+  --gas-estimate-multiplier 200 --private-key $TESTNET_DEPLOYER_KEY    # writes feeSplitter + converters to the book
+TESTNET_GO=yes forge script script/DeployTestnetVault.s.sol --rpc-url $ROBINHOOD_TESTNET_RPC_URL --broadcast --slow \
+  --gas-estimate-multiplier 200 --private-key $TESTNET_DEPLOYER_KEY    # DN vault, mock venue, caps 0; writes dnVault
+# fee turn-on (24h curator timelock) and the live drills: run now, re-run after 24h to execute the scheduled halves
+TESTNET_GO=yes TESTNET_DEPLOYER_KEY=… DRILL_RAN_BY="<name>" pnpm --filter @stockline/devnet drive live-drills \
+  --rpc $ROBINHOOD_TESTNET_RPC_URL                                     # evidence: docs/runbooks/live-drills-46630.json
+# then every feature through the hosted stack:
+SMOKE_KEY=… TESTNET_GO=yes pnpm --filter @stockline/web exec tsx scripts/testnetSmoke.ts --web <APP_URL> --api <API_URL> \
+  --rpc $ROBINHOOD_TESTNET_RPC_URL --monitor <MONITOR_URL> --flows --report ../docs/runbooks/testnet-smoke.md
+```
+
+Rehearsed without the go (2026-09-29): all of the above on an anvil fork of 46630 ([fork-drills-46630.md](fork-drills-46630.md),
+`packages/devnet/test/liveDrills.test.ts`) and the smoke on the local full stack ([testnet-smoke.md](testnet-smoke.md)).
+The DN vault's NAV signers and operator default to the deployer (A27); set `STOCKLINE_NAV_SIGNER_1/2` and
+`STOCKLINE_DN_OPERATOR` to the keeper keys when deploying, or rotate them through the 24h timelock
+(`navOracle.setSigner`, `timelockCalldata.ts`).
 
 **Compliance secret (CP-R8).** The compliance service refuses to start on 46630 without `PROXY_SECRET` (≥ 32 chars,
 `openssl rand -hex 32`), and trusts geo/IP headers only from requests carrying it. Set the same value on web, with

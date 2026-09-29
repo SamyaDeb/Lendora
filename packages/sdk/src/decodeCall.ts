@@ -1,18 +1,21 @@
 import {decodeFunctionData, type Abi, type Hex} from "viem";
 import type {Address, ChainDeployment} from "./addresses.js";
 import {
+  deltaNeutralVaultAbi,
   feeConverterAbi,
   feeSplitterAbi,
   marketHoursAbi,
   stocklineLiquidatorAbi,
   stocklineOracleAbi,
+  navOracleAbi,
   stocklineRouterAbi,
+  strategyManagerAbi,
   vaultV2FullAbi,
 } from "./abis.js";
 
 /** A contract call decoded for an operator page (MON-R16…R18): what, on which Stockline contract. */
 export interface DecodedCall {
-  /** e.g. "router", "oracle:NVDA", "vault:NVDA", "feeSplitter", "timelock", or "unknown". */
+  /** e.g. "router", "oracle:NVDA", "vault:NVDA", "feeSplitter", "dnVault", "navOracle", "timelock", or "unknown". */
   label: string;
   target: Address;
   functionName: string | null;
@@ -37,7 +40,14 @@ export function stocklineContracts(d: ChainDeployment): {address: Address; label
   for (const [t, s] of Object.entries(d.stocks)) {
     add(s.oracle, `oracle:${t}`, stocklineOracleAbi as Abi);
     add(s.vault, `vault:${t}`, vaultV2FullAbi as Abi);
+    // G5 receipt market (A3): its oracle shares the Stockline oracle's owner surface.
+    add(s.receipt?.oracle, `receiptOracle:${t}`, stocklineOracleAbi as Abi);
+    add(s.receipt?.usdgVault, `receiptVault:${t}`, vaultV2FullAbi as Abi);
   }
+  // Phase 4 (USDG Earn).
+  add(d.dnVault?.vault, "dnVault", deltaNeutralVaultAbi as Abi);
+  add(d.dnVault?.strategy, "dnStrategy", strategyManagerAbi as Abi);
+  add(d.dnVault?.navOracle, "navOracle", navOracleAbi as Abi);
   return out;
 }
 

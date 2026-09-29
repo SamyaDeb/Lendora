@@ -15,7 +15,14 @@ const UNIT = 10n ** 18n;
  * (keepers/src/dnRebalancer); this is the scripted version.
  */
 export class DnDriver {
-  constructor(private readonly drv: ChainDriver) {}
+  /** The strategy operator (anvil #6 on the local fixture; the deployer on testnet, A27). */
+  readonly operator: `0x${string}`;
+  constructor(
+    private readonly drv: ChainDriver,
+    opts: {operator?: `0x${string}`} = {},
+  ) {
+    this.operator = opts.operator ?? DN_OPERATOR;
+  }
 
   private get a() {
     return this.drv.a;
@@ -61,11 +68,11 @@ export class DnDriver {
       timestamp: b.timestamp,
       shortSizes: sizes,
     };
-    const td = navReportTypedData(31337, this.dn.navOracle, r);
+    const td = navReportTypedData(await this.a.client.getChainId(), this.dn.navOracle, r);
     const sigs = await Promise.all(
       [...NAV_SIGNERS].sort((x, y) => (x.toLowerCase() < y.toLowerCase() ? -1 : 1)).map((account) => (this.a.wallet.signTypedData as (p: unknown) => Promise<Hex>)({account, ...(td as object)})),
     );
-    await this.a.send(DN_OPERATOR, this.dn.navOracle, this.call(navOracleAbi, "submit", [r, sigs]));
+    await this.a.send(this.operator, this.dn.navOracle, this.call(navOracleAbi, "submit", [r, sigs]));
   }
 
   /** The 08 structure for sleeve `i` with `usdg` raw of capital: 3/4 spot (90% lent), 1/4 margin, short = spot. */
@@ -73,7 +80,7 @@ export class DnDriver {
     const s = (usdg * 3n) / 4n;
     const m = usdg - s;
     const sl = await this.rd<{stockToken: `0x${string}`}>(this.dn.strategy, strategyManagerAbi, "sleeve", [BigInt(i)]);
-    const op = (fn: string, args: readonly unknown[]) => this.a.send(DN_OPERATOR, this.dn.strategy, this.call(strategyManagerAbi, fn, args));
+    const op = (fn: string, args: readonly unknown[]) => this.a.send(this.operator, this.dn.strategy, this.call(strategyManagerAbi, fn, args));
     await op("pullFromVault", [usdg]);
     const unit = await this.rd<bigint>(this.dn.strategy, strategyManagerAbi, "quote", [BigInt(i), UNIT]);
     const minOut = ((s * UNIT) / unit) * 995n / 1000n;
@@ -101,11 +108,11 @@ export class DnDriver {
   }
 
   async settle(n = 20n): Promise<TransactionReceipt> {
-    return this.a.send(DN_OPERATOR, this.dn.vault, this.call(deltaNeutralVaultAbi, "settle", [n]));
+    return this.a.send(this.operator, this.dn.vault, this.call(deltaNeutralVaultAbi, "settle", [n]));
   }
 
   async claim(id: bigint): Promise<TransactionReceipt> {
-    return this.a.send(DN_OPERATOR, this.dn.vault, this.call(deltaNeutralVaultAbi, "claim", [id]));
+    return this.a.send(this.operator, this.dn.vault, this.call(deltaNeutralVaultAbi, "claim", [id]));
   }
 
   async shares(user: `0x${string}`): Promise<bigint> {

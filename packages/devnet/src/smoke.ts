@@ -7,8 +7,9 @@ const E6 = 10n ** 6n;
 /**
  * Smoke flows for a live deployment (testnet after the go, or anvil): every router flow of 05 §4 once, by one wallet,
  * at the current chain time (the feed mirror keeps prices fresh). Returns the recorded actions with tx hashes.
+ * `allocate: false` for a wallet without the allocator role (the hosted stack's allocator keeper supplies liquidity).
  */
-export async function smokeFlows(drv: ChainDriver, me: `0x${string}`, log: (m: string) => void = console.log): Promise<DriverEvent[]> {
+export async function smokeFlows(drv: ChainDriver, me: `0x${string}`, log: (m: string) => void = console.log, opts: {allocate?: boolean} = {}): Promise<DriverEvent[]> {
   const faucet = drv.d.mocks?.faucet;
   if (faucet) {
     const r = await drv.a.send(me, faucet, encodeFunctionData({abi: [{type: "function", name: "claim", stateMutability: "nonpayable", inputs: [{type: "address"}], outputs: []}] as const, functionName: "claim", args: [me]})).catch((e) => {
@@ -20,7 +21,8 @@ export async function smokeFlows(drv: ChainDriver, me: `0x${string}`, log: (m: s
   const start = drv.events.length;
   await drv.lend("NVDA", me, 2n * E18);
   await drv.lend("AAPL", me, 2n * E18);
-  await drv.allocate(["NVDA", "AAPL"]);
+  // The allocator role (the deployer on testnet, A27); a plain tester relies on the allocator keeper instead.
+  if (opts.allocate !== false) await drv.allocate(["NVDA", "AAPL"]);
   await drv.openShort("NVDA", me, 2_000n * E6, E18 / 2n);
   await drv.addCollateral("NVDA", me, 100n * E6);
   await drv.repay("NVDA", me, E18 / 10n);

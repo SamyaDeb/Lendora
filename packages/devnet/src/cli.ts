@@ -5,6 +5,9 @@
  *   pnpm --filter @stockline/devnet drive live [--rpc URL]       # fresh rounds + allocator pass every 15 s (dev stack)
  *   pnpm --filter @stockline/devnet drive serve [--port 8545]    # anvil with the DeployLocal fixture, foreground
  *   pnpm --filter @stockline/devnet drive dump-state [--rpc URL] # write the node's state to fixtures/anvil-state.hex
+ *   pnpm --filter @stockline/devnet drive live-drills --rpc URL [--unlocked] [--state FILE]
+ *       Part C runbook drills on 46630 without time travel (re-run after 24h to execute the scheduled halves).
+ *       Live: TESTNET_GO=yes TESTNET_DEPLOYER_KEY=… DRILL_RAN_BY=… (env only). Rehearsal: --unlocked on an anvil fork.
  */
 import {writeFileSync} from "node:fs";
 import {connectAnvil, FIXTURE_STATE, startAnvil} from "./anvil.js";
@@ -68,21 +71,20 @@ if (cmd === "serve") {
   if (chainId === 46630 && process.env.TESTNET_GO !== "yes") throw new Error("TESTNET_GO=yes is required to send on testnet");
   const me = privateKeyToAccount(key).address;
   const compliance = flag("compliance", "");
-  const provider = compliance
-    ? async (user: `0x${string}`) => {
-        const account = privateKeyToAccount(key);
-        const headers = {"content-type": "application/json", "x-geo-country": "DE", ...(process.env.PROXY_SECRET ? {"x-stockline-proxy": process.env.PROXY_SECRET} : {})};
-        const t = (await (await fetch(`${compliance}/v1/compliance/terms?address=${user}`)).json()) as {version: string; message: string};
-        await fetch(`${compliance}/v1/compliance/terms`, {method: "POST", headers, body: JSON.stringify({address: user, signature: await account.signMessage({message: t.message}), version: t.version})});
-        const r = await fetch(`${compliance}/v1/compliance/attest`, {method: "POST", headers, body: JSON.stringify({address: user})});
-        const j = (await r.json()) as {expiry: string; signature: `0x${string}`; error?: string};
-        if (!r.ok) throw new Error(`compliance: ${j.error}`);
-        return {expiry: BigInt(j.expiry), signature: j.signature};
-      }
-    : undefined;
+  const {complianceAttestationProvider} = await import("./liveSmoke.js");
+  const provider = compliance ? complianceAttestationProvider(`${compliance}/v1/compliance`, key, {"x-geo-country": "DE", ...(process.env.PROXY_SECRET ? {"x-stockline-proxy": process.env.PROXY_SECRET} : {})}) : undefined;
   const drv = new ChainDriver(a, {log: console.log, attestationProvider: provider, attestationKey: process.env.ATTESTATION_SIGNER_KEY as `0x${string}` | undefined});
   const events = await smokeFlows(drv, me);
   console.log(`smoke flows done on chain ${chainId}: ${events.length} actions`);
+} else if (cmd === "live-drills") {
+  const {openLiveDrills, runLiveDrills, drillsMarkdown} = await import("./liveDrills.js");
+  const unlocked = rest.includes("--unlocked");
+  const {ctx, init} = await openLiveDrills({rpc, unlocked, env: process.env});
+  const state = flag("state", unlocked ? ".fork-live-drills-46630.json" : new URL("../../../docs/runbooks/live-drills-46630.json", import.meta.url).pathname);
+  const s = await runLiveDrills(ctx, state, init);
+  console.log(`\n${drillsMarkdown(s)}\n\nstate: ${state}`);
+  const waiting = Object.values(s.steps).filter((x) => x.status === "scheduled");
+  if (waiting.length) console.log(`${waiting.length} drill(s) scheduled: re-run after ${new Date(Math.max(...waiting.map((x) => x.readyAt ?? 0)) * 1000).toISOString()}`);
 } else if (cmd === "dump-state") {
   const a = await guardAnvil(rpc);
   const state = await a.test.dumpState();

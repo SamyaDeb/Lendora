@@ -1,6 +1,7 @@
 import {encodeFunctionData, maxUint256, type Hex, type TransactionReceipt} from "viem";
 import {generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount} from "viem/accounts";
 import {
+  aggregatorV3Abi,
   ATTESTATION_TTL_SEC,
   attestationDomain,
   attestationTypes,
@@ -51,6 +52,8 @@ export interface DriverOptions {
   attestationKey?: Hex;
   /** Get attestations elsewhere (e.g. the compliance service on testnet) instead of signing them here. */
   attestationProvider?: (user: `0x${string}`) => Promise<{expiry: bigint; signature: Hex}>;
+  /** false: never mint test tokens; flows spend the wallet's own balances (a tester on a live chain, faucet-funded). */
+  mint?: boolean;
   log?: (m: string) => void;
   /** Mock operator and owner-side sender (anvil: the DeployLocal deployer; a 46630 fork: the testnet deployer, which
    * gates every mock and holds the testnet roles). */
@@ -123,6 +126,16 @@ export class ChainDriver {
     await this.a.setTime(to);
   }
 
+  /** Take the stock prices from the chain's feeds (a live chain or a stack another process drives): swap minimums are
+   * computed from `prices`, so a driver attached to a running chain must start here. */
+  async syncPrices(): Promise<Record<string, bigint>> {
+    for (const t of this.tickers) {
+      const [, answer] = await this.a.client.readContract({address: this.stock(t).feed, abi: aggregatorV3Abi, functionName: "latestRoundData"});
+      this.prices[t] = answer;
+    }
+    return this.prices;
+  }
+
   /** Publish a feed round for every stock (and USDG) at the current block time, and move the mock DEX (swap rates,
    * pool tick) to the same prices so router swaps and the guard keeper see a consistent market. */
   async rounds(prices: Partial<Record<string, bigint>> = {}): Promise<void> {
@@ -155,10 +168,12 @@ export class ChainDriver {
   // ------------------------------------------------------------------ balances
 
   async mintStock(ticker: string, to: `0x${string}`, amount: bigint): Promise<void> {
+    if (this.opts.mint === false) return;
     await this.a.send(this.op, this.stock(ticker).stockToken, this.call(mockStockTokenAbi, "mint", [to, amount]));
   }
 
   async mintUsdg(to: `0x${string}`, amount: bigint): Promise<void> {
+    if (this.opts.mint === false) return;
     await this.a.send(this.op, this.d.usdg, this.call(mockUsdgAbi, "mint", [to, amount]));
   }
 

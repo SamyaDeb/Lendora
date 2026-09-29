@@ -59,7 +59,8 @@ describe("G5 receipt market listing (A3, CL-R10)", () => {
     expect(() => receiptListingOperations(rd, "NVDA", 1n, {chainId: 4663})).toThrow(/launchTs/);
     expect(() => receiptListingOperations(rd, "NVDA", 1n, {chainId: 4663, launchTs: 1000, nowTs: 1000 + 30 * 86_400 - 1})).toThrow(/30 days/);
     expect(receiptListingOperations(rd, "NVDA", 1n, {chainId: 4663, launchTs: 1000, nowTs: 1000 + 30 * 86_400})).toHaveLength(6);
-    expect(() => receiptListingOperations(d, "NVDA", 1n, {chainId: 31337})).toThrow(/no receipt market/);
+    const noReceipt = {...d, stocks: {...d.stocks, NVDA: {...d.stocks.NVDA, receipt: undefined}}}; // the 31337 book has one since task 15
+    expect(() => receiptListingOperations(noReceipt, "NVDA", 1n, {chainId: 31337})).toThrow(/no receipt market/);
     expect(() => receiptListingOperations(rd, "NVDA", 0n, {chainId: 31337})).toThrow(/> 0/);
   });
 });

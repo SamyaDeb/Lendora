@@ -22,6 +22,7 @@ import {MockGate} from "../test/mocks/MockGate.sol";
 contract DeployTestnetVault is Script, DnVaultDeploy {
     string internal constant BOOK = "../packages/sdk/addresses.json";
     string internal constant C = ".chains.46630.";
+    string internal constant FORK_FEES = "deployments/fork-46630-fees.json";
 
     function run() external returns (DnDeployment memory dn) {
         require(block.chainid == 46_630, "DeployTestnetVault is for Robinhood Chain testnet (46630) only");
@@ -34,7 +35,7 @@ contract DeployTestnetVault is Script, DnVaultDeploy {
             );
         }
         string memory j = vm.readFile(BOOK);
-        (DnConfig memory c, DnSleeveConfig[] memory sl) = configFromBook(j, msg.sender);
+        (DnConfig memory c, DnSleeveConfig[] memory sl) = configFromBook(j, msg.sender, feeRecipient(j, !live));
         vm.startBroadcast(msg.sender);
         dn = _deployDnVault(c, sl);
         address feedKeeper = vm.envOr("STOCKLINE_FEED_KEEPER", msg.sender);
@@ -46,8 +47,19 @@ contract DeployTestnetVault is Script, DnVaultDeploy {
         if (live) vm.writeJson(_dnJson("46630", dn), BOOK, string.concat(C, "dnVault"));
     }
 
+    /// @notice DN-R9: the vault's fee recipient is the `FeeSplitter`: from the address book once `DeployTestnetFees`
+    /// ran with `TESTNET_GO=yes`, or (fork rehearsal only) from that script's fork output. Refused otherwise: the
+    /// testnet entry predates the fee contracts and has no treasury role to fall back to.
+    function feeRecipient(string memory j, bool forkRehearsal) public view returns (address) {
+        if (vm.keyExistsJson(j, string.concat(C, "feeSplitter"))) {
+            return vm.parseJsonAddress(j, string.concat(C, "feeSplitter"));
+        }
+        if (forkRehearsal && vm.isFile(FORK_FEES)) return vm.parseJsonAddress(vm.readFile(FORK_FEES), ".feeSplitter");
+        revert("DeployTestnetVault: no FeeSplitter in the address book: run DeployTestnetFees first (DN-R9)");
+    }
+
     /// @notice The DN config and sleeves (caps 0) from the 46630 address-book entry. Public for the fork rehearsal.
-    function configFromBook(string memory j, address deployer)
+    function configFromBook(string memory j, address deployer, address feeRecipient_)
         public
         view
         returns (DnConfig memory c, DnSleeveConfig[] memory sl)
@@ -56,9 +68,6 @@ contract DeployTestnetVault is Script, DnVaultDeploy {
         address[] memory signers = new address[](s2 == address(0) ? 1 : 2);
         signers[0] = vm.envOr("STOCKLINE_NAV_SIGNER_1", deployer);
         if (s2 != address(0)) signers[1] = s2;
-        address splitter = vm.keyExistsJson(j, string.concat(C, "feeSplitter"))
-            ? vm.parseJsonAddress(j, string.concat(C, "feeSplitter"))
-            : vm.parseJsonAddress(j, string.concat(C, "roles.treasury")); // before the fee contracts: the treasury
         c = DnConfig({
             deployer: deployer,
             usdg: vm.parseJsonAddress(j, string.concat(C, "usdg")),
@@ -67,7 +76,7 @@ contract DeployTestnetVault is Script, DnVaultDeploy {
             timelock: vm.parseJsonAddress(j, string.concat(C, "timelock")),
             guardian: vm.parseJsonAddress(j, string.concat(C, "roles.guardian")),
             operator: vm.envOr("STOCKLINE_DN_OPERATOR", deployer),
-            feeRecipient: splitter,
+            feeRecipient: feeRecipient_,
             navSigners: signers,
             swapTarget: vm.parseJsonAddress(j, string.concat(C, "mocks.swapAggregator")),
             swapMode: IStrategyManager.SwapMode.Approve,

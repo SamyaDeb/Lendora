@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {decodeFunctionData, encodeAbiParameters, getAddress, keccak256} from "viem";
 import {getDeployment} from "../src/addresses.js";
-import {marketHoursAbi, stocklineOracleAbi, stocklineRouterAbi} from "../src/abis.js";
+import {deltaNeutralVaultAbi, marketHoursAbi, navOracleAbi, stocklineOracleAbi, stocklineRouterAbi, strategyManagerAbi} from "../src/abis.js";
 import {actionCall, operationId, saltOf, timelockAbi, timelockOperation, ZERO_BYTES32} from "../src/timelock.js";
 
 const d = getDeployment(31337)!;
@@ -49,6 +49,24 @@ describe("timelock calldata (runbooks)", () => {
     expect(ev.args[0]).toBe(d.stocks.AAPL.stockToken);
     const co = decodeFunctionData({abi: stocklineRouterAbi, data: actionCall(d, cases[7][0] as never).data});
     expect(co.args).toEqual([getAddress(user), getAddress(d.stocks.NVDA.stockToken), 0n]);
+  });
+
+  it("Phase 4: DN vault owner actions (caps, NAV signers) through the same timelock", () => {
+    const dn = d.dnVault!;
+    const signer = "0x00000000000000000000000000000000000000bb" as const;
+    const cases = [
+      [{kind: "dnVault.setTotalCap", cap: 2_000_000n * 10n ** 6n}, dn.vault, deltaNeutralVaultAbi, "setTotalCap", [2_000_000n * 10n ** 6n]],
+      [{kind: "dnStrategy.setSleeveCap", sleeve: 1n, capUsdg: 5n}, dn.strategy, strategyManagerAbi, "setSleeveCap", [1n, 5n]],
+      [{kind: "navOracle.setSigner", signer, allowed: true}, dn.navOracle, navOracleAbi, "setSigner", [getAddress(signer), true]],
+    ] as const;
+    for (const [a, target, abi, fn, args] of cases) {
+      const c = actionCall(d, a as never);
+      expect(c.target, a.kind).toBe(target);
+      const r = decodeFunctionData({abi: abi as never, data: c.data});
+      expect(r.functionName, a.kind).toBe(fn);
+      expect(r.args, a.kind).toEqual(args);
+    }
+    expect(() => actionCall({...d, dnVault: undefined}, {kind: "dnVault.setTotalCap", cap: 1n})).toThrow(/no DN vault/);
   });
 
   it("different salts give different operations; unknown tickers are refused", () => {
