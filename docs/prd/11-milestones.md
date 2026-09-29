@@ -197,6 +197,20 @@ mainnet or testnet (no "go testnet", no hosting OK); every Phase 4 cap is 0 in e
 | C · Testnet | **Rehearsed on a fork of 46630 only**: fees + DN vault deploy and flows, drills 9/9 (14 steps), live-drill runner (two passes); smoke on the local stack, all checks pass | [`fork-drills-46630.md`](../runbooks/fork-drills-46630.md), [`testnet-smoke.md`](../runbooks/testnet-smoke.md) — `4ed9a8e` |
 | D · Mainnet launcher | Built and rehearsed (dry run on a local 4663 fork: VerifyRoles 111/111), **never run**; found and fixed a VerifyRoles launch blocker | `packages/launch`, [`mainnet-launch.md` §3](../runbooks/mainnet-launch.md#3-deploy-scriptsmainnet-launchsh-the-only-supported-path) — `e390233` |
 
+Final run (2026-09-29): `forge fmt --check` clean; `forge build --sizes`: router 24,092 B (484 under EIP-170,
+unchanged), `DeltaNeutralVault` 12,499, `StrategyManager` 15,008, `NavOracle` 10,033; `forge test` without an RPC
+323 passed / 0 failed / 20 skipped; fork suites on the public 4663 RPC 50/51 (the failure is `test/fork/phase0` pinned
+to a historical block: archive RPC, Q7); `FOUNDRY_PROFILE=deep` invariants: router 3 × 1M, `FeeSplitter` 2 × 1M,
+`FeeConverter` 4 × 1M calls pass, DN vault 4 × 1M still running at the time of this commit (> 100 CPU-min; isolated calls; the default profile, 4 × 25,600 calls, passes); `forge coverage --ir-minimum`: every `src/` file ≥ 95% lines
+except `StockWrapper` 94.9% (its two `return` lines are unmapped under IR; 100% without), DN vault 95.3%, strategy
+98.0%, NAV oracle 100%; slither 126 (76 informational, 50 low), none medium+; `forge doc` clean; `pnpm -r typecheck` /
+`lint` clean; tests: sdk 87, devnet 19 (+10 opt-in fork), launch 9 (+1 opt-in dry run), indexer 12, API 26, keepers 99
+(one monitor test timed out while the deep invariants saturated the CPU; 22/22 on re-run), compliance 24, web 78;
+Playwright 19/19 (incl. 4 on-chain USDG Earn flows); Lighthouse on the committed tree `/markets` **82** (below the 85
+target; 90 at A5), `/data` 89 (measured with one core busy on the DN deep run; with other sessions' uncommitted
+`globals.css`/`Hero.tsx` edits `/markets` drops to 54, CLS 0.211); 46630 fork drills 9/9, live-drill rehearsal 3/3;
+launcher dry run on a local 4663 fork: VerifyRoles 111/111.
+
 Phase 4 exit (08: sim gate, audit, 30-day run) is **not met**: the sim gate is INSUFFICIENT DATA and needs the risk
 owner, the audit is not booked, and a 30-day run needs a verified venue adapter and a cap above 0.
 
