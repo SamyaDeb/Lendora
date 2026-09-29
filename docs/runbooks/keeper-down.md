@@ -1,6 +1,6 @@
 # Runbook · Keeper down (`KEEPER_DOWN`, MON-R9, P1) and indexer lag (`INDEXER_LAG`, MON-R14, P2)
 
-**Trigger.** A keeper's `/health` is not 200 (allocator, guard, liquidator, alerts, fee-converter, dn-rebalancer, nav-reporter, nav-cosigner; the allocator's turns 503 after
+**Trigger.** A keeper's `/health` is not 200 (allocator, guard, liquidator, alerts, fee-converter, dn-rebalancer, nav-reporter, nav-cosigner, venue-mirror on testnet; the allocator's turns 503 after
 5 min without a run, LM-R33). `INDEXER_LAG`: the indexer is > 20 blocks behind, or the SI-R5 reconciliation found a
 difference between indexed and onchain values.
 
@@ -14,6 +14,7 @@ difference between indexed and onchain values.
 | fee-converter | Fee shares wait in the `FeeSplitter` / `FeeConverter`s (no user impact; `FEE_NOT_DISTRIBUTED` pages after 8 days above $1k). Anyone can call `FeeSplitter.distribute`; only the fee keeper can convert (FE-R4) |
 | dn-rebalancer | USDG Earn: delta drifts (`DN_DELTA_BREACH` after 30 min), margin isn't topped up (`DN_MARGIN_LOW`), the queue isn't served (`DN_QUEUE_OVERDUE`). The guardian can unwind by hand (`sellSpot`, `unlend`, `adjustShort`, margin withdraw, `returnToVault`) |
 | nav-reporter / nav-cosigner | USDG Earn NAV goes stale after 15 min: deposits and instant withdrawals stop (DN-R5, `DN_NAV_STALE`); requests and claims keep working. Without the co-signer only moves ≤ 1% can be reported |
+| venue-mirror (testnet only) | The testnet vault's shorts earn no funding (yield from lending only) and the rebalancer's kill switch sees no new funding history. On restart it catches up at most 24 periods, resuming after the venue's last `FundingApplied` |
 | indexer | API, dashboard and the monitor's position list go stale (safety views read the chain) |
 
 ## First 5 minutes

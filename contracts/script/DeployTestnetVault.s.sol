@@ -35,7 +35,9 @@ contract DeployTestnetVault is Script, DnVaultDeploy {
             );
         }
         string memory j = vm.readFile(BOOK);
-        (DnConfig memory c, DnSleeveConfig[] memory sl) = configFromBook(j, msg.sender, feeRecipient(j, !live));
+        (DnConfig memory c, DnSleeveConfig[] memory sl) = configFromBook(
+            j, msg.sender, feeRecipient(j, !live), testnetCap(vm.envOr("STOCKLINE_DN_TESTNET_CAP_USDG", uint256(0)))
+        );
         vm.startBroadcast(msg.sender);
         dn = _deployDnVault(c, sl);
         address feedKeeper = vm.envOr("STOCKLINE_FEED_KEEPER", msg.sender);
@@ -58,8 +60,18 @@ contract DeployTestnetVault is Script, DnVaultDeploy {
         revert("DeployTestnetVault: no FeeSplitter in the address book: run DeployTestnetFees first (DN-R9)");
     }
 
-    /// @notice The DN config and sleeves (caps 0) from the 46630 address-book entry. Public for the fork rehearsal.
-    function configFromBook(string memory j, address deployer, address feeRecipient_)
+    /// @notice A49: the owner's testnet cap (Part C, "open a testnet cap"), `STOCKLINE_DN_TESTNET_CAP_USDG` in whole
+    /// test USDG (6 dp raw here), default 0. Total cap and every sleeve's spot cap (each sleeve is bounded by the
+    /// total). Testnet only: `DnVaultDeploy` still refuses any cap above 0 on 4663 (MN-R7), and this script is
+    /// 46630-only.
+    function testnetCap(uint256 whole) public pure returns (uint256) {
+        require(whole <= 10_000_000, "A49: testnet DN cap above 10M test USDG");
+        return whole * 1e6;
+    }
+
+    /// @notice The DN config and sleeves (`cap` raw USDG: `testnetCap`, 0 by default) from the 46630 address-book
+    /// entry. Public for the fork rehearsal.
+    function configFromBook(string memory j, address deployer, address feeRecipient_, uint256 cap)
         public
         view
         returns (DnConfig memory c, DnSleeveConfig[] memory sl)
@@ -81,7 +93,7 @@ contract DeployTestnetVault is Script, DnVaultDeploy {
             swapTarget: vm.parseJsonAddress(j, string.concat(C, "mocks.swapAggregator")),
             swapMode: IStrategyManager.SwapMode.Approve,
             mockVenue: true,
-            totalCap: 0
+            totalCap: cap
         });
         string[] memory tickers = vm.parseJsonKeys(j, string.concat(C, "stocks"));
         sl = new DnSleeveConfig[](tickers.length);
@@ -94,7 +106,7 @@ contract DeployTestnetVault is Script, DnVaultDeploy {
                 wrapper: vm.parseJsonAddress(j, string.concat(b, "wrapper")),
                 rVault: vm.parseJsonAddress(j, string.concat(b, "vault")),
                 oracle: vm.parseJsonAddress(j, string.concat(b, "oracle")),
-                capUsdg: 0,
+                capUsdg: uint128(cap),
                 mmfWad: spy ? 0.012e18 : 0.03e18,
                 imfWad: spy ? 0.02e18 : 0.05e18
             });

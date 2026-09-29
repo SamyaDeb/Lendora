@@ -35,7 +35,7 @@ contract DeployTestnetVaultTest is Test {
     function test_Q11_testnetDnConfigHasCapsZeroAndTheMockVenue() public {
         address splitter = makeAddr("splitter");
         (DnVaultDeploy.DnConfig memory c, DnVaultDeploy.DnSleeveConfig[] memory sl) =
-            s.configFromBook(book, DEPLOYER, splitter);
+            s.configFromBook(book, DEPLOYER, splitter, s.testnetCap(0)); // the default: no owner cap
         assertEq(c.totalCap, 0);
         assertTrue(c.mockVenue);
         assertEq(c.feeRecipient, splitter);
@@ -44,5 +44,16 @@ contract DeployTestnetVaultTest is Test {
         for (uint256 i; i < sl.length; i++) {
             assertEq(sl[i].capUsdg, 0);
         }
+    }
+
+    function test_A49_ownerTestnetCapOpensTotalAndSleevesBounded() public {
+        (DnVaultDeploy.DnConfig memory c, DnVaultDeploy.DnSleeveConfig[] memory sl) =
+            s.configFromBook(book, DEPLOYER, makeAddr("splitter"), s.testnetCap(1_000_000));
+        assertEq(c.totalCap, 1_000_000e6);
+        for (uint256 i; i < sl.length; i++) {
+            assertEq(sl[i].capUsdg, 1_000_000e6);
+        }
+        vm.expectRevert(bytes("A49: testnet DN cap above 10M test USDG"));
+        s.testnetCap(10_000_001);
     }
 }

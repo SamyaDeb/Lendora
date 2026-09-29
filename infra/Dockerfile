@@ -1,7 +1,7 @@
 # Stockline Node services (indexer, api, compliance, keepers): one image, the service chosen at runtime.
 #   docker build -f infra/Dockerfile -t stockline-svc .
 #   docker run -e SERVICE=api … stockline-svc
-# SERVICE: indexer | api | compliance | allocator | guard | liquidator | alerts | feed-mirror | monitor | reconcile
+# SERVICE: indexer | api | compliance | allocator | guard | liquidator | alerts | feed-mirror | venue-mirror | monitor | reconcile
 # OFF-15: base image pinned by digest (node v22.23.3, Alpine 3.24; 2026-09-28). Bump the digest deliberately.
 FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS deps
 RUN corepack enable && corepack prepare pnpm@10.19.0 --activate

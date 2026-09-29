@@ -79,8 +79,18 @@ TESTNET_GO=yes SMOKE_KEY=$TESTNET_DEPLOYER_KEY PROXY_SECRET=$PROXY_SECRET pnpm -
   --rpc $ROBINHOOD_TESTNET_RPC_URL --compliance <COMPLIANCE_URL>
 ```
 
-**Phase 3–4 contracts on the existing deployment** (each after the owner's go; the deployer needs ~0.0003 ETH at
-0.01 gwei for both, 0.00839 ETH on 2026-09-29):
+**Deployed 2026-09-29** (owner's "go testnet"): `DeployTestnetFees` (`FeeSplitter` `0xc9ED…3674`, treasury and
+backstop converters) and `DeployTestnetVault` with the owner's testnet cap `STOCKLINE_DN_TESTNET_CAP_USDG=1000000`
+(A49: 1,000,000 test USDG total and per sleeve; mainnet stays 0, MN-R7): vault `0xcDFa…3118`, strategy `0x2a79…C28c`,
+NAV oracle `0xE189…8863` (signers: the deployer and a testnet-only co-signer `0x8552…89BE`), mock venue `0x6dBF…9898`
+(gated). Deployer ETH 0.00839 → 0.00820. Addresses in `packages/sdk/addresses.json["46630"]`. The venue mirror
+(`keepers/src/venueMirror`, A49) applies **Lighter's real hourly funding** (Robinhood Chain instance, public API) to the
+mock venue, since Lighter has no testnet with stock perps. Services: `scripts/dev.sh --network 46630` with
+`STOCKLINE_SERVICES_RPC_URL=https://rpc.testnet.chain.robinhood.com` (Alchemy's free tier caps `eth_getLogs` at 10
+blocks, which breaks the indexer, the monitor and the DN keepers).
+
+**Phase 3–4 contracts on the existing deployment** (each after the owner's go; the deployer needs ~0.0007 ETH at
+0.02 gwei for both):
 
 ```sh
 cd contracts

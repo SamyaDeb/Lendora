@@ -1,0 +1,51 @@
+{
+  "chainId": 46630,
+  "mode": "live",
+  "ranBy": "SamyaDeb (via Claude Code)",
+  "steps": {
+    "guard-trip-clear": {
+      "status": "done",
+      "txs": [
+        "0x06dc60a938bfa8394444ee5d018f6f943f26cb59362cbed0473e5da5c0b5f21b",
+        "0x7ae8d67f5c1805da812ffbff33ca56feb13d42ada20bc7a2dcde0bd389169d8a"
+      ],
+      "note": "MANUAL latched and cleared by the guardian",
+      "at": "2026-09-29T12:03:18.000Z"
+    },
+    "governance-change": {
+      "status": "done",
+      "txs": [
+        "0xdd19a5acd294acc9be3f617fd55a9ece4597c946c97d86809be58b8f71d2694c",
+        "0xd723532f6dd8e8082346d8a43ea50cab5201f1ca42fb96d7624e11f0b0e5361f"
+      ],
+      "note": "scheduled and decoded as `router.setGlobalCap(4000000000000)`, then cancelled",
+      "at": "2026-09-29T12:03:25.000Z"
+    },
+    "timelock-two-step": {
+      "status": "scheduled",
+      "txs": [
+        "0x71739bccc6a6ebf8afb94b9fcb8e2322baeee3501c48a6eddeb312815632c778"
+      ],
+      "readyAt": 1790769809,
+      "note": "router.setGlobalCap(4000000000000) scheduled, delay 86400 s",
+      "at": "2026-09-29T12:03:29.000Z"
+    },
+    "fees-turn-on": {
+      "status": "scheduled",
+      "txs": [
+        "0xc0f2ec795720a4447f2699da315237390c92034e2d8b559035b19fe8c2993940",
+        "0x8f67b5dd45124d93e775e9637a152d0e791be51af31477e921399c9cef973660",
+        "0xf769327c158938ef0bed6eaabdce7c8d3b46cc3c33f912203bd823ed6a3e3d76"
+      ],
+      "readyAt": 1790769820,
+      "note": "3 curator submits",
+      "at": "2026-09-29T12:03:40.000Z"
+    },
+    "dn-caps-zero": {
+      "status": "done",
+      "txs": [],
+      "note": "total cap 1000000000000 (> 0: the owner raised it)",
+      "at": "2026-09-29T12:03:41.000Z"
+    }
+  }
+}

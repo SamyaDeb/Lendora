@@ -1,6 +1,6 @@
 import type {Context} from "ponder:registry";
 import {chainHead, dexVolume, flowBucket, latestSnapshot, market, position, rollup, snapshot} from "ponder:schema";
-import {createPublicClient, http} from "viem";
+import {createPublicClient, fallback, http} from "viem";
 import {
   adaptiveCurveBorrowRate,
   erc20Abi,
@@ -23,7 +23,10 @@ const unavailable = new Set<string>();
  * to the event's block, no retries). Ponder's per-call queue made every snapshot cost ~200 ms and the head lag grow
  * with the tick rate (SI-R4). The results depend only on the block, so they are reorg-safe with the handler.
  */
-const reader = net.rpcUrl ? createPublicClient({transport: http(net.rpcUrl, {batch: {batchSize: 64, wait: 0}, retryCount: 2})}) : undefined;
+const httpOf = (url: string) => http(url, {batch: {batchSize: 64, wait: 0}, retryCount: 2});
+const reader = net.rpcUrl
+  ? createPublicClient({transport: net.archiveRpcUrl ? fallback([httpOf(net.rpcUrl), httpOf(net.archiveRpcUrl)]) : httpOf(net.rpcUrl)})
+  : undefined;
 /** Lowest block known to have state on this node (non-archive nodes, or anvil loaded from a dump, cannot serve older
  * state); probed once per block below it, without retries. */
 let stateFloor: bigint | undefined;

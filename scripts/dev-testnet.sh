@@ -12,8 +12,11 @@
 #
 # Env: repo-root .env (ROBINHOOD_TESTNET_RPC_URL, ROBINHOOD_MAINNET_READ_RPC_URL) and, exported by the owner,
 # TESTNET_DEPLOYER_KEY (keepers), COMPLIANCE_SIGNER_KEY (compliance) and PROXY_SECRET (compliance + web). Secrets reach
-# the services only through their environment; this script never prints or writes them.
-# Optional: GEO_STATIC_COUNTRY (web, default DE), STOCKLINE_WEB_RPC_URL (browser RPC, default the public endpoint),
+# the services only through their environment; this script never prints or writes them. Phase 4 (once the book has
+# `dnVault`): NAV_COSIGNER_KEY (the second NAV signer, testnet-only key) and COSIGNER_TOKEN (>= 32 chars).
+# Optional: STOCKLINE_SERVICES_RPC_URL (the services' RPC; default ROBINHOOD_TESTNET_RPC_URL — a free-tier provider
+# that caps eth_getLogs, e.g. Alchemy's 10 blocks, breaks the indexer, monitor and DN keepers: use the public endpoint
+# https://rpc.testnet.chain.robinhood.com or a paid plan), GEO_STATIC_COUNTRY (web, default DE), STOCKLINE_WEB_RPC_URL (browser RPC, default the public endpoint),
 # SANCTIONS_DENY_LIST (default: the `sanctioned` test user in .dev/testnet-users.json), GAS_BURN_WEI_PER_DAY.
 set -euo pipefail
 
@@ -47,6 +50,11 @@ SERVICES=(
   "guard|http://127.0.0.1:8788/health"
   "liquidator|http://127.0.0.1:8789/health"
   "feed-mirror|http://127.0.0.1:8790/health"
+  "fee-converter|http://127.0.0.1:8791/health"
+  "nav-cosigner|http://127.0.0.1:8795/health"
+  "nav-reporter|http://127.0.0.1:8793/health"
+  "dn-rebalancer|http://127.0.0.1:8792/health"
+  "venue-mirror|http://127.0.0.1:8796/health"
   "monitor|http://127.0.0.1:42073/health"
   "web|http://127.0.0.1:3000/restricted"
 )
@@ -92,8 +100,8 @@ required=(ROBINHOOD_TESTNET_RPC_URL)
 missing=()
 for v in "${required[@]}"; do [ -n "${!v:-}" ] || missing+=("$v"); done
 if [ ${#missing[@]} -gt 0 ]; then echo "[dev] missing env: ${missing[*]} (export them; see docs/runbooks/testnet.md §2)" >&2; exit 1; fi
-RPC="$ROBINHOOD_TESTNET_RPC_URL"
-[ "$(cast chain-id --rpc-url "$RPC")" = 46630 ] || { echo "[dev] ROBINHOOD_TESTNET_RPC_URL is not chain 46630; refusing" >&2; exit 1; }
+RPC="${STOCKLINE_SERVICES_RPC_URL:-$ROBINHOOD_TESTNET_RPC_URL}"
+[ "$(cast chain-id --rpc-url "$RPC")" = 46630 ] || { echo "[dev] the services' RPC is not chain 46630; refusing" >&2; exit 1; }
 
 addr() { node -e "const d=require('$ROOT/packages/sdk/addresses.json').chains['46630'];console.log($1)"; }
 START_BLOCK="$(addr d.startBlock)"
@@ -132,13 +140,18 @@ start() {
 }
 TSX="$ROOT/node_modules/.bin/tsx"
 [ -x "$TSX" ] || TSX="$ROOT/keepers/node_modules/.bin/tsx"
+# pnpm hoists the binaries to the root; a package-local .bin is used when it exists.
+bin() { if [ -x "$ROOT/$1/node_modules/.bin/$2" ]; then echo "./node_modules/.bin/$2"; else echo "$ROOT/node_modules/.bin/$2"; fi; }
 pnpm --silent --filter @stockline/sdk build >/dev/null
 
 COMMON=(STOCKLINE_NETWORK=46630 DEPLOYMENT_KEY=46630 RPC_URL="$RPC" DATABASE_URL="$DATABASE_URL" REDIS_URL="$REDIS_URL")
 INDEXER_VIEWS=stockline_testnet
 
-start indexer indexer "${COMMON[@]}" PONDER_POLLING_MS="${PONDER_POLLING_MS:-1000}" \
-  -- ./node_modules/.bin/ponder start --schema stockline_46630 --views-schema "$INDEXER_VIEWS" --port 42069
+# Reads pinned to old blocks fall back to ROBINHOOD_TESTNET_RPC_URL when the services use another RPC (the public
+# endpoint has no archive state, A24).
+ARCHIVE=""; [ "$RPC" = "$ROBINHOOD_TESTNET_RPC_URL" ] || ARCHIVE="$ROBINHOOD_TESTNET_RPC_URL"
+start indexer indexer "${COMMON[@]}" RPC_URL_ARCHIVE="$ARCHIVE" PONDER_POLLING_MS="${PONDER_POLLING_MS:-1000}" \
+  -- "$(bin indexer ponder)" start --schema stockline_46630 --views-schema "$INDEXER_VIEWS" --port 42069
 start api api "${COMMON[@]}" INDEXER_SCHEMA="$INDEXER_VIEWS" API_SCHEMA=stockline_api_testnet PORT=42070 SIWE_DOMAIN=localhost:3000 \
   -- "$TSX" src/index.ts
 if [ "$READ_ONLY" = 0 ]; then
@@ -155,11 +168,35 @@ start liquidator keepers "${KEEPER[@]}" HEALTH_PORT=8789 LIQUIDATOR_FROM_BLOCK="
   -- "$TSX" src/liquidator/main.ts
 start feed-mirror keepers "${KEEPER[@]}" HEALTH_PORT=8790 MAINNET_RPC_URL="$ROBINHOOD_MAINNET_READ_RPC_URL" INTERVAL_MS=15000 \
   -- "$TSX" src/feedMirror/main.ts
+HAS_FEES="$(addr "d.feeSplitter ? 1 : ''")"
+HAS_DN="$(addr "d.dnVault ? 1 : ''")"
+# FE-R4: the fee converter as the fee keeper (the operator key on testnet, A27).
+[ -z "$HAS_FEES" ] || start fee-converter keepers "${KEEPER[@]}" HEALTH_PORT=8791 INTERVAL_MS=60000 FEE_CONVERTER_FROM_BLOCK="$START_BLOCK" \
+  -- "$TSX" src/feeConverter/main.ts
+if [ -n "$HAS_DN" ]; then
+  # Phase 4 (08): NAV reporter (signer 1 = the operator key) with an independent co-signer (signer 2, its own key),
+  # the rebalancer as the strategy operator, and the venue mirror: Lighter's real hourly funding → the mock venue (A49).
+  for v in NAV_COSIGNER_KEY COSIGNER_TOKEN; do [ -n "${!v:-}" ] || { echo "[dev] missing env: $v (the book has dnVault)" >&2; exit 1; }; done
+  start nav-cosigner keepers "${COMMON[@]}" NAV_MODE=cosigner PORT=8794 HEALTH_PORT=8795 NAV_SIGNER_SIGNER=env-key \
+    NAV_SIGNER_KEY="$NAV_COSIGNER_KEY" COSIGNER_TOKEN="$COSIGNER_TOKEN" \
+    -- "$TSX" src/navReporter/main.ts
+  start nav-reporter keepers "${KEEPER[@]}" HEALTH_PORT=8793 NAV_SIGNER_SIGNER=env-key NAV_SIGNER_KEY="$TESTNET_DEPLOYER_KEY" \
+    COSIGNER_URL=http://127.0.0.1:8794/cosign COSIGNER_TOKEN="$COSIGNER_TOKEN" \
+    -- "$TSX" src/navReporter/main.ts
+  start dn-rebalancer keepers "${KEEPER[@]}" HEALTH_PORT=8792 DN_VENUE=mock \
+    -- "$TSX" src/dnRebalancer/main.ts
+  start venue-mirror keepers "${KEEPER[@]}" HEALTH_PORT=8796 INTERVAL_MS=300000 \
+    -- "$TSX" src/venueMirror/main.ts
+fi
 start alerts keepers "${COMMON[@]}" DRY_RUN=false KEEPER_SIGNER=env-key INDEXER_SCHEMA="$INDEXER_VIEWS" ALERTS_SCHEMA=stockline_alerts_testnet PORT=42072 \
   -- "$TSX" src/alerts/main.ts
 fi
 MONITOR_KEEPERS=""
-[ "$READ_ONLY" = 1 ] || MONITOR_KEEPERS="allocator=http://127.0.0.1:8787/health,guard=http://127.0.0.1:8788/health,liquidator=http://127.0.0.1:8789/health,feed-mirror=http://127.0.0.1:8790/health,alerts=http://127.0.0.1:42072/health"
+if [ "$READ_ONLY" = 0 ]; then
+  MONITOR_KEEPERS="allocator=http://127.0.0.1:8787/health,guard=http://127.0.0.1:8788/health,liquidator=http://127.0.0.1:8789/health,feed-mirror=http://127.0.0.1:8790/health,alerts=http://127.0.0.1:42072/health"
+  [ -z "$HAS_FEES" ] || MONITOR_KEEPERS+=",fee-converter=http://127.0.0.1:8791/health"
+  [ -z "$HAS_DN" ] || MONITOR_KEEPERS+=",dn-rebalancer=http://127.0.0.1:8792/health,nav-reporter=http://127.0.0.1:8793/health,nav-cosigner=http://127.0.0.1:8795/health,venue-mirror=http://127.0.0.1:8796/health"
+fi
 # Ops monitor: read-only; pages to the console (its log) and .dev/pages.jsonl until a real pager is configured.
 start monitor keepers "${COMMON[@]}" INDEXER_SCHEMA="$INDEXER_VIEWS" MONITOR_SCHEMA=stockline_monitor_testnet PORT=42073 \
   MONITOR_KEEPERS="$MONITOR_KEEPERS" \
@@ -168,8 +205,9 @@ start monitor keepers "${COMMON[@]}" INDEXER_SCHEMA="$INDEXER_VIEWS" MONITOR_SCH
   -- "$TSX" src/monitor/main.ts
 [ "$READ_ONLY" = 1 ] || start web web NODE_ENV=development NEXT_PUBLIC_CHAIN_ID=46630 NEXT_PUBLIC_RPC_URL="${STOCKLINE_WEB_RPC_URL:-https://rpc.testnet.chain.robinhood.com}" \
   NEXT_PUBLIC_API_URL=http://127.0.0.1:42070 API_URL_INTERNAL=http://127.0.0.1:42070 COMPLIANCE_URL=http://127.0.0.1:42071 \
+  NEXT_PUBLIC_FEATURE_VAULT="${HAS_DN:+1}" NEXT_PUBLIC_FEATURE_RECEIPT_MARKET="${NEXT_PUBLIC_FEATURE_RECEIPT_MARKET:-}" \
   ALERTS_URL=http://127.0.0.1:42072 GEO_PLATFORM=static GEO_STATIC_COUNTRY="${GEO_STATIC_COUNTRY:-DE}" \
-  -- ./node_modules/.bin/next dev -p 3000
+  -- "$(bin web next)" dev -p 3000
 
 # ---------------------------------------------------------------- health summary
 echo "[dev] waiting for health (up to ${STOCKLINE_HEALTH_WAIT:-120} s; the indexer's /ready waits for its backfill)"

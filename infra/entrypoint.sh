@@ -6,7 +6,7 @@ case "$SERVICE" in
   reconcile) exec pnpm --filter @stockline/indexer reconcile ;;
   api) exec pnpm --filter @stockline/api start ;;
   compliance) exec pnpm --filter @stockline/compliance start ;;
-  allocator|guard|liquidator|alerts|feed-mirror|monitor|fee-converter|dn-rebalancer|nav-reporter) exec pnpm --filter @stockline/keepers "$SERVICE" ;;
+  allocator|guard|liquidator|alerts|feed-mirror|monitor|fee-converter|dn-rebalancer|nav-reporter|venue-mirror) exec pnpm --filter @stockline/keepers "$SERVICE" ;;
   nav-cosigner) NAV_MODE=cosigner exec pnpm --filter @stockline/keepers nav-reporter ;;
-  *) echo "set SERVICE to indexer|reconcile|api|compliance|allocator|guard|liquidator|alerts|feed-mirror|monitor|fee-converter|dn-rebalancer|nav-reporter|nav-cosigner" >&2; exit 1 ;;
+  *) echo "set SERVICE to indexer|reconcile|api|compliance|allocator|guard|liquidator|alerts|feed-mirror|monitor|fee-converter|dn-rebalancer|nav-reporter|nav-cosigner|venue-mirror" >&2; exit 1 ;;
 esac

@@ -15,6 +15,7 @@ created or deployed from this repo without the owner's go.**
 | dn-rebalancer, nav-reporter (Phase 4, DN-R2…R14) | `infra/Dockerfile`, `SERVICE=<name>` | vault keepers (dry run by default; strategy operator key / NAV signer key) | `GET /health` (`HEALTH_PORT`) | `keepers/.env.example` |
 | nav-cosigner (Phase 4, DN-R4) | `infra/Dockerfile`, `SERVICE=nav-cosigner` | independent second NAV signer, `POST /cosign` (bearer `COSIGNER_TOKEN`); **run by a different operator with its own key and RPC** | `GET /health` | `keepers/.env.example` |
 | feed-mirror (testnet) | `infra/Dockerfile`, `SERVICE=feed-mirror` | mainnet feeds → testnet mock feeds | `GET /health` | `keepers/.env.example` |
+| venue-mirror (testnet, A49) | `infra/Dockerfile`, `SERVICE=venue-mirror` | Lighter's real hourly funding (public API) → the testnet mock perp venue | `GET /health` | `keepers/.env.example` |
 | web | `infra/web.Dockerfile` (NEXT_PUBLIC_* as build args) | `next start` | `GET /restricted` | `web/.env.example` |
 
 `infra/railway/<service>.json` is Railway config-as-code for each service (Dockerfile path, health check, restart

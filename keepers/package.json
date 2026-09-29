@@ -17,7 +17,8 @@
     "monitor": "tsx src/monitor/main.ts",
     "fee-converter": "tsx src/feeConverter/main.ts",
     "dn-rebalancer": "tsx src/dnRebalancer/main.ts",
-    "nav-reporter": "tsx src/navReporter/main.ts"
+    "nav-reporter": "tsx src/navReporter/main.ts",
+    "venue-mirror": "tsx src/venueMirror/main.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",

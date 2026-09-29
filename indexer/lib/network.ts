@@ -9,6 +9,9 @@ export interface NetworkConfig {
   key: DeploymentKey;
   chainId: number;
   rpcUrl: string;
+  /** Archive RPC for reads pinned to old blocks (`RPC_URL_ARCHIVE`, optional): tried after `rpcUrl` fails, e.g. the
+   * public 46630 endpoint (no archive state, A24) + a free-tier archive provider that caps `eth_getLogs` ranges. */
+  archiveRpcUrl?: string;
   wsUrl?: string;
   d: ChainDeployment;
   startBlock: number;
@@ -70,6 +73,7 @@ export function networkConfig(env: NodeJS.ProcessEnv = process.env): NetworkConf
     key,
     chainId,
     rpcUrl: env.RPC_URL ?? (key === 31337 ? "http://127.0.0.1:8545" : ""),
+    archiveRpcUrl: env.RPC_URL_ARCHIVE || undefined,
     wsUrl: env.WS_URL,
     d,
     startBlock: Number(d.startBlock ?? d.forkBlock ?? 0),

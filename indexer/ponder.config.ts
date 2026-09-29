@@ -1,4 +1,5 @@
 import {createConfig} from "ponder";
+import {fallback, http} from "viem";
 import {
   adaptiveCurveIrmAbi,
   deltaNeutralVaultAbi,
@@ -36,7 +37,7 @@ export default createConfig({
   ordering: "omnichain",
   chains: {
     // Anvil (31337) is a different chain after every restart: never reuse Ponder's RPC cache for it.
-    [chain]: {id: n.chainId, rpc: n.rpcUrl, ws: n.wsUrl, pollingInterval: n.pollingMs, disableCache: n.key === 31337},
+    [chain]: {id: n.chainId, rpc: n.archiveRpcUrl ? fallback([http(n.rpcUrl), http(n.archiveRpcUrl)]) : n.rpcUrl, ws: n.wsUrl, pollingInterval: n.pollingMs, disableCache: n.key === 31337},
   },
   contracts: {
     Morpho: {

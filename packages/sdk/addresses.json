@@ -240,7 +240,16 @@
       "timelock": "0x4A302FF565870066F285E022707E64728fb82314",
       "usdg": "0xC9894fb4776B1441d7Fe77Fa9EFd977A5dAb9cd8",
       "usdgFeed": "0x88E27c0cF31D942CB32B7cdbD6b9E4625FD3C752",
-      "vaultV2Factory": "0xC8627368AD9f9999FB6C17Ae5d9bC9Da40C83f76"
+      "vaultV2Factory": "0xC8627368AD9f9999FB6C17Ae5d9bC9Da40C83f76",
+      "feeSplitter": "0xc9ED94bfe581c8aE4d9C1F115f96537f81f23674",
+      "treasuryConverter": "0xebA2cBCcCBb33A31CDBD88C09F32eF3F40700B6c",
+      "backstopConverter": "0x519715e11b3d56a6ba6D89d09cDb561B2dD8a28F",
+      "dnVault": {
+        "navOracle": "0xE189867a9f0ae990e18eEe53F17CC452F3BF8863",
+        "perpAdapter": "0x6dBFcC8bF4d176074774A410FDC4E604552f9898",
+        "strategy": "0x2a79c00A3722F99F0B33a0707929Aaa1e440C28c",
+        "vault": "0xcDFa4DD7535cFae585BbFe4627D8B0124be43118"
+      }
     }
   }
 }
