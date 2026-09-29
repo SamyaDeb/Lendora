@@ -195,6 +195,11 @@ The sim gate lives in `sim/dn_vault` (report: [sim/reports/phase4-dn-vault.md](.
 files above). Router runtime unchanged (24,092 B). Fixes during this round are recorded here as
 `file · commit · why · failing-first test`.
 
-| File | Commit | Why | Test |
+No `src/` file changed after the Phase 4 freeze. Deployment logic (in scope) changed as follows:
+
+| File | Commit | Why | Failing-first test |
 |---|---|---|---|
-| – | – | – | – |
+| `script/DeployTestnetVault.s.sol` | `4ed9a8e` | Part C fork rehearsal: the fee recipient was read from `roles.treasury`, which the 46630 book never had, so the script could not run on testnet. Now the `FeeSplitter` (book, or the fork rehearsal's output), refused otherwise | `test/deploy/DeployTestnetVault.t.sol` |
+| `script/VerifyRoles.s.sol` | Part D commit | **Launch blocker found by the launcher's dry run:** the DN sleeve check compared sleeve *i* with stock *i*; `deployments/4663.json` lists stocks alphabetically while sleeves are in deploy order, so VerifyRoles would have failed on the real launch. Matched by vault now, each stock once | `test_MN_R5_verifyRolesReadsTheWrittenAddressBook` (now writes `.dnVault` as `DeployMainnet` does) |
+| `script/DeployMainnet.s.sol` | Part D commit | The deployment body moved into `_launch(deployer, out)` so the dry run runs the same code; `run()` and its MN-R4 refusal are unchanged | `test/deploy/DeployMainnet*.t.sol` (unchanged, pass) |
+| `script/DeployMainnetDryRun.s.sol` (new) | Part D commit | The launcher's `--dry-run`: anvil fork of 4663 only (`web3_clientVersion`), refuses the go and the real output name | `test/deploy/DeployMainnetDryRun.t.sol` |

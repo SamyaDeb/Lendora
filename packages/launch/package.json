@@ -1,0 +1,30 @@
+{
+  "name": "@stockline/launch",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The one guarded mainnet launch path (Phase 4 Part D): gates, env and Safe checks, fork rehearsal, typed-confirmation broadcast, VerifyRoles, publish, services, read-only smoke. Run through scripts/mainnet-launch.sh.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "pretypecheck": "pnpm --filter @stockline/sdk build",
+    "typecheck": "tsc --noEmit",
+    "pretest": "pnpm --filter @stockline/sdk build",
+    "test": "vitest run",
+    "launch": "tsx src/cli.ts",
+    "publish-deployment": "tsx src/publishCli.ts",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@stockline/sdk": "workspace:*",
+    "viem": "^2.56.9"
+  },
+  "devDependencies": {
+    "@stockline/devnet": "workspace:*",
+    "@types/node": "^22.20.4",
+    "tsx": "^4.21.0",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.7"
+  }
+}

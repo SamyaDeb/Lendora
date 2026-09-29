@@ -40,7 +40,7 @@ The boxes below are ticked only by the people who close them.
 
 **A27 must not carry over:** on testnet one key held every role; on mainnet **every** `STOCKLINE_*` role is a
 distinct address from the table above. `DeployMainnet` refuses otherwise (MN-R1…MN-R3), and the fork test replays the
-exact config before broadcasting (§3.1).
+exact config before broadcasting (§3, step 3).
 
 ## 2. Configuration (from D8 and 10 launch parameters)
 
@@ -59,43 +59,51 @@ exact config before broadcasting (§3.1).
 | Performance fee | 10% → `FeeSplitter` (Phase 3 task) | Vault V2 |
 | `forceDeallocatePenalty` | 0 (A12) | Vault V2 |
 
-## 3. Deploy
+## 3. Deploy: `scripts/mainnet-launch.sh`, the only supported path
 
-Scripts: `contracts/script/DeployMainnet.s.sol` (config in `MainnetConfig.sol`) and the read-only
-`contracts/script/VerifyRoles.s.sol`. The nine role addresses come from env; there are no defaults:
+One guarded, resumable command runs every step below in order and stops at the first refusal. It never uses a
+private key, never sets `I_HAVE_THE_OWNERS_GO` itself, and never broadcasts without a typed confirmation. The manual
+commands it wraps are listed per step for review; do not run them by hand.
 
 ```sh
+# the operator, after the owner's written go is in the launch log:
+export I_HAVE_THE_OWNERS_GO=1
 export STOCKLINE_OWNER=0x… STOCKLINE_CURATOR=0x… STOCKLINE_GUARDIAN=0x… STOCKLINE_ALLOCATOR=0x…
 export STOCKLINE_GUARD_KEEPER=0x… STOCKLINE_TREASURY=0x… STOCKLINE_BACKSTOP_RESERVE=0x…
 export STOCKLINE_FEE_KEEPER=0x… STOCKLINE_ATTESTATION_SIGNER=0x…
+export STOCKLINE_DN_OPERATOR=0x… STOCKLINE_NAV_SIGNER_1=0x… STOCKLINE_NAV_SIGNER_2=0x…
+export LAUNCH_DEPLOYER=0x… LAUNCH_SIGNER=ledger        # or trezor | aws | gcp (KMS); never a key
+export ROBINHOOD_RPC_URL=https://…                    # the real 4663 endpoint (dedicated provider)
+scripts/mainnet-launch.sh [--services-env infra/mainnet.env] [--apply]
 ```
 
-1. **Rehearse the exact config** on a fork of the latest block (no broadcast; the script itself refuses 4663 without
-   the go): `cd contracts && ROBINHOOD_RPC_URL=… forge test --match-contract DeployMainnetForkTest -vv`. It deploys
-   with Safe-like placeholders, runs every `VerifyRoles` check and the Phase 1 lend/borrow/repay/withdraw flow. Also
-   run `forge test --match-path 'test/fork/phase1/*'`. Record the fork block and results in the launch log.
-2. Fund the fresh deployer with gas and 2 × SEED raw units (2e12) of each launch Stock Token (SPY, NVDA, AAPL).
-3. **Broadcast** (owner's go recorded in the launch log first; hardware wallet or remote signer, never a key in env):
-   ```sh
-   I_HAVE_THE_OWNERS_GO=1 forge script script/DeployMainnet.s.sol --rpc-url $ROBINHOOD_RPC_URL \
-     --broadcast --slow --verify --sender <deployer> --ledger   # or the remote-signer flags
-   ```
-   It writes `contracts/deployments/4663.json`. Verify every contract on the explorer (Sourcify + Blockscout).
-4. **Role checks** (paste the table into the launch log; every row must be PASS):
-   ```sh
-   STOCKLINE_DEPLOYMENT_JSON=deployments/4663.json STOCKLINE_DEPLOYER=<deployer> \
-     forge script script/VerifyRoles.s.sol --rpc-url $ROBINHOOD_RPC_URL
-   ```
-   It covers: roles distinct/non-zero/not the deployer; Safe thresholds; timelock 48h with the owner Safe as
-   proposer/executor/canceller and no external admin; router `owner() == timelock`, `attestationSigner`, ERC1967
-   implementation, $4M global cap, UniversalRouter in `Transfer` mode; `clUSDG.router()`; `MarketHours.owner()`;
-   liquidator owned by the owner Safe; `FeeSplitter` owner and 50/50 split; both converters' owner, keeper,
-   destination and vault registrations; per stock: oracle owner/guardian/keeper, vault owner/curator/sentinel/
-   allocators, 10% fee to the splitter, `forceDeallocatePenalty = 0`, U_MAX, every curator timelock 48h, adapter
-   timelocks, the router listing; **Vault V2 code** (official factory byte-identical to the pinned source,
-   `isVaultV2`, vault runtime equal to the pinned `VaultV2` outside immutables); deployer holds nothing.
-5. Commit `packages/sdk/addresses.json["4663"]` from `deployments/4663.json` (by hand: scripts never write the `4663`
-   key), commit `deployments/4663.json`; re-export ABIs if anything changed; tag the release.
+| Step | What it does | Refuses when |
+|---|---|---|
+| 0 go | `I_HAVE_THE_OWNERS_GO=1` present (set by the operator) | unset (MN-R4) |
+| 1 gates + preflight | every entry of [`launch-gates.json`](../owner-actions/launch-gates.json) signed (person, date, evidence); ≥ 5 GB disk; forge 1.5.1, node ≥ 22, pnpm; clean tree on a **tagged** commit; `forge build --sizes` (router ≤ EIP-170); the full offline suite (`forge test`, `pnpm -r test`) | an unsigned gate, a dirty or untagged tree, a failing build or test |
+| 2 env | the 12 roles set, addresses, distinct, not the deployer (MN-R1, MN-R8); chain 4663 and **not** anvil; the five Safes read onchain (owner 4-of-7, guardian 2-of-4, curator/treasury/backstop ≥ 2; an EOA is refused, MN-R2); signer is a hardware wallet or KMS and no `*PRIVATE_KEY*`/`MNEMONIC` var exists; deployer ≥ 0.01 ETH and 2 × SEED of SPY, NVDA, AAPL; service secrets present **by name** (with `--apply`) | any of these |
+| 3 rehearsal | `forge test` `DeployMainnetForkTest` and `test/fork/phase1/*`, `phase3/*`, `phase4/*` at `latest` (fork block recorded) | a failure or a skip |
+| 4 broadcast | prints chain, deployer, roles and caps; the operator types `DEPLOY 4663 <last 6 of the deployer>`; then `forge script script/DeployMainnet.s.sol --broadcast --slow --gas-estimate-multiplier 200 --verify --verifier blockscout …` with the signer flag (the script's MN-R1…R4 refusals stay). `--resume` is added automatically after an interrupted broadcast | the confirmation differs (nothing is sent) |
+| 5 verify | `VerifyRoles` from `deployments/4663.json` (every row PASS; table saved to `deployments/4663.verify-roles.md`); explorer verification of every core contract | any FAIL, any unverified contract |
+| 6 publish | `addresses.json["4663"]` from `deployments/4663.json` (+ `4663-receipt-<T>.json` later), `deployBlock` → `startBlock`; ABIs re-exported, SDK rebuilt, OpenAPI + typed client regenerated; prints the commit and the tag to make | an invalid deployment file, a different existing 4663 entry |
+| 7 services | prints the env of every service from [`infra/mainnet.env.example`](../../infra/mainnet.env.example) (the owner's filled copy via `--services-env`), **monitor first**; with `--apply` and `railway whoami` OK, sets it through the Railway CLI; then a read-only smoke: monitor `/health`, API `/v1/status`, compliance `/health` with a real sanctions provider, web `/` (`MAINNET_*_URL`) | `--apply` without a Railway login, an unfilled value or a missing secret |
+| 8 post-launch | reminders: announce 48h ahead, list at 25% caps, first-weekend watch, bug bounty listing, DN caps stay 0 | – |
+
+Progress is recorded in `contracts/deployments/4663.launch.json`: re-running after any stop skips finished steps
+(checks 0–2 always re-run). `pnpm --filter @stockline/launch publish-deployment` is step 6 alone.
+
+**Rehearsal (`--dry-run`).** Against a **local anvil fork of 4663** only (the launcher checks chain id, `anvil` and a
+local host; `DeployMainnetDryRun` checks `web3_clientVersion` again and refuses `I_HAVE_THE_OWNERS_GO`): unsigned gates
+and a dirty tree are warnings, the deployer is impersonated, output goes to `deployments/4663-dry-run.json`, and
+publishing writes a **temp copy** of the address book. Rehearsed 2026-09-29 (`packages/launch/test/launch.test.ts`,
+`LAUNCH_DRY_RUN_4663=1`): wrong confirmation → nothing sent; deploy on the fork; VerifyRoles 111/111; temp book gets
+`chains["4663"]`; the second run resumes with no change. That dry run found a launch blocker, fixed with a test:
+VerifyRoles' DN sleeve check compared by index, and the file lists stocks alphabetically.
+
+```sh
+anvil --fork-url https://rpc.mainnet.chain.robinhood.com --port 8600 &
+ROBINHOOD_RPC_URL=http://127.0.0.1:8600 STOCKLINE_…=… LAUNCH_DEPLOYER=… scripts/mainnet-launch.sh --dry-run --skip-suite
+```
 
 ## 4. Services before the first deposit
 
@@ -113,7 +121,7 @@ on the first run, so a `CallScheduled` before it starts is never paged, MON-R16/
 - [ ] Status page and comms channels ready; comms templates from [README.md](README.md).
 
 **Service network rules on 4663 (MN-R6).** Every service calls `resolveDeployment` from `@stockline/sdk` at startup
-and refuses a network that `addresses.json` does not list, so nothing starts on 4663 until step §3.5 has published
+and refuses a network that `addresses.json` does not list, so nothing starts on 4663 until the launcher's step 6 has published
 `chains["4663"]` (released SDK build). What differs on 4663, audited per service:
 
 | Service | On 4663 | Evidence |

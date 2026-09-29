@@ -37,3 +37,8 @@ docs/audit/forge-doc/
 web/scripts/.live-stack.json
 web/.next-live/
 web/.next-lh/
+
+# live-drill rehearsal state (packages/devnet, --unlocked)
+packages/devnet/.fork-live-drills-46630.json
+# mainnet launcher dry-run output (packages/launch, --dry-run)
+contracts/deployments/4663-dry-run*

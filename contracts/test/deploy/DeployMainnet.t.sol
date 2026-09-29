@@ -200,10 +200,15 @@ contract DeployMainnetTest is Test, MainnetConfig, LocalMocks {
     function test_MN_R5_verifyRolesReadsTheWrittenAddressBook() public {
         string memory json = _chainJson("rehearsal", c, core, stocks, ds, "", "");
         vm.writeJson(json, "deployments/rehearsal-31337.json");
+        // As DeployMainnet writes it, with the DN vault (Part D dry-run finding: the file lists stocks alphabetically,
+        // the strategy's sleeves are in deploy order; the DN sleeve check must not depend on the order).
+        vm.writeJson(_dnJson("rehearsal", dn), "deployments/rehearsal-31337.json", ".dnVault");
         VerifyRoles.Deployment memory d = verifier.loadDeployment("deployments/rehearsal-31337.json");
         vm.removeFile("deployments/rehearsal-31337.json");
         assertEq(d.router, address(core.router));
         assertEq(d.stocks.length, 3);
+        assertEq(d.dn.vault, address(dn.vault));
+        assertEq(d.stocks[0].ticker, "AAPL", "the file's order is alphabetical, not the deploy order");
         VerifyRoles.Check[] memory cs = verifier.verify(d, _expected());
         assertEq(verifier.printTable(cs), 0);
     }

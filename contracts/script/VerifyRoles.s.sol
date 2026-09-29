@@ -492,10 +492,17 @@ contract VerifyRoles is Script, MainnetConfig {
             sm.swapModes(e.swapTarget) == IStrategyManager.SwapMode.Transfer,
             ""
         );
+        // Matched by rSTOCK vault, not by index: the address-book file lists stocks alphabetically while the
+        // sleeves are in deploy order (Part D dry-run finding). Each stock must back exactly one sleeve.
         bool capsZero = sm.sleeveCount() == d.stocks.length;
-        for (uint256 i; i < sm.sleeveCount(); i++) {
+        bool[] memory used = new bool[](d.stocks.length);
+        for (uint256 i; i < sm.sleeveCount() && capsZero; i++) {
             IStrategyManager.Sleeve memory sl = sm.sleeve(i);
-            capsZero = capsZero && sl.capUsdg == 0 && sl.rVault == d.stocks[i].vault;
+            bool found;
+            for (uint256 k; k < d.stocks.length && !found; k++) {
+                if (!used[k] && sl.rVault == d.stocks[k].vault) found = used[k] = true;
+            }
+            capsZero = found && sl.capUsdg == 0;
         }
         _add(o, "DN strategy: one sleeve per stock, every sleeve cap 0 (MN-R7)", capsZero, "");
         _eq(o, "DN NAV oracle: owner == timelock", no.owner(), d.timelock);

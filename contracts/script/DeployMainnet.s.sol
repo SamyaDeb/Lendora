@@ -26,7 +26,12 @@ import {MainnetConfig} from "./MainnetConfig.sol";
 contract DeployMainnet is Script, MainnetConfig {
     function run() external {
         _refuseWithoutGo(block.chainid, vm.envOr("I_HAVE_THE_OWNERS_GO", string("")));
-        address deployer = msg.sender;
+        _launch(msg.sender, vm.toString(block.chainid));
+    }
+
+    /// @dev The deployment itself, shared with `DeployMainnetDryRun` (the launcher's anvil rehearsal) so both run the
+    /// same code; only the entry checks differ.
+    function _launch(address deployer, string memory out) internal {
         CoreConfig memory c = mainnetCoreConfig(deployer, mainnetRolesFromEnv());
         StockConfig[] memory stocks = mainnetStocks();
         _assertMainnetConfig(c, stocks, d8Targets());
@@ -38,7 +43,7 @@ contract DeployMainnet is Script, MainnetConfig {
         DnDeployment memory dn = _deployMainnetDn(c, core, stocks, ds, dr);
         vm.stopBroadcast();
 
-        string memory path = string.concat("deployments/", vm.toString(block.chainid), ".json");
+        string memory path = string.concat("deployments/", out, ".json");
         string memory json = _chainJson("4663-deploy", c, core, stocks, ds, "deployBlock", vm.toString(block.number));
         vm.writeJson(json, path);
         vm.writeJson(_dnJson("4663-deploy", dn), path, ".dnVault");

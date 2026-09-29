@@ -1,0 +1,12 @@
+{
+  "$comment": "Mainnet launch gates (mainnet-launch.md §0), read by scripts/mainnet-launch.sh: it refuses unless every gate has signedBy (a person), date (YYYY-MM-DD, not in the future) and evidence (a link or repo path). Only the person who closes a gate fills its entry.",
+  "gates": [
+    {"id": "audits", "gate": "Two audits closed; every finding fixed or accepted in writing; fixes re-reviewed against the freeze", "signedBy": null, "date": null, "evidence": null},
+    {"id": "counsel", "gate": "Counsel opinions (06 legal questions A–D) and terms of use / risk disclosure signed off (CP-R6)", "signedBy": null, "date": null, "evidence": null},
+    {"id": "sanctions", "gate": "Sanctions provider contracted and live (SANCTIONS_PROVIDER=chainalysis|trm, key in the secret store; Q5, CP-R8)", "signedBy": null, "date": null, "evidence": null},
+    {"id": "risk", "gate": "Risk owner signed off the sim report (σ, z, event buffers, caps; 04 acceptance) and the weekday DEX depth run", "signedBy": null, "date": null, "evidence": null},
+    {"id": "testnet", "gate": "2 clean testnet weekends (GET /weekends evidence) and 20 external testers (Phase 2 exit)", "signedBy": null, "date": null, "evidence": null},
+    {"id": "drills", "gate": "Runbooks drilled on testnet (guard-tripped, re-anchor, calendar-push, multiplier-change, keeper-down, one P0 tabletop); dates in runbooks/README.md", "signedBy": null, "date": null, "evidence": null},
+    {"id": "bounty", "gate": "Bug bounty live, max payout sized to the caps", "signedBy": null, "date": null, "evidence": null}
+  ]
+}
