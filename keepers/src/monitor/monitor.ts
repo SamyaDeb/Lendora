@@ -6,6 +6,10 @@ import {
   collateralTokenAbi,
   feeConverterAbi,
   vaultV2FullAbi,
+  deltaNeutralVaultAbi,
+  navOracleAbi,
+  perpAdapterAbi,
+  strategyManagerAbi,
   currentDebt,
   erc20Abi,
   eventWindowsByTickerData,
@@ -97,6 +101,11 @@ export interface MonitorOptions {
   /** MON-R20: a fee balance above this (USDG raw, oracle value) for `feeStuckForSec` (8 days) pages. */
   feeStuckUsdg: bigint;
   feeStuckForSec: bigint;
+  /** MON-R21: DN delta band, bps of the sleeve's spot (DN-R2). */
+  dnBandBps: bigint;
+  /** MON-R22: margin floor, × maintenance (WAD) while open / closed (DN-R3; 08 weekend rule). */
+  dnMarginOpenWad: bigint;
+  dnMarginClosedWad: bigint;
   /** First run without a cursor scans this many blocks back. */
   eventLookbackBlocks: bigint;
   logChunkBlocks: bigint;
@@ -122,6 +131,9 @@ export const defaultMonitorOptions: MonitorOptions = {
   reconcileEveryMs: 24 * 3600_000,
   feeStuckUsdg: 1_000_000_000n,
   feeStuckForSec: 8n * 86_400n,
+  dnBandBps: 200n,
+  dnMarginOpenWad: 2n * 10n ** 18n,
+  dnMarginClosedWad: 3n * 10n ** 18n,
   eventLookbackBlocks: 1000n,
   logChunkBlocks: 5000n,
   now: Date.now,
@@ -208,6 +220,7 @@ export class Monitor {
     await section("gas", () => this.gasRunway(obs));
     await section("governance", () => this.governance.scan(block.number, obs)); // MON-R16…R18
     await section("fees", () => this.feeBalances(obs)); // MON-R20
+    await section("dn", () => this.dnVault(block.timestamp, obs)); // MON-R21…R25
 
     for (const o of obs) await this.apply(o, block.number, block.timestamp);
     const pages = await this.notify(block.number);
@@ -380,6 +393,53 @@ export class Monitor {
         }
         obs.push({rule: "FEE_NOT_DISTRIBUTED", subject: `${name}:${t}`, active: value > this.o.feeStuckUsdg, title: `${t} fees above $${Number(this.o.feeStuckUsdg) / 1e6} waiting in ${name} for 8 days`, details: {ticker: t, holder: name, shares: shares.toString(), valueUsdg: value.toString()}});
       }
+    }
+  }
+
+  /**
+   * MON-R21…R25, delta-neutral vault (08): DN_DELTA_BREACH per sleeve (|spot − short| > band for 30 min),
+   * DN_MARGIN_LOW (venue margin below 2× maintenance, 3× while closed), DN_NAV_STALE (the NAV can't mint or burn for
+   * 5 min while the vault holds deposits), DN_QUEUE_OVERDUE (the queue head is past its promised settlement),
+   * DN_KILL_SWITCH per sleeve (killed and still holding spot or a short: the unwind is in progress).
+   */
+  private async dnVault(now: bigint, obs: Observation[]): Promise<void> {
+    const dn = this.d.dnVault;
+    if (!dn) return;
+    const rd = <T>(address: `0x${string}`, abi: readonly unknown[], functionName: string, args: readonly unknown[] = []) => (this.client.readContract as (p: unknown) => Promise<T>)({address, abi, functionName, args});
+    const [supply, fresh, open, bounds, n] = await Promise.all([
+      rd<bigint>(dn.vault, erc20Abi, "totalSupply"),
+      rd<boolean>(dn.navOracle, navOracleAbi, "fresh"),
+      rd<boolean>(this.d.marketHours, marketHoursAbi, "isOpen", [now]),
+      rd<readonly [bigint, bigint]>(dn.vault, deltaNeutralVaultAbi, "queueBounds"),
+      rd<bigint>(dn.strategy, strategyManagerAbi, "sleeveCount"),
+    ]);
+    obs.push({rule: "DN_NAV_STALE", subject: "dnVault", active: supply > 0n && !fresh, title: "USDG Earn NAV is stale: no mint or burn (DN-R5)", details: {reportAge: (await rd<bigint>(dn.navOracle, navOracleAbi, "reportAge")).toString()}});
+    let overdue = false;
+    let head: {settleBy: bigint} | undefined;
+    if (bounds[0] < bounds[1]) {
+      head = await rd<{settleBy: bigint}>(dn.vault, deltaNeutralVaultAbi, "request", [bounds[0]]);
+      overdue = BigInt(head.settleBy) <= now;
+    }
+    obs.push({rule: "DN_QUEUE_OVERDUE", subject: "dnVault", active: overdue, title: "USDG Earn withdrawal queue past its promised settlement (DN-R1)", details: {head: bounds[0].toString(), tail: bounds[1].toString(), settleBy: head ? String(head.settleBy) : null}});
+    if (/^0x0{40}$/i.test(dn.perpAdapter)) return;
+    // Margin: the venue's own view when it exposes one (mock venue), else skip (the rebalancer reads the report).
+    try {
+      const ratio = await rd<bigint>(dn.perpAdapter, [{type: "function", name: "marginRatio", stateMutability: "view", inputs: [], outputs: [{type: "uint256"}]}], "marginRatio");
+      const floor = open ? this.o.dnMarginOpenWad : this.o.dnMarginClosedWad;
+      obs.push({rule: "DN_MARGIN_LOW", subject: "venue", active: ratio < floor, title: `USDG Earn venue margin below ${Number(floor / 10n ** 16n) / 100}x maintenance (DN-R3)`, details: {ratioWad: ratio.toString(), floorWad: floor.toString(), open}});
+    } catch {
+      /* venue without an onchain margin view */
+    }
+    const last = await rd<{shortSizes: readonly bigint[]}>(dn.navOracle, navOracleAbi, "lastReport");
+    for (let i = 0n; i < n; i++) {
+      const sl = await rd<{perpMarket: `0x${string}`; active: boolean}>(dn.strategy, strategyManagerAbi, "sleeve", [i]);
+      const spot = await rd<bigint>(dn.strategy, strategyManagerAbi, "spotUnits", [i]);
+      const [readable, size] = await rd<readonly [boolean, bigint]>(dn.perpAdapter, perpAdapterAbi, "shortSize", [sl.perpMarket]);
+      const short = readable ? size : (last.shortSizes[Number(i)] ?? 0n);
+      const diff = spot > short ? spot - short : short - spot;
+      const breach = sl.active && (spot > 0n ? diff * 10_000n > spot * this.o.dnBandBps : short > 0n);
+      obs.push({rule: "DN_DELTA_BREACH", subject: `sleeve:${i}`, active: breach, title: `USDG Earn sleeve ${i}: net delta outside ±${Number(this.o.dnBandBps) / 100}% (DN-R2)`, details: {spot: spot.toString(), short: short.toString()}});
+      obs.push({rule: "DN_KILL_SWITCH", subject: `sleeve:${i}`, active: !sl.active && (spot > 0n || short > 0n), title: `USDG Earn sleeve ${i} killed: unwinding to USDG (DN-R7)`, details: {spot: spot.toString(), short: short.toString()}});
     }
   }
 

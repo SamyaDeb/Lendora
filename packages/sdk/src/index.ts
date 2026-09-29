@@ -25,5 +25,6 @@ export * from "./alerts.js";
 export * from "./reads.js";
 export * from "./timelock.js";
 export * from "./vaultTimelock.js";
+export * from "./dnVault.js";
 export * from "./decodeCall.js";
 export * from "./redact.js";

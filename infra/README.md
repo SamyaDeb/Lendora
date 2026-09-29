@@ -12,6 +12,8 @@ created or deployed from this repo without the owner's go.**
 | alerts | `infra/Dockerfile`, `SERVICE=alerts` | watcher + settings API | `GET /health` (:42072) | `keepers/.env.example` |
 | allocator, guard, liquidator, fee-converter | `infra/Dockerfile`, `SERVICE=<name>` | keeper loops (dry run by default) | `GET /health` (`HEALTH_PORT`) | `keepers/.env.example` |
 | monitor (MON-R1…R14) | `infra/Dockerfile`, `SERVICE=monitor` | read-only ops monitor, pages P0/P1/P2, `GET /weekends`, `GET /incidents` | `GET /health` (:42073) | `keepers/.env.example` |
+| dn-rebalancer, nav-reporter (Phase 4, DN-R2…R14) | `infra/Dockerfile`, `SERVICE=<name>` | vault keepers (dry run by default; strategy operator key / NAV signer key) | `GET /health` (`HEALTH_PORT`) | `keepers/.env.example` |
+| nav-cosigner (Phase 4, DN-R4) | `infra/Dockerfile`, `SERVICE=nav-cosigner` | independent second NAV signer, `POST /cosign` (bearer `COSIGNER_TOKEN`); **run by a different operator with its own key and RPC** | `GET /health` | `keepers/.env.example` |
 | feed-mirror (testnet) | `infra/Dockerfile`, `SERVICE=feed-mirror` | mainnet feeds → testnet mock feeds | `GET /health` | `keepers/.env.example` |
 | web | `infra/web.Dockerfile` (NEXT_PUBLIC_* as build args) | `next start` | `GET /restricted` | `web/.env.example` |
 

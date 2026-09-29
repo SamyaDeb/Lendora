@@ -166,7 +166,7 @@ export function senderFromConfig(
 /** EIP-712 signer for the compliance attestations (RT-R2, CP-R3). Same rule as the tx senders: no key material in
  * code; the key comes from the environment (a secret manager), a key file, or a remote signer (KMS/HSM). */
 export interface TypedDataSigner {
-  readonly kind: "env-key" | "remote";
+  readonly kind: "env-key" | "remote" | "rpc-unlocked";
   readonly address: `0x${string}`;
   signTypedData(typedData: {domain: Record<string, unknown>; types: Record<string, readonly {name: string; type: string}[]>; primaryType: string; message: Record<string, unknown>}): Promise<Hex>;
 }
@@ -201,4 +201,35 @@ export function remoteTypedDataSigner(url: string, address: `0x${string}`, auth?
       return signature;
     },
   };
+}
+
+/** An account unlocked on the node (anvil's dev accounts) signs through `eth_signTypedData_v4`. Anvil and tests only:
+ * refused on any other chain id. */
+export function rpcUnlockedTypedDataSigner(rpcUrl: string, address: `0x${string}`, chainId: number): TypedDataSigner {
+  if (chainId !== 31337) throw new Error("rpc-unlocked typed-data signing is for anvil (31337) only");
+  const wallet = createWalletClient({transport: http(rpcUrl)});
+  return {
+    kind: "rpc-unlocked",
+    address,
+    signTypedData: (t) => wallet.signTypedData({account: address, ...(t as Omit<Parameters<typeof wallet.signTypedData>[0], "account">)}),
+  };
+}
+
+/** The typed-data signer a service's env asks for: `<PREFIX>_SIGNER=env-key|remote|rpc-unlocked`, with
+ * `<PREFIX>_KEY`/`_KEY_FILE`, `<PREFIX>_REMOTE_URL` + `<PREFIX>_ADDRESS` (+ `_REMOTE_AUTH`), or `<PREFIX>_ADDRESS`. */
+export function typedDataSignerFromEnv(prefix: string, env: NodeJS.ProcessEnv, rpcUrl: string, chainId: number): TypedDataSigner {
+  const kind = env[`${prefix}_SIGNER`] ?? "env-key";
+  const address = env[`${prefix}_ADDRESS`] as `0x${string}` | undefined;
+  switch (kind) {
+    case "env-key":
+      return envKeyTypedDataSigner(prefix, env);
+    case "remote":
+      if (!env[`${prefix}_REMOTE_URL`] || !address) throw new Error(`${prefix}_SIGNER=remote needs ${prefix}_REMOTE_URL and ${prefix}_ADDRESS`);
+      return remoteTypedDataSigner(env[`${prefix}_REMOTE_URL`]!, address, env[`${prefix}_REMOTE_AUTH`]);
+    case "rpc-unlocked":
+      if (!address) throw new Error(`${prefix}_SIGNER=rpc-unlocked needs ${prefix}_ADDRESS`);
+      return rpcUnlockedTypedDataSigner(rpcUrl, address, chainId);
+    default:
+      throw new Error(`${prefix}_SIGNER must be env-key, remote or rpc-unlocked (got "${kind}")`);
+  }
 }

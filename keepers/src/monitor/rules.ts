@@ -28,7 +28,12 @@ export type RuleId =
   | "TIMELOCK_EXECUTED_UNTRACKED"
   | "ROLE_CHANGED"
   | "LIQUIDATION_UNPROFITABLE"
-  | "FEE_NOT_DISTRIBUTED";
+  | "FEE_NOT_DISTRIBUTED"
+  | "DN_DELTA_BREACH"
+  | "DN_MARGIN_LOW"
+  | "DN_NAV_STALE"
+  | "DN_QUEUE_OVERDUE"
+  | "DN_KILL_SWITCH";
 
 export interface RuleMeta {
   req: string;
@@ -73,6 +78,12 @@ export const RULES: Record<RuleId, RuleMeta> = {
   ROLE_CHANGED: {req: "MON-R18", severity: "P0", runbook: rb("governance-change.md"), autoResolveSec: 24 * 3600},
   LIQUIDATION_UNPROFITABLE: {req: "MON-R19", severity: "P1", runbook: rb("missed-liquidation.md")},
   FEE_NOT_DISTRIBUTED: {req: "MON-R20", severity: "P2", runbook: rb("keeper-down.md"), forSec: 8n * 86_400n},
+  // Phase 4 delta-neutral vault (08). The rebalancer fixes a breach within a tick or two: page if it persists.
+  DN_DELTA_BREACH: {req: "MON-R21", severity: "P1", runbook: rb("dn-delta-breach.md"), forSec: 1800n},
+  DN_MARGIN_LOW: {req: "MON-R22", severity: "P0", runbook: rb("dn-margin-low.md")},
+  DN_NAV_STALE: {req: "MON-R23", severity: "P1", runbook: rb("dn-nav-stale.md"), forSec: 300n},
+  DN_QUEUE_OVERDUE: {req: "MON-R24", severity: "P0", runbook: rb("dn-queue-overdue.md")},
+  DN_KILL_SWITCH: {req: "MON-R25", severity: "P1", runbook: rb("dn-kill-switch.md")},
 };
 
 /** Oracle guard reason bits (StocklineOracleBase), by name. */

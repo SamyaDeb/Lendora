@@ -84,6 +84,16 @@ export interface ChainDeployment {
   treasuryConverter?: Address;
   /** FeeConverter of the backstop share → USDG → `BackstopReserve` (FE-R3, FE-R4). */
   backstopConverter?: Address;
+  /** Phase 4 delta-neutral vault ("USDG Earn", 08). */
+  dnVault?: DnVaultDeployment;
+}
+
+export interface DnVaultDeployment {
+  vault: Address;
+  strategy: Address;
+  navOracle: Address;
+  /** Zero address on mainnet until a live venue adapter is verified (MN-R7); the mock venue on anvil and testnet. */
+  perpAdapter: Address;
 }
 
 /** Keys: a chain id ("31337" anvil, "46630" testnet, "4663" mainnet once the launch publishes it) or "fork-4663" (a

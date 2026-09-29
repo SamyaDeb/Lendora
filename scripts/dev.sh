@@ -130,8 +130,15 @@ start alerts keepers alerts
 # FE-R4 fee converter as the fee keeper (anvil account 9); regular-hours gate off so it runs on the fixture clock.
 KEEPER_ADDRESS=0xa0Ee7A142d267C1f36714E4a8F75612F20a79720 HEALTH_PORT=8789 INTERVAL_MS=60000 FEE_CONVERTER_REGULAR_HOURS_ONLY=false \
   start fee-converter keepers fee-converter
+# Phase 4 (08): NAV reporter (anvil #8 signs through the node) with an independent co-signer (anvil #9), and the
+# rebalancer as the strategy operator (anvil #6).
+PORT=8792 HEALTH_PORT=8793 NAV_MODE=cosigner NAV_SIGNER_SIGNER=rpc-unlocked NAV_SIGNER_ADDRESS=0xa0Ee7A142d267C1f36714E4a8F75612F20a79720 \
+  COSIGNER_TOKEN=dev-cosigner-token-0123456789abcdef start nav-cosigner keepers nav-reporter
+KEEPER_ADDRESS=0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f HEALTH_PORT=8790 NAV_SIGNER_SIGNER=rpc-unlocked NAV_SIGNER_ADDRESS=0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f \
+  COSIGNER_URL=http://127.0.0.1:8792/cosign COSIGNER_TOKEN=dev-cosigner-token-0123456789abcdef start nav-reporter keepers nav-reporter
+KEEPER_ADDRESS=0x976EA74026E726554dB657fA54763abd0C3a0aa9 HEALTH_PORT=8791 start dn-rebalancer keepers dn-rebalancer
 # Ops monitor (MON-R1…R15): read-only; pages to the console locally. GET :42073/weekends, /incidents.
-PORT=42073 MONITOR_KEEPERS="allocator=http://127.0.0.1:8787/health,guard=http://127.0.0.1:8788/health,alerts=http://127.0.0.1:42072/health,fee-converter=http://127.0.0.1:8789/health" \
+PORT=42073 MONITOR_KEEPERS="allocator=http://127.0.0.1:8787/health,guard=http://127.0.0.1:8788/health,alerts=http://127.0.0.1:42072/health,fee-converter=http://127.0.0.1:8789/health,dn-rebalancer=http://127.0.0.1:8791/health,nav-reporter=http://127.0.0.1:8790/health,nav-cosigner=http://127.0.0.1:8793/health" \
   start monitor keepers monitor
 echo "[dev] up. web http://localhost:3000 · api http://localhost:42070/v1 · indexer http://localhost:42069 · monitor http://localhost:42073/weekends · Ctrl-C stops everything"
 wait

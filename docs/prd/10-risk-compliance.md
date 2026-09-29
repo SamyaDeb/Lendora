@@ -89,6 +89,11 @@ anvil from real chain conditions).
 | MON-R18 | `ROLE_CHANGED` | Ownership, curator, sentinel, allocator, oracle guardian/keeper, attestation signer, router implementation, converter keeper/destination, fee recipients, timelock roles or min delay change on any Stockline contract | P0 | [governance-change](../runbooks/governance-change.md) |
 | MON-R19 | `LIQUIDATION_UNPROFITABLE` | A position with HF < 1 whose seized collateral (debt × LIF at the oracle price) buys less than the debt on the best DEX route now (mock aggregator on anvil/testnet, Uniswap v3 QuoterV2 on 4663) | P1 | [missed-liquidation](../runbooks/missed-liquidation.md) |
 | MON-R20 | `FEE_NOT_DISTRIBUTED` | `rSTOCK` fee shares worth > $1k (oracle value) in the `FeeSplitter` or a `FeeConverter` for > 8 days (FE-R4) | P2 | [keeper-down](../runbooks/keeper-down.md) |
+| MON-R21 | `DN_DELTA_BREACH` | *(Phase 4)* A USDG Earn sleeve's net delta outside ±2% of its spot for 30 min (DN-R2) | P1 | [dn-delta-breach](../runbooks/dn-delta-breach.md) |
+| MON-R22 | `DN_MARGIN_LOW` | Venue margin below 2× maintenance, 3× while the market is closed (DN-R3) | P0 | [dn-margin-low](../runbooks/dn-margin-low.md) |
+| MON-R23 | `DN_NAV_STALE` | The vault NAV can't mint or burn for 5 min while it holds deposits (DN-R5, DN-R14) | P1 | [dn-nav-stale](../runbooks/dn-nav-stale.md) |
+| MON-R24 | `DN_QUEUE_OVERDUE` | The oldest withdrawal request is past its promised settlement (DN-R1) | P0 | [dn-queue-overdue](../runbooks/dn-queue-overdue.md) |
+| MON-R25 | `DN_KILL_SWITCH` | A killed sleeve still holds spot or a short: unwind in progress (DN-R7) | P1 | [dn-kill-switch](../runbooks/dn-kill-switch.md) |
 
 **Weekend log.** For every closure ≥ 24h and every market the monitor records, once, the ramp-in start, full buffer,
 close, first fresh round and ramp-out, plus guard trips/clears from the ramp start to 24h after the reopen, and serves
