@@ -20,16 +20,17 @@ export interface VaultSleeve {
   cap: number;
   /** Net delta as a fraction of sleeve NAV (band ±bandPct, DN-R2). */
   delta: number;
-  /** Perp margin ratio, × maintenance (DN-R3). */
-  marginRatio: number;
+  /** Perp margin ratio, × maintenance (DN-R3); null where the venue has no onchain margin view. */
+  marginRatio: number | null;
   /** "unwound": moved to USDG by the funding kill switch (DN-R7). */
   status: "active" | "unwound";
 }
 
 export interface VaultOverview {
   asOf: {block: string; time: string};
-  /** Net of costs and the performance fee. Historical, variable. */
-  apy: {d7: number; d30: number; d90: number};
+  /** Net of costs and the performance fee. Historical, variable. `null` until the window has history (never a
+   * projection, CP-R7). */
+  apy: {d7: number | null; d30: number | null; d90: number | null};
   /** Daily net APY. */
   apySeries: VaultPoint[];
   /** USDG per share. */
@@ -44,12 +45,13 @@ export interface VaultOverview {
   allocation: {lent: number; held: number; perpMargin: number; cash: number};
   /** USDG withdrawable now without queueing (the cash buffer). */
   instantCapacity: number;
-  /** DN-R5: perp equity report age. */
-  nav: {ageSec: number; stale: boolean};
+  /** DN-R5: perp equity report age (null before the first report). */
+  nav: {ageSec: number | null; stale: boolean};
   venue: {name: string; status: "ok" | "halted"};
   /** DN-R7: sleeves unwound to USDG. */
   killSwitch: {symbol: string; since: string}[];
-  lastRebalance: string;
+  /** Null before the first trade. */
+  lastRebalance: string | null;
   bandPct: number;
   /** × maintenance margin while markets are open, and while closed (08 weekend behaviour). */
   marginTarget: number;

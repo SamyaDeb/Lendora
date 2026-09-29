@@ -144,7 +144,7 @@ describe("deposit (entry)", () => {
     ["pre-launch", {...base, o: fxVault("preview").overview}, "Deposits open after the simulation gate and audits."],
     ["cap full", {...base, o: fxVault("cap_full").overview}, "The vault is full. Withdrawals work; deposits reopen when the cap rises."],
     ["paused", {...base, o: {...o, depositsOpen: false, pauseReason: "paused"} as VaultOverview}, "Deposits are paused by the vault's guardian. Withdrawals and claims still work."],
-    ["stale NAV", {...base, o: fxVault("nav_stale").overview}, "Deposits are paused while the vault's price data is more than 15 minutes old and markets are closed. They reopen with the next fresh report."],
+    ["stale NAV", {...base, o: fxVault("nav_stale").overview}, "Deposits are paused while the vault's price data is being refreshed (it never mints on stale data). They reopen with the next fresh report."],
     ["over balance", {...base, assets: 60_000}, "That's more USDG than you hold."],
     ["over the cap", {...base, u: {...FX_VAULT_USER, usdgBalance: 1e7}, assets: 800_000}, "Only 716,000.00 USDG of room is left under the vault's cap."],
   ])("blocked: %s", (_, p, msg) => {

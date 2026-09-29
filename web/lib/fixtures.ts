@@ -258,7 +258,7 @@ export function fxVault(state: VaultState): {overview?: VaultOverview; user?: Va
       return {overview: {...o, tvl: 2_000_000, instantCapacity: 100_000, depositsOpen: false, pauseReason: "cap_full"}, user: u};
     case "weekend":
       return {
-        overview: {...o, asOf: {block: "10420", time: iso(VAULT_T_WEEKEND)}, apySeries: WEEKEND_SERIES.apy, sharePriceSeries: WEEKEND_SERIES.price, marketClosed: true, lastRebalance: iso(VAULT_T_WEEKEND - 44 * 3600), nav: {ageSec: 180, stale: false}, sleeves: o.sleeves.map((s) => ({...s, marginRatio: s.marginRatio + 0.5}))},
+        overview: {...o, asOf: {block: "10420", time: iso(VAULT_T_WEEKEND)}, apySeries: WEEKEND_SERIES.apy, sharePriceSeries: WEEKEND_SERIES.price, marketClosed: true, lastRebalance: iso(VAULT_T_WEEKEND - 44 * 3600), nav: {ageSec: 180, stale: false}, sleeves: o.sleeves.map((s) => ({...s, marginRatio: (s.marginRatio ?? 0) + 0.5}))},
         user: u,
       };
     case "nav_stale":

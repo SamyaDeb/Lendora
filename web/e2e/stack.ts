@@ -83,7 +83,7 @@ export async function startWebStack(o: {build?: boolean; log?: (m: string) => vo
     NEXT_PUBLIC_RPC_URL: stack.anvil.url,
     NEXT_PUBLIC_API_URL: stack.api.url,
     NEXT_PUBLIC_E2E: "1",
-    // USDG Earn runs on its fixture source until the task 14 contracts exist (e2e/vault.spec.ts).
+    // USDG Earn: the real vault on anvil (apiSource); the fixture flows pin the fixture source per tab (vault.spec.ts).
     NEXT_PUBLIC_FEATURE_VAULT: process.env.NEXT_PUBLIC_FEATURE_VAULT ?? "1",
     NEXT_PUBLIC_E2E_ACCOUNT: E2E_ACCOUNT,
     COMPLIANCE_URL: compliance.url,

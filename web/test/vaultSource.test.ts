@@ -41,10 +41,10 @@ describe("fixtures", () => {
   it("every window's split adds up to its headline APY", () => {
     for (const w of ["7d", "30d", "90d"] as const) {
       const key = ({"7d": "d7", "30d": "d30", "90d": "d90"} as const)[w];
-      expect(splitTotal(splitFor(FX_VAULT_OVERVIEW, w))).toBeCloseTo(FX_VAULT_OVERVIEW.apy[key], 6);
+      expect(splitTotal(splitFor(FX_VAULT_OVERVIEW, w))).toBeCloseTo(FX_VAULT_OVERVIEW.apy[key]!, 6);
     }
     const ks = fxVault("kill_switch").overview!;
-    expect(splitTotal(splitFor(ks, "30d"))).toBeCloseTo(ks.apy.d30, 6);
+    expect(splitTotal(splitFor(ks, "30d"))).toBeCloseTo(ks.apy.d30!, 6);
   });
 
   it("covers every preview state", () => {
@@ -98,5 +98,48 @@ describe("fixture ledger", () => {
     const ready = (await stale.user(A)).requests.find((r) => r.status === "ready")!;
     await stale.claim(A, ready.id);
     expect((await stale.user(A)).requests.find((r) => r.id === ready.id)!.status).toBe("claimed");
+  });
+});
+
+describe("apiSource mapping (task 16)", () => {
+  it("DN_R11 maps the API's decimal strings to numbers and keeps a missing APY window as null (CP-R7)", async () => {
+    const {overviewFromApi} = await import("@/lib/vault/apiSource");
+    const o = overviewFromApi({
+      asOfBlock: "10",
+      asOfTime: "2026-10-01T16:00:00.000Z",
+      confirmed: false,
+      safe: false,
+      scope: "",
+      data: {
+        sharePrice: "1.0012",
+        tvl: "1000000",
+        cap: "2000000",
+        instantCapacity: "50000",
+        apy: {d7: "0.05", d30: null, d90: null},
+        apySeries: [{t: 1, v: "0.04"}],
+        sharePriceSeries: [{t: 1, v: "1.0012"}],
+        split: [{window: "7d", lending: "0.01", funding: "0.045", buffer: "0", costs: "-0.005"}],
+        sleeves: [{symbol: "NVDA", weight: "1", cap: "500000", delta: "0.001", marginRatio: null, status: "active", spotUsdg: "1", lentUnits: "1", shortUnits: "1"}],
+        allocation: {lent: "0.6", held: "0.1", perpMargin: "0.25", cash: "0.05"},
+        nav: {ageSec: 30, stale: false, maxAgeClosedSec: 900},
+        venue: {name: "Mock perp venue (test)", status: "ok"},
+        killSwitch: [],
+        lastRebalance: null,
+        bandPct: "0.02",
+        marginTarget: "2",
+        marginTargetClosed: "3",
+        marketClosed: false,
+        depositsOpen: true,
+        pauseReason: null,
+        queue: {length: 0, escrowedShares: "0"},
+        contracts: {vault: "0x0000000000000000000000000000000000000001", strategy: "0x0000000000000000000000000000000000000002", navOracle: "0x0000000000000000000000000000000000000003", perpAdapter: "0x0000000000000000000000000000000000000004"},
+        rateKind: "variable",
+      },
+    });
+    expect(o.apy).toEqual({d7: 0.05, d30: null, d90: null});
+    expect(o.sharePrice).toBe(1.0012);
+    expect(o.sleeves[0].marginRatio).toBeNull();
+    expect(o.pauseReason).toBeUndefined();
+    expect(splitTotal(o.split[0])).toBeCloseTo(0.05, 9);
   });
 });

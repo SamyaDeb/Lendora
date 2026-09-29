@@ -5,7 +5,7 @@ import {useVaultOverview} from "@/lib/vault/hooks";
 import {AssetIcon, Icon, Skeleton} from "@/components/ui";
 
 /** Markets board entry to USDG Earn: the net APY with its window and "variable" (CP-R7), and where it comes from. */
-export function EarnCard({apy}: {apy?: number}) {
+export function EarnCard({apy}: {apy?: number | null}) {
   return (
     <Link
       href="/vault"
@@ -16,7 +16,7 @@ export function EarnCard({apy}: {apy?: number}) {
       <span className="min-w-0 flex-1 text-[14.5px] leading-snug">
         <span className="font-medium text-fg">USDG Earn</span>
         <span className="text-muted"> · </span>
-        {apy !== undefined ? <span className="num font-medium text-supply">{pct(apy)}</span> : <Skeleton className="h-4 w-12 align-middle" />}
+        {apy === null ? <span className="num text-dim">–</span> : apy !== undefined ? <span className="num font-medium text-supply">{pct(apy)}</span> : <Skeleton className="h-4 w-12 align-middle" />}
         <span className="text-dim"> net APY (30d, variable)</span>
         <span className="text-muted"> · lending fees + perp funding</span>
       </span>

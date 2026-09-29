@@ -14,7 +14,7 @@ const KEY = {"7d": "d7", "30d": "d30", "90d": "d90"} as const;
  * window switch changes the headline (it ticks) and whatever the caller ties to it; the other two windows stay
  * visible as text, and the sparkline shows the daily history.
  */
-export function ApyHero({apy, series, window, onWindow, className}: {apy: {d7: number; d30: number; d90: number}; series: number[]; window: ApyWindow; onWindow: (w: ApyWindow) => void; className?: string}) {
+export function ApyHero({apy, series, window, onWindow, className}: {apy: {d7: number | null; d30: number | null; d90: number | null}; series: number[]; window: ApyWindow; onWindow: (w: ApyWindow) => void; className?: string}) {
   const others = WINDOWS.filter((w) => w !== window);
   return (
     <div className={cn("space-y-3", className)} data-testid="apy-hero">
@@ -25,11 +25,18 @@ export function ApyHero({apy, series, window, onWindow, className}: {apy: {d7: n
         <Segmented<ApyWindow> label="APY window" value={window} onChange={onWindow} testIdPrefix="apy-" options={WINDOWS.map((w) => ({value: w, label: w}))} />
       </div>
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <NumberTicker value={apy[KEY[window]]} format="pct" className="text-[44px] font-medium leading-none tracking-[-0.035em] text-supply sm:text-[56px]" data-testid="apy-headline" />
+        {apy[KEY[window]] === null ? (
+          <span className="text-[44px] font-medium leading-none tracking-[-0.035em] text-dim sm:text-[56px]" data-testid="apy-headline" title="Not enough history for this window yet">
+            –
+          </span>
+        ) : (
+          <NumberTicker value={apy[KEY[window]]!} format="pct" className="text-[44px] font-medium leading-none tracking-[-0.035em] text-supply sm:text-[56px]" data-testid="apy-headline" />
+        )}
         {series.length > 1 && <Sparkline values={series} color="var(--supply)" width={148} height={40} label={`Daily net APY over the last ${series.length} days (historical)`} />}
       </div>
       <p className="num text-[13px] text-muted">
-        {others.map((w) => `${w} ${pct(apy[KEY[w]])}`).join(" · ")} · historical, after costs and the performance fee
+        {others.map((w) => `${w} ${apy[KEY[w]] === null ? "–" : pct(apy[KEY[w]]!)}`).join(" · ")} · historical, after costs and the performance fee
+        {apy[KEY[window]] === null && " · not enough history for this window yet"}
       </p>
     </div>
   );

@@ -188,7 +188,10 @@ export function StateNotices({o}: {o: VaultOverview}) {
       {o.pauseReason === "paused" && <Notice tone="warn" title="Deposits are paused">{PAUSE_COPY.paused}</Notice>}
       {o.nav.stale && (
         <Notice tone="warn" title="Deposits and instant withdrawals are paused">
-          The vault&apos;s perp price report is {Math.round(o.nav.ageSec / 60)} minutes old while markets are closed, so it can&apos;t price shares. It never mints or burns on stale data. Withdrawal requests and claims of settled requests still work.
+          {o.nav.ageSec === null
+            ? "The vault hasn't published its first price report yet, so it can't price shares."
+            : `The vault's perp price report is ${Math.round(o.nav.ageSec / 60)} minutes old${o.marketClosed ? " while markets are closed" : ""}, so it can't price shares.`}{" "}
+          It never mints or burns on stale data. Withdrawal requests and claims of settled requests still work.
         </Notice>
       )}
       {o.venue.status === "halted" && (
@@ -414,8 +417,8 @@ function HowItsRun({o}: {o: VaultOverview}) {
                 <UtilBar value={maxDelta / o.bandPct} cap={1} />
               </div>
             </div>
-            <Stat size="sm" label="Lowest margin ratio" value={`${num(minMargin, 1)}×`} tone={minMargin < target ? "caution" : undefined} hint={`Target ≥ ${o.marginTarget}× maintenance, ${o.marginTargetClosed}× while closed`} />
-            <Stat size="sm" label="Last rebalance" value={et(Date.parse(o.lastRebalance) / 1000)} hint="At least once per US session" />
+            <Stat size="sm" label="Lowest margin ratio" value={minMargin === null ? "–" : `${num(minMargin, 1)}×`} tone={minMargin !== null && minMargin < target ? "caution" : undefined} hint={`Target ≥ ${o.marginTarget}× maintenance, ${o.marginTargetClosed}× while closed`} />
+            <Stat size="sm" label="Last rebalance" value={o.lastRebalance ? et(Date.parse(o.lastRebalance) / 1000) : "–"} hint="At least once per US session" />
           </dl>
         </div>
 
@@ -440,7 +443,7 @@ function HowItsRun({o}: {o: VaultOverview}) {
                       Delta <span className={cn("num", Math.abs(s.delta) > o.bandPct * 0.75 ? "text-caution" : "text-fg")}>{s.delta >= 0 ? "+" : "−"}{pct(Math.abs(s.delta), 1)}</span>
                     </span>
                     <span className="text-muted">
-                      Margin <span className={cn("num", s.marginRatio < target * 1.2 ? "text-caution" : "text-fg")}>{num(s.marginRatio, 1)}×</span>
+                      Margin <span className={cn("num", s.marginRatio !== null && s.marginRatio < target * 1.2 ? "text-caution" : "text-fg")}>{s.marginRatio === null ? "–" : `${num(s.marginRatio, 1)}×`}</span>
                     </span>
                     <Badge tone="success" icon="check" className="ml-auto">
                       Active
@@ -458,7 +461,7 @@ function HowItsRun({o}: {o: VaultOverview}) {
 
         <dl className="grid gap-5 border-t border-line pt-5 sm:grid-cols-3">
           <Stat size="sm" label="Perp venue" value={o.venue.name} hint={o.venue.status === "ok" ? "Operating normally" : "Withdrawals halted"} tone={o.venue.status === "halted" ? "danger" : undefined} />
-          <Stat size="sm" label="Price report age" value={o.nav.ageSec < 120 ? `${o.nav.ageSec}s` : `${Math.round(o.nav.ageSec / 60)} min`} hint={o.nav.stale ? "Stale: shares can't be priced" : "Fresh; stale after 15 min while closed"} tone={o.nav.stale ? "caution" : undefined} />
+          <Stat size="sm" label="Price report age" value={o.nav.ageSec === null ? "none yet" : o.nav.ageSec < 120 ? `${o.nav.ageSec}s` : `${Math.round(o.nav.ageSec / 60)} min`} hint={o.nav.stale ? "Stale: shares can't be priced" : "Fresh; stale after 15 min"} tone={o.nav.stale ? "caution" : undefined} />
           <Stat size="sm" label="Data as of" value={`Block ${o.asOf.block}`} hint={new Date(o.asOf.time).toUTCString().slice(5, 22) + " UTC"} />
         </dl>
 

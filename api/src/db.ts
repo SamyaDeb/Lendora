@@ -126,6 +126,59 @@ export class IndexerDb {
     return rows;
   }
 
+  // ------------------------------------------------------------------ Phase 4 vault (DN-R11) and G5 receipt markets
+
+  /** NAV points (accepted reports) at or after `from` (unix s), oldest first. */
+  async dnNavSince(from: bigint, limit = 20_000): Promise<Row[]> {
+    const {rows} = await this.pool.query(`select * from ${this.s}.dn_nav where timestamp >= $1 order by timestamp asc, block_number asc limit $2`, [from.toString(), limit]);
+    return rows;
+  }
+
+  /** The last NAV point at or before `ts` (the window's start value). */
+  async dnNavAt(ts: bigint): Promise<Row | undefined> {
+    const {rows} = await this.pool.query(`select * from ${this.s}.dn_nav where timestamp <= $1 order by timestamp desc, block_number desc limit 1`, [ts.toString()]);
+    return rows[0];
+  }
+
+  /** Funding / costs / fee sums over days in [from, to). */
+  async dnDaysSum(from: bigint, to: bigint): Promise<Row> {
+    const {rows} = await this.pool.query(
+      `select coalesce(sum(funding), 0)::text as funding, coalesce(sum(costs), 0)::text as costs, coalesce(sum(fee), 0)::text as fee
+         from ${this.s}.dn_day where day >= $1 and day < $2`,
+      [from.toString(), to.toString()],
+    );
+    return rows[0];
+  }
+
+  async dnAccount(address: string): Promise<Row | undefined> {
+    const {rows} = await this.pool.query(`select * from ${this.s}.dn_account where lower(address) = lower($1)`, [address]);
+    return rows[0];
+  }
+
+  /** Requests owned by or paying `address`, newest first, with the queue position of queued ones. */
+  async dnRequests(address: string): Promise<Row[]> {
+    const {rows} = await this.pool.query(
+      `select r.*, case when r.status = 'queued'
+                    then (select count(*) from ${this.s}.dn_request q where q.status = 'queued' and q.id <= r.id)
+                    else 0 end as position
+         from ${this.s}.dn_request r
+        where lower(r.owner) = lower($1) or lower(r.receiver) = lower($1)
+        order by r.id desc limit 200`,
+      [address],
+    );
+    return rows;
+  }
+
+  async dnSleeves(): Promise<Row[]> {
+    const {rows} = await this.pool.query(`select * from ${this.s}.dn_sleeve order by id`);
+    return rows;
+  }
+
+  async receiptMarkets(): Promise<Row[]> {
+    const {rows} = await this.pool.query(`select * from ${this.s}.receipt_market order by ticker`);
+    return rows;
+  }
+
   // ------------------------------------------------------------------ API keys (SI-R10)
 
   /** FE-R5: fees per stock per UTC day in [from, to] (unix seconds, day starts). */

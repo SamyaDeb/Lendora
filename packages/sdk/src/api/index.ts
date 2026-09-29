@@ -17,6 +17,9 @@ export type Event = components["schemas"]["Event"];
 export type Position = components["schemas"]["Position"];
 export type StatusResponse = components["schemas"]["StatusResponse"];
 export type RevenueResponse = components["schemas"]["RevenueResponse"];
+export type VaultOverviewResponse = components["schemas"]["VaultOverviewResponse"];
+export type VaultAccountResponse = components["schemas"]["VaultAccountResponse"];
+export type ReceiptMarketsResponse = components["schemas"]["ReceiptMarketsResponse"];
 
 export class ApiError extends Error {
   constructor(
@@ -66,6 +69,12 @@ export function createClient(baseUrl: string, opts: ClientOptions = {}) {
     status: () => unwrap(c.GET("/v1/status")),
     /** FE-R5: protocol revenue per stock per day (UTC days `YYYY-MM-DD`, default the last 90). */
     revenue: (query: {from?: string; to?: string} = {}) => unwrap(c.GET("/v1/protocol/revenue", {params: {query}})),
+    /** DN-R11: USDG Earn overview (historical, variable rates; CP-R7). */
+    vaultOverview: () => unwrap(c.GET("/v1/vault/overview")),
+    /** USDG Earn position and withdrawal requests of an address. */
+    vaultAccount: (address: string) => unwrap(c.GET("/v1/vault/account/{address}", {params: {path: {address}}})),
+    /** A3: G5 receipt markets (rSTOCK collateral, USDG loans). */
+    receiptMarkets: () => unwrap(c.GET("/v1/receipt-markets")),
     terms: () => unwrap(c.GET("/v1/terms")),
     nonce: () => unwrap(c.GET("/v1/auth/nonce")),
     createKey: (message: string, signature: string, label?: string) => unwrap(c.POST("/v1/auth/keys", {body: {message, signature, label}})),

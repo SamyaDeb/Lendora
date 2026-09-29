@@ -5,4 +5,6 @@
 export const FEATURES = {
   vault: process.env.NEXT_PUBLIC_FEATURE_VAULT === "1",
   backstop: process.env.NEXT_PUBLIC_FEATURE_BACKSTOP === "1",
+  /** A3 (G5): the rSTOCK → USDG receipt markets (listed ≥ 30 days after launch, CL-R10). */
+  receiptMarket: process.env.NEXT_PUBLIC_FEATURE_RECEIPT_MARKET === "1",
 } as const;

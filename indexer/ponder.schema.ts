@@ -191,3 +191,83 @@ export const feeEvent = onchainTable(
   }),
   (t) => ({kindTimeIdx: index().on(t.kind, t.timestamp)}),
 );
+
+// ------------------------------------------------------------------ G5 receipt markets (A3)
+
+/** Morpho totals of each stock's `rSTOCK` → USDG market, derived from events like `market` (SI-R5 method). */
+export const receiptMarket = onchainTable("receipt_market", (t) => ({
+  ticker: t.text().primaryKey(),
+  marketId: t.hex().notNull(),
+  usdgVault: t.hex().notNull(),
+  lltv: t.bigint().notNull(),
+  totalSupplyAssets: t.bigint().notNull(),
+  totalSupplyShares: t.bigint().notNull(),
+  totalBorrowAssets: t.bigint().notNull(),
+  totalBorrowShares: t.bigint().notNull(),
+  collateral: t.bigint().notNull(),
+  rateAtTarget: t.bigint().notNull(),
+  lastUpdate: t.bigint().notNull(),
+  updatedBlock: t.bigint().notNull(),
+}));
+
+// ------------------------------------------------------------------ Phase 4 delta-neutral vault (08, DN-R11)
+
+/** Vault shares and flows per account (earnings = value − deposited + withdrawn; unknown while nothing is indexed). */
+export const dnAccount = onchainTable("dn_account", (t) => ({
+  address: t.hex().primaryKey(),
+  shares: t.bigint().notNull(),
+  deposited: t.bigint().notNull(),
+  withdrawn: t.bigint().notNull(),
+  updatedBlock: t.bigint().notNull(),
+}));
+
+/** ERC-7540-style withdrawal requests (DN-R1): queued → claimable → claimed. */
+export const dnRequest = onchainTable(
+  "dn_request",
+  (t) => ({
+    id: t.bigint().primaryKey(),
+    owner: t.hex().notNull(),
+    receiver: t.hex().notNull(),
+    shares: t.bigint().notNull(),
+    assets: t.bigint(),
+    requestedAt: t.bigint().notNull(),
+    settleBy: t.bigint().notNull(),
+    status: t.text().notNull(),
+    settledAt: t.bigint(),
+    claimedAt: t.bigint(),
+  }),
+  (t) => ({ownerIdx: index().on(t.owner), receiverIdx: index().on(t.receiver)}),
+);
+
+/** NAV points: every accepted NAV report (DN-R4) with the share price at that block (WAD, USDG per share). */
+export const dnNav = onchainTable(
+  "dn_nav",
+  (t) => ({
+    id: t.text().primaryKey(),
+    blockNumber: t.bigint().notNull(),
+    timestamp: t.bigint().notNull(),
+    nav: t.bigint().notNull(),
+    totalSupply: t.bigint().notNull(),
+    sharePriceWad: t.bigint().notNull(),
+    perpEquity: t.bigint().notNull(),
+    signers: t.integer().notNull(),
+  }),
+  (t) => ({timeIdx: index().on(t.timestamp)}),
+);
+
+/** Per UTC day (DN-R11 yield split): venue funding received (+) or paid (−), trading costs (spot fills below the feed
+ * price, USDG), performance fee (USDG value at the block), all USDG raw. */
+export const dnDay = onchainTable("dn_day", (t) => ({
+  day: t.bigint().primaryKey(),
+  funding: t.bigint().notNull(),
+  costs: t.bigint().notNull(),
+  fee: t.bigint().notNull(),
+  trades: t.integer().notNull(),
+}));
+
+/** Per sleeve (DN-R7): when it was killed, if ever, and its last trade. */
+export const dnSleeve = onchainTable("dn_sleeve", (t) => ({
+  id: t.integer().primaryKey(),
+  killedAt: t.bigint(),
+  lastTradeAt: t.bigint(),
+}));

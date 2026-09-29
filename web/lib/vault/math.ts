@@ -53,14 +53,15 @@ export const splitTotal = (s: {lending: number; funding: number; buffer: number;
 export function hedgeStatus(o: Pick<VaultOverview, "sleeves">) {
   const active = o.sleeves.filter((s) => s.status === "active");
   const list = active.length ? active : o.sleeves;
-  return {maxDelta: Math.max(0, ...list.map((s) => Math.abs(s.delta))), minMargin: Math.min(...list.map((s) => s.marginRatio))};
+  const margins = list.map((s) => s.marginRatio).filter((m): m is number => m !== null);
+  return {maxDelta: Math.max(0, ...list.map((s) => Math.abs(s.delta))), minMargin: margins.length ? Math.min(...margins) : null};
 }
 
 /** Why deposits are closed, in plain words (one sentence per pause reason; CP-R7: no promises). */
 export const PAUSE_COPY: Record<NonNullable<VaultOverview["pauseReason"]>, string> = {
   cap_zero: "Deposits open after the simulation gate and audits.",
   cap_full: "The vault is full. Withdrawals work; deposits reopen when the cap rises.",
-  nav_stale: "Deposits are paused while the vault's price data is more than 15 minutes old and markets are closed. They reopen with the next fresh report.",
+  nav_stale: "Deposits are paused while the vault's price data is being refreshed (it never mints on stale data). They reopen with the next fresh report.",
   paused: "Deposits are paused by the vault's guardian. Withdrawals and claims still work.",
 };
 

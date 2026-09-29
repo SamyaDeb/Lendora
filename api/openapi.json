@@ -1469,6 +1469,717 @@
           "data"
         ]
       },
+      "VaultOverviewResponse": {
+        "type": "object",
+        "properties": {
+          "asOfBlock": {
+            "type": "string",
+            "pattern": "^-?\\d+$",
+            "description": "Block the data is as of (SI-R13)",
+            "example": "1000000000000000000"
+          },
+          "asOfTime": {
+            "type": "string",
+            "description": "ISO 8601 UTC",
+            "example": "2026-10-01T16:00:00.000Z"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "description": "asOfBlock ≤ the chain's finalized block (SI-R3)"
+          },
+          "safe": {
+            "type": "boolean",
+            "description": "asOfBlock ≤ the chain's safe block"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "sharePrice": {
+                "type": "string",
+                "description": "USDG per share at the current NAV",
+                "example": "1234.56"
+              },
+              "tvl": {
+                "type": "string",
+                "description": "NAV, USDG",
+                "example": "1234.56"
+              },
+              "cap": {
+                "type": "string",
+                "description": "Decimal string",
+                "example": "1234.56"
+              },
+              "instantCapacity": {
+                "type": "string",
+                "description": "USDG withdrawable without queueing now (0 while the NAV is stale or the market closed)",
+                "example": "1234.56"
+              },
+              "apy": {
+                "type": "object",
+                "properties": {
+                  "d7": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Fraction as a decimal string (0.0934 = 9.34%)",
+                    "example": "0.0934"
+                  },
+                  "d30": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Fraction as a decimal string (0.0934 = 9.34%)",
+                    "example": "0.0934"
+                  },
+                  "d90": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Fraction as a decimal string (0.0934 = 9.34%)",
+                    "example": "0.0934"
+                  }
+                },
+                "required": [
+                  "d7",
+                  "d30",
+                  "d90"
+                ],
+                "description": "Net APY from the share price over the window: historical, variable (CP-R7); null until the window has history"
+              },
+              "apySeries": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "t": {
+                      "type": "integer",
+                      "description": "UTC seconds (day start)"
+                    },
+                    "v": {
+                      "type": "string",
+                      "description": "Decimal string",
+                      "example": "1234.56"
+                    }
+                  },
+                  "required": [
+                    "t",
+                    "v"
+                  ]
+                },
+                "description": "Daily net APY (historical)"
+              },
+              "sharePriceSeries": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "t": {
+                      "type": "integer",
+                      "description": "UTC seconds (day start)"
+                    },
+                    "v": {
+                      "type": "string",
+                      "description": "Decimal string",
+                      "example": "1234.56"
+                    }
+                  },
+                  "required": [
+                    "t",
+                    "v"
+                  ]
+                }
+              },
+              "split": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "window": {
+                      "type": "string",
+                      "enum": [
+                        "7d",
+                        "30d",
+                        "90d"
+                      ]
+                    },
+                    "lending": {
+                      "type": "string",
+                      "description": "The rest of the net return: lending income plus the hedge residual",
+                      "example": "0.0934"
+                    },
+                    "funding": {
+                      "type": "string",
+                      "description": "Fraction as a decimal string (0.0934 = 9.34%)",
+                      "example": "0.0934"
+                    },
+                    "buffer": {
+                      "type": "string",
+                      "description": "Fraction as a decimal string (0.0934 = 9.34%)",
+                      "example": "0.0934"
+                    },
+                    "costs": {
+                      "type": "string",
+                      "description": "Trading costs and the performance fee (negative)",
+                      "example": "0.0934"
+                    }
+                  },
+                  "required": [
+                    "window",
+                    "lending",
+                    "funding",
+                    "buffer",
+                    "costs"
+                  ]
+                }
+              },
+              "sleeves": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "symbol": {
+                      "type": "string"
+                    },
+                    "weight": {
+                      "type": "string",
+                      "description": "Fraction as a decimal string (0.0934 = 9.34%)",
+                      "example": "0.0934"
+                    },
+                    "cap": {
+                      "type": "string",
+                      "description": "Decimal string",
+                      "example": "1234.56"
+                    },
+                    "delta": {
+                      "type": "string",
+                      "description": "Fraction as a decimal string (0.0934 = 9.34%)",
+                      "example": "0.0934"
+                    },
+                    "marginRatio": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Decimal string",
+                      "example": "1234.56"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "active",
+                        "unwound"
+                      ]
+                    },
+                    "spotUsdg": {
+                      "type": "string",
+                      "description": "Decimal string",
+                      "example": "1234.56"
+                    },
+                    "lentUnits": {
+                      "type": "string",
+                      "description": "Decimal string",
+                      "example": "1234.56"
+                    },
+                    "shortUnits": {
+                      "type": "string",
+                      "description": "Decimal string",
+                      "example": "1234.56"
+                    }
+                  },
+                  "required": [
+                    "symbol",
+                    "weight",
+                    "cap",
+                    "delta",
+                    "marginRatio",
+                    "status",
+                    "spotUsdg",
+                    "lentUnits",
+                    "shortUnits"
+                  ]
+                }
+              },
+              "allocation": {
+                "type": "object",
+                "properties": {
+                  "lent": {
+                    "type": "string",
+                    "description": "Fraction as a decimal string (0.0934 = 9.34%)",
+                    "example": "0.0934"
+                  },
+                  "held": {
+                    "type": "string",
+                    "description": "Fraction as a decimal string (0.0934 = 9.34%)",
+                    "example": "0.0934"
+                  },
+                  "perpMargin": {
+                    "type": "string",
+                    "description": "Fraction as a decimal string (0.0934 = 9.34%)",
+                    "example": "0.0934"
+                  },
+                  "cash": {
+                    "type": "string",
+                    "description": "Fraction as a decimal string (0.0934 = 9.34%)",
+                    "example": "0.0934"
+                  }
+                },
+                "required": [
+                  "lent",
+                  "held",
+                  "perpMargin",
+                  "cash"
+                ]
+              },
+              "nav": {
+                "type": "object",
+                "properties": {
+                  "ageSec": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "stale": {
+                    "type": "boolean"
+                  },
+                  "maxAgeClosedSec": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "ageSec",
+                  "stale",
+                  "maxAgeClosedSec"
+                ]
+              },
+              "venue": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ok",
+                      "halted"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "status"
+                ]
+              },
+              "killSwitch": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "symbol": {
+                      "type": "string"
+                    },
+                    "since": {
+                      "type": "string",
+                      "description": "ISO 8601 UTC",
+                      "example": "2026-10-01T16:00:00.000Z"
+                    }
+                  },
+                  "required": [
+                    "symbol",
+                    "since"
+                  ]
+                }
+              },
+              "lastRebalance": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "ISO 8601 UTC",
+                "example": "2026-10-01T16:00:00.000Z"
+              },
+              "bandPct": {
+                "type": "string",
+                "description": "Fraction as a decimal string (0.0934 = 9.34%)",
+                "example": "0.0934"
+              },
+              "marginTarget": {
+                "type": "string",
+                "description": "Decimal string",
+                "example": "1234.56"
+              },
+              "marginTargetClosed": {
+                "type": "string",
+                "description": "Decimal string",
+                "example": "1234.56"
+              },
+              "marketClosed": {
+                "type": "boolean"
+              },
+              "depositsOpen": {
+                "type": "boolean"
+              },
+              "pauseReason": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "cap_zero",
+                  "cap_full",
+                  "nav_stale",
+                  "paused",
+                  null
+                ]
+              },
+              "queue": {
+                "type": "object",
+                "properties": {
+                  "length": {
+                    "type": "integer"
+                  },
+                  "escrowedShares": {
+                    "type": "string",
+                    "description": "Decimal string",
+                    "example": "1234.56"
+                  }
+                },
+                "required": [
+                  "length",
+                  "escrowedShares"
+                ]
+              },
+              "contracts": {
+                "type": "object",
+                "properties": {
+                  "vault": {
+                    "type": "string",
+                    "pattern": "^0x[0-9a-fA-F]{40}$",
+                    "example": "0x0000000000000000000000000000000000000000"
+                  },
+                  "strategy": {
+                    "type": "string",
+                    "pattern": "^0x[0-9a-fA-F]{40}$",
+                    "example": "0x0000000000000000000000000000000000000000"
+                  },
+                  "navOracle": {
+                    "type": "string",
+                    "pattern": "^0x[0-9a-fA-F]{40}$",
+                    "example": "0x0000000000000000000000000000000000000000"
+                  },
+                  "perpAdapter": {
+                    "type": "string",
+                    "pattern": "^0x[0-9a-fA-F]{40}$",
+                    "example": "0x0000000000000000000000000000000000000000"
+                  }
+                },
+                "required": [
+                  "vault",
+                  "strategy",
+                  "navOracle",
+                  "perpAdapter"
+                ]
+              },
+              "rateKind": {
+                "type": "string",
+                "enum": [
+                  "variable"
+                ]
+              }
+            },
+            "required": [
+              "sharePrice",
+              "tvl",
+              "cap",
+              "instantCapacity",
+              "apy",
+              "apySeries",
+              "sharePriceSeries",
+              "split",
+              "sleeves",
+              "allocation",
+              "nav",
+              "venue",
+              "killSwitch",
+              "lastRebalance",
+              "bandPct",
+              "marginTarget",
+              "marginTargetClosed",
+              "marketClosed",
+              "depositsOpen",
+              "pauseReason",
+              "queue",
+              "contracts",
+              "rateKind"
+            ]
+          }
+        },
+        "required": [
+          "asOfBlock",
+          "asOfTime",
+          "confirmed",
+          "safe",
+          "scope",
+          "data"
+        ]
+      },
+      "VaultAccountResponse": {
+        "type": "object",
+        "properties": {
+          "asOfBlock": {
+            "type": "string",
+            "pattern": "^-?\\d+$",
+            "description": "Block the data is as of (SI-R13)",
+            "example": "1000000000000000000"
+          },
+          "asOfTime": {
+            "type": "string",
+            "description": "ISO 8601 UTC",
+            "example": "2026-10-01T16:00:00.000Z"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "description": "asOfBlock ≤ the chain's finalized block (SI-R3)"
+          },
+          "safe": {
+            "type": "boolean",
+            "description": "asOfBlock ≤ the chain's safe block"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string"
+              },
+              "shares": {
+                "type": "string",
+                "description": "Decimal string",
+                "example": "1234.56"
+              },
+              "value": {
+                "type": "string",
+                "description": "shares × the current share price, USDG",
+                "example": "1234.56"
+              },
+              "netDeposits": {
+                "type": "string",
+                "description": "Deposited minus withdrawn and claimed, USDG",
+                "example": "1234.56"
+              },
+              "requests": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "owner": {
+                      "type": "string",
+                      "pattern": "^0x[0-9a-fA-F]{40}$",
+                      "example": "0x0000000000000000000000000000000000000000"
+                    },
+                    "receiver": {
+                      "type": "string",
+                      "pattern": "^0x[0-9a-fA-F]{40}$",
+                      "example": "0x0000000000000000000000000000000000000000"
+                    },
+                    "shares": {
+                      "type": "string",
+                      "description": "Decimal string",
+                      "example": "1234.56"
+                    },
+                    "assets": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Decimal string",
+                      "example": "1234.56"
+                    },
+                    "requestedAt": {
+                      "type": "string",
+                      "description": "ISO 8601 UTC",
+                      "example": "2026-10-01T16:00:00.000Z"
+                    },
+                    "settlesAt": {
+                      "type": "string",
+                      "description": "ISO 8601 UTC",
+                      "example": "2026-10-01T16:00:00.000Z"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "ready",
+                        "claimed"
+                      ]
+                    },
+                    "position": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "owner",
+                    "receiver",
+                    "shares",
+                    "assets",
+                    "requestedAt",
+                    "settlesAt",
+                    "status",
+                    "position"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "address",
+              "shares",
+              "value",
+              "netDeposits",
+              "requests"
+            ]
+          }
+        },
+        "required": [
+          "asOfBlock",
+          "asOfTime",
+          "confirmed",
+          "safe",
+          "scope",
+          "data"
+        ]
+      },
+      "ReceiptMarketsResponse": {
+        "type": "object",
+        "properties": {
+          "asOfBlock": {
+            "type": "string",
+            "pattern": "^-?\\d+$",
+            "description": "Block the data is as of (SI-R13)",
+            "example": "1000000000000000000"
+          },
+          "asOfTime": {
+            "type": "string",
+            "description": "ISO 8601 UTC",
+            "example": "2026-10-01T16:00:00.000Z"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "description": "asOfBlock ≤ the chain's finalized block (SI-R3)"
+          },
+          "safe": {
+            "type": "boolean",
+            "description": "asOfBlock ≤ the chain's safe block"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "marketId": {
+                  "type": "string"
+                },
+                "usdgVault": {
+                  "type": "string",
+                  "pattern": "^0x[0-9a-fA-F]{40}$",
+                  "example": "0x0000000000000000000000000000000000000000"
+                },
+                "oracle": {
+                  "type": "string",
+                  "pattern": "^0x[0-9a-fA-F]{40}$",
+                  "example": "0x0000000000000000000000000000000000000000"
+                },
+                "lltv": {
+                  "type": "string",
+                  "description": "Decimal string",
+                  "example": "1234.56"
+                },
+                "listed": {
+                  "type": "boolean",
+                  "description": "The curator's timelocked listing raised the cap (A3)"
+                },
+                "capUsdg": {
+                  "type": "string",
+                  "description": "Decimal string",
+                  "example": "1234.56"
+                },
+                "supplied": {
+                  "type": "string",
+                  "description": "Decimal string",
+                  "example": "1234.56"
+                },
+                "borrowed": {
+                  "type": "string",
+                  "description": "Decimal string",
+                  "example": "1234.56"
+                },
+                "utilization": {
+                  "type": "string",
+                  "description": "Fraction as a decimal string (0.0934 = 9.34%)",
+                  "example": "0.0934"
+                },
+                "collateralShares": {
+                  "type": "string",
+                  "description": "rSTOCK posted as collateral",
+                  "example": "1234.56"
+                },
+                "stockPriceUsd": {
+                  "type": "string",
+                  "description": "Decimal string",
+                  "example": "1234.56"
+                },
+                "rateKind": {
+                  "type": "string",
+                  "enum": [
+                    "variable"
+                  ]
+                }
+              },
+              "required": [
+                "symbol",
+                "marketId",
+                "usdgVault",
+                "oracle",
+                "lltv",
+                "listed",
+                "capUsdg",
+                "supplied",
+                "borrowed",
+                "utilization",
+                "collateralShares",
+                "stockPriceUsd",
+                "rateKind"
+              ]
+            }
+          }
+        },
+        "required": [
+          "asOfBlock",
+          "asOfTime",
+          "confirmed",
+          "safe",
+          "scope",
+          "data"
+        ]
+      },
       "TermsResponse": {
         "type": "object",
         "properties": {
@@ -2152,6 +2863,197 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RevenueResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (SI-R10)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Indexer not ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/vault/overview": {
+      "get": {
+        "tags": [
+          "vault"
+        ],
+        "summary": "USDG Earn: share price, net APY (7/30/90d, historical, variable), yield split, sleeves, delta, margin, venue, queue (DN-R11)",
+        "responses": {
+          "200": {
+            "description": "Overview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultOverviewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (SI-R10)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Indexer not ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/vault/account/{address}": {
+      "get": {
+        "tags": [
+          "vault"
+        ],
+        "summary": "USDG Earn position of an address: shares, value at the current share price, net deposits, withdrawal requests",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^0x[0-9a-fA-F]{40}$"
+            },
+            "required": true,
+            "name": "address",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultAccountResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (SI-R10)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Indexer not ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/receipt-markets": {
+      "get": {
+        "tags": [
+          "markets"
+        ],
+        "summary": "G5 receipt markets (rSTOCK collateral, USDG loans): totals, utilization, LLTV (A3)",
+        "responses": {
+          "200": {
+            "description": "Receipt markets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptMarketsResponse"
                 }
               }
             }

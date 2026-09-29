@@ -538,6 +538,224 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/vault/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** USDG Earn: share price, net APY (7/30/90d, historical, variable), yield split, sleeves, delta, margin, venue, queue (DN-R11) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Overview */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VaultOverviewResponse"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rate limited (SI-R10) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Indexer not ready */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/vault/account/{address}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** USDG Earn position of an address: shares, value at the current share price, net deposits, withdrawal requests */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    address: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Account */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VaultAccountResponse"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rate limited (SI-R10) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Indexer not ready */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/receipt-markets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** G5 receipt markets (rSTOCK collateral, USDG loans): totals, utilization, LLTV (A3) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Receipt markets */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReceiptMarketsResponse"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rate limited (SI-R10) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Indexer not ready */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/terms": {
         parameters: {
             query?: never;
@@ -1544,6 +1762,359 @@ export interface components {
                     usd: string;
                 };
             };
+        };
+        VaultOverviewResponse: {
+            /**
+             * @description Block the data is as of (SI-R13)
+             * @example 1000000000000000000
+             */
+            asOfBlock: string;
+            /**
+             * @description ISO 8601 UTC
+             * @example 2026-10-01T16:00:00.000Z
+             */
+            asOfTime: string;
+            /** @description asOfBlock ≤ the chain's finalized block (SI-R3) */
+            confirmed: boolean;
+            /** @description asOfBlock ≤ the chain's safe block */
+            safe: boolean;
+            scope: string;
+            data: {
+                /**
+                 * @description USDG per share at the current NAV
+                 * @example 1234.56
+                 */
+                sharePrice: string;
+                /**
+                 * @description NAV, USDG
+                 * @example 1234.56
+                 */
+                tvl: string;
+                /**
+                 * @description Decimal string
+                 * @example 1234.56
+                 */
+                cap: string;
+                /**
+                 * @description USDG withdrawable without queueing now (0 while the NAV is stale or the market closed)
+                 * @example 1234.56
+                 */
+                instantCapacity: string;
+                /** @description Net APY from the share price over the window: historical, variable (CP-R7); null until the window has history */
+                apy: {
+                    /**
+                     * @description Fraction as a decimal string (0.0934 = 9.34%)
+                     * @example 0.0934
+                     */
+                    d7: string | null;
+                    /**
+                     * @description Fraction as a decimal string (0.0934 = 9.34%)
+                     * @example 0.0934
+                     */
+                    d30: string | null;
+                    /**
+                     * @description Fraction as a decimal string (0.0934 = 9.34%)
+                     * @example 0.0934
+                     */
+                    d90: string | null;
+                };
+                /** @description Daily net APY (historical) */
+                apySeries: {
+                    /** @description UTC seconds (day start) */
+                    t: number;
+                    /**
+                     * @description Decimal string
+                     * @example 1234.56
+                     */
+                    v: string;
+                }[];
+                sharePriceSeries: {
+                    /** @description UTC seconds (day start) */
+                    t: number;
+                    /**
+                     * @description Decimal string
+                     * @example 1234.56
+                     */
+                    v: string;
+                }[];
+                split: {
+                    /** @enum {string} */
+                    window: "7d" | "30d" | "90d";
+                    /**
+                     * @description The rest of the net return: lending income plus the hedge residual
+                     * @example 0.0934
+                     */
+                    lending: string;
+                    /**
+                     * @description Fraction as a decimal string (0.0934 = 9.34%)
+                     * @example 0.0934
+                     */
+                    funding: string;
+                    /**
+                     * @description Fraction as a decimal string (0.0934 = 9.34%)
+                     * @example 0.0934
+                     */
+                    buffer: string;
+                    /**
+                     * @description Trading costs and the performance fee (negative)
+                     * @example 0.0934
+                     */
+                    costs: string;
+                }[];
+                sleeves: {
+                    symbol: string;
+                    /**
+                     * @description Fraction as a decimal string (0.0934 = 9.34%)
+                     * @example 0.0934
+                     */
+                    weight: string;
+                    /**
+                     * @description Decimal string
+                     * @example 1234.56
+                     */
+                    cap: string;
+                    /**
+                     * @description Fraction as a decimal string (0.0934 = 9.34%)
+                     * @example 0.0934
+                     */
+                    delta: string;
+                    /**
+                     * @description Decimal string
+                     * @example 1234.56
+                     */
+                    marginRatio: string | null;
+                    /** @enum {string} */
+                    status: "active" | "unwound";
+                    /**
+                     * @description Decimal string
+                     * @example 1234.56
+                     */
+                    spotUsdg: string;
+                    /**
+                     * @description Decimal string
+                     * @example 1234.56
+                     */
+                    lentUnits: string;
+                    /**
+                     * @description Decimal string
+                     * @example 1234.56
+                     */
+                    shortUnits: string;
+                }[];
+                allocation: {
+                    /**
+                     * @description Fraction as a decimal string (0.0934 = 9.34%)
+                     * @example 0.0934
+                     */
+                    lent: string;
+                    /**
+                     * @description Fraction as a decimal string (0.0934 = 9.34%)
+                     * @example 0.0934
+                     */
+                    held: string;
+                    /**
+                     * @description Fraction as a decimal string (0.0934 = 9.34%)
+                     * @example 0.0934
+                     */
+                    perpMargin: string;
+                    /**
+                     * @description Fraction as a decimal string (0.0934 = 9.34%)
+                     * @example 0.0934
+                     */
+                    cash: string;
+                };
+                nav: {
+                    ageSec: number | null;
+                    stale: boolean;
+                    maxAgeClosedSec: number;
+                };
+                venue: {
+                    name: string;
+                    /** @enum {string} */
+                    status: "ok" | "halted";
+                };
+                killSwitch: {
+                    symbol: string;
+                    /**
+                     * @description ISO 8601 UTC
+                     * @example 2026-10-01T16:00:00.000Z
+                     */
+                    since: string;
+                }[];
+                /**
+                 * @description ISO 8601 UTC
+                 * @example 2026-10-01T16:00:00.000Z
+                 */
+                lastRebalance: string | null;
+                /**
+                 * @description Fraction as a decimal string (0.0934 = 9.34%)
+                 * @example 0.0934
+                 */
+                bandPct: string;
+                /**
+                 * @description Decimal string
+                 * @example 1234.56
+                 */
+                marginTarget: string;
+                /**
+                 * @description Decimal string
+                 * @example 1234.56
+                 */
+                marginTargetClosed: string;
+                marketClosed: boolean;
+                depositsOpen: boolean;
+                /** @enum {string|null} */
+                pauseReason: "cap_zero" | "cap_full" | "nav_stale" | "paused" | null;
+                queue: {
+                    length: number;
+                    /**
+                     * @description Decimal string
+                     * @example 1234.56
+                     */
+                    escrowedShares: string;
+                };
+                contracts: {
+                    /** @example 0x0000000000000000000000000000000000000000 */
+                    vault: string;
+                    /** @example 0x0000000000000000000000000000000000000000 */
+                    strategy: string;
+                    /** @example 0x0000000000000000000000000000000000000000 */
+                    navOracle: string;
+                    /** @example 0x0000000000000000000000000000000000000000 */
+                    perpAdapter: string;
+                };
+                /** @enum {string} */
+                rateKind: "variable";
+            };
+        };
+        VaultAccountResponse: {
+            /**
+             * @description Block the data is as of (SI-R13)
+             * @example 1000000000000000000
+             */
+            asOfBlock: string;
+            /**
+             * @description ISO 8601 UTC
+             * @example 2026-10-01T16:00:00.000Z
+             */
+            asOfTime: string;
+            /** @description asOfBlock ≤ the chain's finalized block (SI-R3) */
+            confirmed: boolean;
+            /** @description asOfBlock ≤ the chain's safe block */
+            safe: boolean;
+            scope: string;
+            data: {
+                address: string;
+                /**
+                 * @description Decimal string
+                 * @example 1234.56
+                 */
+                shares: string;
+                /**
+                 * @description shares × the current share price, USDG
+                 * @example 1234.56
+                 */
+                value: string;
+                /**
+                 * @description Deposited minus withdrawn and claimed, USDG
+                 * @example 1234.56
+                 */
+                netDeposits: string;
+                requests: {
+                    id: string;
+                    /** @example 0x0000000000000000000000000000000000000000 */
+                    owner: string;
+                    /** @example 0x0000000000000000000000000000000000000000 */
+                    receiver: string;
+                    /**
+                     * @description Decimal string
+                     * @example 1234.56
+                     */
+                    shares: string;
+                    /**
+                     * @description Decimal string
+                     * @example 1234.56
+                     */
+                    assets: string | null;
+                    /**
+                     * @description ISO 8601 UTC
+                     * @example 2026-10-01T16:00:00.000Z
+                     */
+                    requestedAt: string;
+                    /**
+                     * @description ISO 8601 UTC
+                     * @example 2026-10-01T16:00:00.000Z
+                     */
+                    settlesAt: string;
+                    /** @enum {string} */
+                    status: "queued" | "ready" | "claimed";
+                    position: number;
+                }[];
+            };
+        };
+        ReceiptMarketsResponse: {
+            /**
+             * @description Block the data is as of (SI-R13)
+             * @example 1000000000000000000
+             */
+            asOfBlock: string;
+            /**
+             * @description ISO 8601 UTC
+             * @example 2026-10-01T16:00:00.000Z
+             */
+            asOfTime: string;
+            /** @description asOfBlock ≤ the chain's finalized block (SI-R3) */
+            confirmed: boolean;
+            /** @description asOfBlock ≤ the chain's safe block */
+            safe: boolean;
+            scope: string;
+            data: {
+                symbol: string;
+                marketId: string;
+                /** @example 0x0000000000000000000000000000000000000000 */
+                usdgVault: string;
+                /** @example 0x0000000000000000000000000000000000000000 */
+                oracle: string;
+                /**
+                 * @description Decimal string
+                 * @example 1234.56
+                 */
+                lltv: string;
+                /** @description The curator's timelocked listing raised the cap (A3) */
+                listed: boolean;
+                /**
+                 * @description Decimal string
+                 * @example 1234.56
+                 */
+                capUsdg: string;
+                /**
+                 * @description Decimal string
+                 * @example 1234.56
+                 */
+                supplied: string;
+                /**
+                 * @description Decimal string
+                 * @example 1234.56
+                 */
+                borrowed: string;
+                /**
+                 * @description Fraction as a decimal string (0.0934 = 9.34%)
+                 * @example 0.0934
+                 */
+                utilization: string;
+                /**
+                 * @description rSTOCK posted as collateral
+                 * @example 1234.56
+                 */
+                collateralShares: string;
+                /**
+                 * @description Decimal string
+                 * @example 1234.56
+                 */
+                stockPriceUsd: string;
+                /** @enum {string} */
+                rateKind: "variable";
+            }[];
         };
         TermsResponse: {
             terms: string;

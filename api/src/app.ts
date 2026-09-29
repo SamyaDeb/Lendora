@@ -13,6 +13,7 @@ import {HttpError} from "./errors.js";
 import type {ChainReader} from "./chain.js";
 import {envelope, eventView, historyView, iso, marketView, positionView, wad, type Envelope} from "./model.js";
 import * as S from "./schemas.js";
+import {registerVaultRoutes} from "./vault.js";
 
 /**
  * Stockline public API (docs/prd/07 §2, SI-R10…R14). Mounted at `/v1`; `WS /v1/stream` is attached by the server
@@ -421,6 +422,10 @@ export function createApp(deps: AppDeps) {
       );
     },
   );
+
+  // ---------------------------------------------------------------- USDG Earn (DN-R11) and receipt markets (A3)
+
+  registerVaultRoutes(app as never, db, chain.client, d, {json, errors, asOfHeaders: asOfHeaders as never});
 
   app.openapi(createRoute({method: "get", path: "/v1/terms", tags: ["status"], summary: "Data terms of use (SI-R14)", responses: {200: json(S.TermsResponse, "Terms")}}), (c) =>
     c.json(TERMS, 200),

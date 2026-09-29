@@ -225,3 +225,77 @@ export const RevenueQuery = z.object({
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().openapi({description: "First UTC day (default: 90 days ago)", example: "2026-10-01"}),
   to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().openapi({description: "Last UTC day, inclusive (default: today)", example: "2026-10-31"}),
 });
+
+// ---------------------------------------------------------------- Phase 4: USDG Earn (DN-R11) and G5 receipt markets
+
+const Frac = z.string().openapi({description: "Fraction as a decimal string (0.0934 = 9.34%)", example: "0.0934"});
+const Point = z.object({t: z.number().int().openapi({description: "UTC seconds (day start)"}), v: Dec});
+
+export const VaultOverviewResponse = z
+  .object({
+    ...EnvelopeSchema,
+    data: z.object({
+      sharePrice: Dec.openapi({description: "USDG per share at the current NAV"}),
+      tvl: Dec.openapi({description: "NAV, USDG"}),
+      cap: Dec,
+      instantCapacity: Dec.openapi({description: "USDG withdrawable without queueing now (0 while the NAV is stale or the market closed)"}),
+      apy: z.object({d7: Frac.nullable(), d30: Frac.nullable(), d90: Frac.nullable()}).openapi({description: "Net APY from the share price over the window: historical, variable (CP-R7); null until the window has history"}),
+      apySeries: z.array(Point).openapi({description: "Daily net APY (historical)"}),
+      sharePriceSeries: z.array(Point),
+      split: z.array(z.object({window: z.enum(["7d", "30d", "90d"]), lending: Frac.openapi({description: "The rest of the net return: lending income plus the hedge residual"}), funding: Frac, buffer: Frac, costs: Frac.openapi({description: "Trading costs and the performance fee (negative)"})})),
+      sleeves: z.array(z.object({symbol: z.string(), weight: Frac, cap: Dec, delta: Frac, marginRatio: Dec.nullable(), status: z.enum(["active", "unwound"]), spotUsdg: Dec, lentUnits: Dec, shortUnits: Dec})),
+      allocation: z.object({lent: Frac, held: Frac, perpMargin: Frac, cash: Frac}),
+      nav: z.object({ageSec: z.number().int().nullable(), stale: z.boolean(), maxAgeClosedSec: z.number().int()}),
+      venue: z.object({name: z.string(), status: z.enum(["ok", "halted"])}),
+      killSwitch: z.array(z.object({symbol: z.string(), since: Time})),
+      lastRebalance: Time.nullable(),
+      bandPct: Frac,
+      marginTarget: Dec,
+      marginTargetClosed: Dec,
+      marketClosed: z.boolean(),
+      depositsOpen: z.boolean(),
+      pauseReason: z.enum(["cap_zero", "cap_full", "nav_stale", "paused"]).nullable(),
+      queue: z.object({length: z.number().int(), escrowedShares: Dec}),
+      contracts: z.object({vault: Addr, strategy: Addr, navOracle: Addr, perpAdapter: Addr}),
+      rateKind: z.literal("variable"),
+    }),
+  })
+  .openapi("VaultOverviewResponse");
+
+export const VaultAccountResponse = z
+  .object({
+    ...EnvelopeSchema,
+    data: z.object({
+      address: z.string(),
+      shares: Dec,
+      value: Dec.openapi({description: "shares × the current share price, USDG"}),
+      netDeposits: Dec.openapi({description: "Deposited minus withdrawn and claimed, USDG"}),
+      requests: z.array(
+        z.object({id: z.string(), owner: Addr, receiver: Addr, shares: Dec, assets: Dec.nullable(), requestedAt: Time, settlesAt: Time, status: z.enum(["queued", "ready", "claimed"]), position: z.number().int()}),
+      ),
+    }),
+  })
+  .openapi("VaultAccountResponse");
+
+export const ReceiptMarketsResponse = z
+  .object({
+    ...EnvelopeSchema,
+    data: z.array(
+      z.object({
+        symbol: z.string(),
+        marketId: z.string(),
+        usdgVault: Addr,
+        oracle: Addr,
+        lltv: Dec,
+        listed: z.boolean().openapi({description: "The curator's timelocked listing raised the cap (A3)"}),
+        capUsdg: Dec,
+        supplied: Dec,
+        borrowed: Dec,
+        utilization: Frac,
+        collateralShares: Dec.openapi({description: "rSTOCK posted as collateral"}),
+        stockPriceUsd: Dec,
+        rateKind: z.literal("variable"),
+      }),
+    ),
+  })
+  .openapi("ReceiptMarketsResponse");

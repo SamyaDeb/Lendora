@@ -1,5 +1,7 @@
 import {VAULT_STATES, type VaultState} from "@/lib/fixtures";
 import {createFixtureSource, type FixtureControls, type VaultSource} from "./source";
+import {createApiSource} from "./apiSource";
+import {deployment, E2E} from "@/lib/env";
 
 export type {VaultSource, FixtureControls} from "./source";
 export * from "./types";
@@ -19,13 +21,33 @@ export function fixtureSourceFor(state: VaultState): VaultSource & FixtureContro
   return s;
 }
 
+/** `NEXT_PUBLIC_VAULT_SOURCE=api|fixture`; default: the real contracts wherever the deployment has a vault. */
+export const VAULT_SOURCE: "api" | "fixture" =
+  process.env.NEXT_PUBLIC_VAULT_SOURCE === "fixture" || process.env.NEXT_PUBLIC_VAULT_SOURCE === "api"
+    ? process.env.NEXT_PUBLIC_VAULT_SOURCE
+    : deployment().dnVault
+      ? "api"
+      : "fixture";
+
+let api: VaultSource | undefined;
+
+/** Dev and e2e builds only: a tab can pin the fixture source (`sessionStorage["vault-source"] = "fixture"`), so the
+ * fixture flows and the on-chain flows run against one build. Never in a production build without E2E. */
+function pinnedFixture(): boolean {
+  if (typeof window === "undefined" || !(E2E || process.env.NODE_ENV !== "production")) return false;
+  try {
+    return window.sessionStorage.getItem("vault-source") === "fixture";
+  } catch {
+    return false;
+  }
+}
+
 /**
- * The one place the vault's data source is chosen.
- * TODO(task 16): return `apiSource` (reads `/v1/vault/*` + the user's balances and requests from `DeltaNeutralVault`
- * by multicall; sends deposit / withdraw / requestRedeem / claim through `useWriter`, and the entry gate through
- * `lib/compliance`) once the contracts (task 14) and the API are deployed; keep the fixtures for /dev and tests.
+ * The one place the vault's data source is chosen: the real contracts through `/v1/vault/*` and the wallet
+ * (`apiSource`, Phase 4 task 16), or the fixture ledger for /dev previews, tests and deployments without a vault.
  */
 export function vaultSource(): VaultSource {
+  if (VAULT_SOURCE === "api" && !pinnedFixture()) return (api ??= createApiSource());
   return fixtureSourceFor(VAULT_FIXTURE_STATE);
 }
 

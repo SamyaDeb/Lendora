@@ -17,7 +17,7 @@ const within = <T,>(p: Promise<T | undefined>, ms = 1500) => Promise.race([p, ne
 /** The vault's 30-day net APY from the adapter, only while the vault flag is on. */
 async function earnApy(): Promise<number | undefined> {
   if (!FEATURES.vault) return undefined;
-  return within(vaultSource().overview().then((o) => o.apy.d30));
+  return within(vaultSource().overview().then((o) => o.apy.d30 ?? undefined));
 }
 
 /**

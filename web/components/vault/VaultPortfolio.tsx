@@ -61,7 +61,7 @@ export function VaultPortfolioSection({restricted}: {restricted: boolean}) {
               <Stat size="sm" label="Value" value={`${num(u.value)} USDG`} testId="vault-value" />
               <Stat size="sm" label="Earned" tone={earned !== undefined ? "supply" : undefined} value={earned !== undefined ? `${earned < 0 ? "−" : "+"}${num(Math.abs(earned))} USDG` : "–"} hint={earned === undefined ? "Waiting for the indexer" : undefined} />
               <Stat size="sm" label="Shares" value={num(u.shares, 4)} hint={o.data ? `At ${num(o.data.sharePrice, 4)} USDG` : undefined} />
-              <Stat size="sm" label="Net APY (30d, variable)" tone="supply" value={o.data ? `${num(o.data.apy.d30 * 100)}%` : "–"} hint="Historical" />
+              <Stat size="sm" label="Net APY (30d, variable)" tone="supply" value={o.data && o.data.apy.d30 !== null ? `${num(o.data.apy.d30 * 100)}%` : "–"} hint="Historical" />
             </dl>
             {open.length > 0 && (
               <div className="grid gap-3 md:grid-cols-2">

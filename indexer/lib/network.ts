@@ -28,6 +28,10 @@ export interface NetworkConfig {
   byWrapper: Map<string, string>;
   /** Uniswap pool → [ticker, stock is token0]. */
   byPool: Map<string, {ticker: string; stockIsToken0: boolean}>;
+  /** G5 receipt markets (A3): Morpho market id → ticker. */
+  byReceiptMarketId: Map<string, string>;
+  /** Phase 4 delta-neutral vault (08), if deployed; `mockVenue` = the adapter emits `FundingApplied`. */
+  dn?: {vault: Address; strategy: Address; navOracle: Address; perpAdapter: Address; hasAdapter: boolean};
 }
 
 const lc = (a: string) => a.toLowerCase();
@@ -81,5 +85,11 @@ export function networkConfig(env: NodeJS.ProcessEnv = process.env): NetworkConf
     byToken: map((s) => s.stockToken),
     byWrapper: map((s) => s.wrapper),
     byPool,
+    byReceiptMarketId: new Map(tickers.filter((t) => stocks[t].receipt).map((t) => [lc(stocks[t].receipt!.marketId), t])),
+    dn: d.dnVault ? {...d.dnVault, hasAdapter: !/^0x0{40}$/i.test(d.dnVault.perpAdapter)} : undefined,
   };
 }
+
+/** A placeholder that keeps Ponder's handlers typed and never matches a log (sources not deployed on a network). */
+export const NO_ADDRESS = "0x000000000000000000000000000000000000dEaD" as const;
+export const NO_ID = `0x${"0".repeat(64)}` as const;

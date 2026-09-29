@@ -19,7 +19,7 @@ const TOP_RISKS = [
 export function DepositForm({f}: {f: DepositFlow}) {
   const [review, setReview] = useState(false);
   const {o, u} = f;
-  const apy = o?.apy.d30;
+  const apy = o?.apy.d30 ?? undefined; // null = not enough history: no rate, no estimate (CP-R7)
   // "Enter an amount" is obvious from the empty field; every other reason is spelled out under the button.
   const showBlocker = Boolean(f.blocker) && !(f.amount === "" && f.blocker!.startsWith("Enter how much"));
   return (

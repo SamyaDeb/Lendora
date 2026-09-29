@@ -6,6 +6,8 @@ import {num, pct, wad} from "@/lib/format";
 import {AmountInput, Button, Icon, Notice, NumberTicker, Row, Segmented, Stat} from "@/components/ui";
 import {ReviewSheet} from "@/components/review/ReviewSheet";
 import {NeedFunds, WalletGate} from "./WalletGate";
+import {ReceiptMarketPanel} from "./ReceiptMarket";
+import {FEATURES} from "@/lib/features";
 
 /** Lend tab: deposit Stock Tokens into rSTOCK, or withdraw. The yield source is always spelled out. */
 export function LendForm({f}: {f: LendFlow}) {
@@ -101,9 +103,13 @@ export function LendForm({f}: {f: LendFlow}) {
               className="col-span-2"
             />
           </dl>
-          <Button variant="ghost" size="sm" disabled className="w-full" title="Receipt-as-collateral markets open 30 days after mainnet launch (CL-R10)">
-            Use r{symbol} as collateral (coming later)
-          </Button>
+          {FEATURES.receiptMarket ? (
+            <ReceiptMarketPanel symbol={symbol} />
+          ) : (
+            <Button variant="ghost" size="sm" disabled className="w-full" title="Receipt-as-collateral markets open 30 days after mainnet launch (CL-R10)">
+              Use r{symbol} as collateral (coming later)
+            </Button>
+          )}
         </section>
       )}
 
