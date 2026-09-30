@@ -2,7 +2,7 @@
 import {useState} from "react";
 import {useQuery} from "@tanstack/react-query";
 import {maxUint256} from "viem";
-import {erc20Abi, stocklineRouterAbi, vaultV2FullAbi, withdrawableAssets} from "@stockline/sdk";
+import {erc20Abi, lendoraRouterAbi, vaultV2FullAbi, withdrawableAssets} from "@lendora/sdk";
 import {deployment} from "@/lib/env";
 import {browserApi} from "@/lib/api";
 import {deadline, useChainMarket} from "@/lib/hooks";
@@ -63,7 +63,7 @@ export function useLendFlow(symbol: string) {
       const minShares = ((await w.pc.readContract({address: s.vault, abi: vaultV2FullAbi, functionName: "previewDeposit", args: [parsed]})) * 999n) / 1000n;
       return [
         {id: "approve", label: `Approve ${symbol}`, kind: "approve", skip: u.stockAllowance >= parsed, run: async () => void (await w.send({address: s.stockToken, abi: erc20Abi, functionName: "approve", args: [d.router!, maxUint256]}))},
-        {id: "lend", label: `Deposit ${amount} ${symbol} into r${symbol}`, kind: "execute", run: async () => void (await w.send({address: d.router!, abi: stocklineRouterAbi, functionName: "lend", args: [s.stockToken, parsed, minShares, w.address, dl]}))},
+        {id: "lend", label: `Deposit ${amount} ${symbol} into r${symbol}`, kind: "execute", run: async () => void (await w.send({address: d.router!, abi: lendoraRouterAbi, functionName: "lend", args: [s.stockToken, parsed, minShares, w.address, dl]}))},
       ];
     }
     const all = parsed >= u.vaultAssets;
@@ -71,7 +71,7 @@ export function useLendFlow(symbol: string) {
     const minAssets = (parsed * 999n) / 1000n;
     return [
       {id: "approve", label: `Approve r${symbol}`, kind: "approve", skip: u.vaultAllowance >= shares, run: async () => void (await w.send({address: s.vault, abi: erc20Abi, functionName: "approve", args: [d.router!, maxUint256]}))},
-      {id: "withdraw", label: `Withdraw ${amount} ${symbol}`, kind: "execute", run: async () => void (await w.send({address: d.router!, abi: stocklineRouterAbi, functionName: "withdrawLend", args: [s.stockToken, shares, minAssets, w.address, dl]}))},
+      {id: "withdraw", label: `Withdraw ${amount} ${symbol}`, kind: "execute", run: async () => void (await w.send({address: d.router!, abi: lendoraRouterAbi, functionName: "withdrawLend", args: [s.stockToken, shares, minAssets, w.address, dl]}))},
     ];
   }
 

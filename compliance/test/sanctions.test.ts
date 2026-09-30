@@ -180,7 +180,7 @@ describe("CP-R3 provider selection and startup (Q5, CP-R8)", () => {
   });
 
   it("MN_R6 mainnet (4663) with a real provider still refuses until addresses.json has the deployment", async () => {
-    await expect(startCompliance({STOCKLINE_NETWORK: "4663", PROXY_SECRET: SECRET, SANCTIONS_PROVIDER: "trm", SANCTIONS_API_KEY: KEY, DATABASE_URL: "postgres://x"})).rejects.toThrow(/compliance: no deployment "4663".*MN-R6/);
+    await expect(startCompliance({LENDORA_NETWORK: "4663", PROXY_SECRET: SECRET, SANCTIONS_PROVIDER: "trm", SANCTIONS_API_KEY: KEY, DATABASE_URL: "postgres://x"})).rejects.toThrow(/compliance: no deployment "4663".*MN-R6/);
   });
 });
 
@@ -233,8 +233,8 @@ describe("OFF-16 compliance CORS and env", () => {
       app.request(new Request("http://x/health", {headers: {origin}}));
     const closed = createComplianceApp(svc, terms, {trustProxy: false, attestRpm: 5, allowedOrigins: []});
     expect((await pre(closed, "https://evil.example")).headers.get("access-control-allow-origin")).toBeNull();
-    const listed = createComplianceApp(svc, terms, {trustProxy: false, attestRpm: 5, allowedOrigins: ["https://app.stockline.xyz"]});
-    expect((await pre(listed, "https://app.stockline.xyz")).headers.get("access-control-allow-origin")).toBe("https://app.stockline.xyz");
+    const listed = createComplianceApp(svc, terms, {trustProxy: false, attestRpm: 5, allowedOrigins: ["https://app.lendora.xyz"]});
+    expect((await pre(listed, "https://app.lendora.xyz")).headers.get("access-control-allow-origin")).toBe("https://app.lendora.xyz");
     expect((await pre(listed, "https://evil.example")).headers.get("access-control-allow-origin")).not.toBe("https://evil.example");
     const local = createComplianceApp(svc, terms, {trustProxy: false, attestRpm: 5, allowedOrigins: [], corsAnyOrigin: true});
     expect((await pre(local, "http://localhost:3000")).headers.get("access-control-allow-origin")).toBe("*");

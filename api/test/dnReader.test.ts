@@ -1,6 +1,6 @@
 import {describe, expect, it, vi} from "vitest";
 import type {PublicClient} from "viem";
-import type {ChainDeployment} from "@stockline/sdk";
+import type {ChainDeployment} from "@lendora/sdk";
 import {DnReader} from "../src/vault.js";
 
 /** OFF-22 (docs/audit/offchain-review.md): `/v1/vault/*` requests at a new block share one set of chain reads. */

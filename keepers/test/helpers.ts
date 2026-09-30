@@ -1,5 +1,5 @@
 import {encodeFunctionData, maxUint256, type Hex} from "viem";
-import {erc20Abi, mockAggregatorAbi, mockStockTokenAbi, stocklineRouterAbi, vaultV2Abi} from "@stockline/sdk";
+import {erc20Abi, mockAggregatorAbi, mockStockTokenAbi, lendoraRouterAbi, vaultV2Abi} from "@lendora/sdk";
 import type {Anvil} from "./anvil.js";
 import {capIds, marketParams} from "../src/common/market.js";
 
@@ -27,7 +27,7 @@ export async function lend(a: Anvil, ticker: string, lender: `0x${string}`, amou
   await a.send(
     lender,
     a.d.router!,
-    encodeFunctionData({abi: stocklineRouterAbi, functionName: "lend", args: [token, amount, 0n, lender, block.timestamp + 3600n]}),
+    encodeFunctionData({abi: lendoraRouterAbi, functionName: "lend", args: [token, amount, 0n, lender, block.timestamp + 3600n]}),
   );
 }
 

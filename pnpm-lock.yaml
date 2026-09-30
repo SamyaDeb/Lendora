@@ -34,7 +34,7 @@ importers:
       '@hono/zod-openapi':
         specifier: ^1.6.3
         version: 1.6.3(hono@4.13.9)(zod@4.6.5)
-      '@stockline/sdk':
+      '@lendora/sdk':
         specifier: workspace:*
         version: link:../packages/sdk
       hono:
@@ -56,10 +56,10 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
-      '@stockline/devnet':
+      '@lendora/devnet':
         specifier: workspace:*
         version: link:../packages/devnet
-      '@stockline/indexer':
+      '@lendora/indexer':
         specifier: workspace:*
         version: link:../indexer
       '@types/autocannon':
@@ -95,10 +95,10 @@ importers:
       '@hono/node-server':
         specifier: ^2.1.1
         version: 2.1.1(hono@4.13.9)
-      '@stockline/keepers':
+      '@lendora/keepers':
         specifier: workspace:*
         version: link:../keepers
-      '@stockline/sdk':
+      '@lendora/sdk':
         specifier: workspace:*
         version: link:../packages/sdk
       hono:
@@ -114,7 +114,7 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
-      '@stockline/devnet':
+      '@lendora/devnet':
         specifier: workspace:*
         version: link:../packages/devnet
       '@types/node':
@@ -135,7 +135,7 @@ importers:
 
   indexer:
     dependencies:
-      '@stockline/sdk':
+      '@lendora/sdk':
         specifier: workspace:*
         version: link:../packages/sdk
       hono:
@@ -151,7 +151,7 @@ importers:
         specifier: ^2.56.9
         version: 2.56.9(typescript@5.9.3)(zod@3.25.76)
     devDependencies:
-      '@stockline/devnet':
+      '@lendora/devnet':
         specifier: workspace:*
         version: link:../packages/devnet
       '@types/node':
@@ -175,10 +175,10 @@ importers:
       '@hono/node-server':
         specifier: ^2.1.1
         version: 2.1.1(hono@4.13.9)
-      '@stockline/indexer':
+      '@lendora/indexer':
         specifier: workspace:*
         version: link:../indexer
-      '@stockline/sdk':
+      '@lendora/sdk':
         specifier: workspace:*
         version: link:../packages/sdk
       hono:
@@ -194,10 +194,10 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
-      '@stockline/api':
+      '@lendora/api':
         specifier: workspace:*
         version: link:../api
-      '@stockline/devnet':
+      '@lendora/devnet':
         specifier: workspace:*
         version: link:../packages/devnet
       '@types/node':
@@ -218,7 +218,7 @@ importers:
 
   packages/devnet:
     dependencies:
-      '@stockline/sdk':
+      '@lendora/sdk':
         specifier: workspace:*
         version: link:../sdk
       pg:
@@ -246,14 +246,14 @@ importers:
 
   packages/launch:
     dependencies:
-      '@stockline/sdk':
+      '@lendora/sdk':
         specifier: workspace:*
         version: link:../sdk
       viem:
         specifier: ^2.56.9
         version: 2.56.9(typescript@5.9.3)(zod@4.6.5)
     devDependencies:
-      '@stockline/devnet':
+      '@lendora/devnet':
         specifier: workspace:*
         version: link:../devnet
       '@types/node':
@@ -302,6 +302,9 @@ importers:
       '@coinbase/wallet-sdk':
         specifier: ^4.4.0
         version: 4.4.0(typescript@5.9.3)(zod@3.25.76)
+      '@lendora/sdk':
+        specifier: workspace:*
+        version: link:../packages/sdk
       '@radix-ui/react-dialog':
         specifier: ^1.1.23
         version: 1.1.23(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -314,9 +317,6 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.16
         version: 1.2.16(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@stockline/sdk':
-        specifier: workspace:*
-        version: link:../packages/sdk
       '@tanstack/react-query':
         specifier: ^5.104.0
         version: 5.104.0(react@19.3.0)
@@ -348,24 +348,24 @@ importers:
       '@hono/node-server':
         specifier: ^2.1.1
         version: 2.1.1(hono@4.13.9)
+      '@lendora/api':
+        specifier: workspace:*
+        version: link:../api
+      '@lendora/compliance':
+        specifier: workspace:*
+        version: link:../compliance
+      '@lendora/devnet':
+        specifier: workspace:*
+        version: link:../packages/devnet
+      '@lendora/indexer':
+        specifier: workspace:*
+        version: link:../indexer
+      '@lendora/keepers':
+        specifier: workspace:*
+        version: link:../keepers
       '@playwright/test':
         specifier: ^1.63.0
         version: 1.63.0
-      '@stockline/api':
-        specifier: workspace:*
-        version: link:../api
-      '@stockline/compliance':
-        specifier: workspace:*
-        version: link:../compliance
-      '@stockline/devnet':
-        specifier: workspace:*
-        version: link:../packages/devnet
-      '@stockline/indexer':
-        specifier: workspace:*
-        version: link:../indexer
-      '@stockline/keepers':
-        specifier: workspace:*
-        version: link:../keepers
       '@tailwindcss/postcss':
         specifier: ^4.3.3
         version: 4.3.3

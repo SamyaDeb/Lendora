@@ -1,5 +1,5 @@
 import {NextResponse, type NextRequest} from "next/server";
-import {isRestricted, restrictedListFromEnv} from "@stockline/sdk";
+import {isRestricted, restrictedListFromEnv} from "@lendora/sdk";
 import {geoPlatform, staticGeo, visitorGeo} from "@/lib/complianceProxy";
 
 /**
@@ -21,7 +21,7 @@ export function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
   if (EXIT_OK.some((r) => r.test(path))) {
     const headers = new Headers(req.headers);
-    headers.set("x-stockline-restricted", "1");
+    headers.set("x-lendora-restricted", "1");
     return NextResponse.next({request: {headers}});
   }
   return NextResponse.rewrite(new URL("/restricted", req.url));

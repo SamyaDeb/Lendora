@@ -8,14 +8,14 @@ import {
   stockLoanPrice,
   toAssetsUp,
   type ChainDeployment,
-} from "@stockline/sdk";
+} from "@lendora/sdk";
 import type {HeadRow, Row} from "./db.js";
 
 /** Formatting for the public API (07 §2: JSON, ISO 8601 UTC times, amounts as decimal strings). Every number is
- * computed by `@stockline/sdk` (indexer snapshots via `shortInterestFields`, positions below); this module only
+ * computed by `@lendora/sdk` (indexer snapshots via `shortInterestFields`, positions below); this module only
  * formats. */
 
-export const SCOPE = "Stockline markets only: the stock-loan Morpho Blue market and the rSTOCK Vault V2 of each stock";
+export const SCOPE = "Lendora markets only: the stock-loan Morpho Blue market and the rSTOCK Vault V2 of each stock";
 
 const big = (v: unknown): bigint => BigInt(String(v ?? 0));
 export const wad = (v: unknown, digits = 18) => formatUnits(big(v), digits);
@@ -57,7 +57,7 @@ export const GUARD_REASONS = [
   "CALENDAR",
 ] as const;
 
-/** Decode the oracle's reason bitmask (StocklineOracleBase constants). */
+/** Decode the oracle's reason bitmask (LendoraOracleBase constants). */
 export function guardReasonNames(mask: bigint): string[] {
   return GUARD_REASONS.filter((_, i) => (mask >> BigInt(i)) & 1n);
 }

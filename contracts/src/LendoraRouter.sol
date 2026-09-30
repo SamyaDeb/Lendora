@@ -21,14 +21,14 @@ import {
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
 import {SharesMathLib} from "morpho-blue/src/libraries/SharesMathLib.sol";
 import {MorphoBalancesLib} from "morpho-blue/src/libraries/periphery/MorphoBalancesLib.sol";
-import {IStocklineRouter} from "./interfaces/IStocklineRouter.sol";
+import {ILendoraRouter} from "./interfaces/ILendoraRouter.sol";
 import {IStockWrapper} from "./interfaces/IStockWrapper.sol";
 import {ICollateralToken} from "./interfaces/ICollateralToken.sol";
-import {IStocklineOracle} from "./interfaces/IStocklineOracle.sol";
+import {ILendoraOracle} from "./interfaces/ILendoraOracle.sol";
 import {IVaultV2Min, IMorphoMarketV1AdapterV2Min} from "./interfaces/external/IMorphoVaultV2.sol";
 import {OracleMath} from "./libraries/OracleMath.sol";
 
-/// @title StocklineRouter
+/// @title LendoraRouter
 /// @notice One-transaction user flows over Morpho Blue, Vault V2, the wrappers and `clUSDG`
 /// (docs/prd/05-collateral-router.md §4). Entries (`borrow`, `openShort`) enforce RT-R1 (guard, HF ≥ 1.10 at t + 24h
 /// with closure and event buffers, per-address and global caps) and RT-R2 (EIP-712 attestation). Exits (`repay`,
@@ -38,14 +38,7 @@ import {OracleMath} from "./libraries/OracleMath.sol";
 /// entry point takes a `deadline` and is reentrancy-guarded (RT-R6). Swaps go only through allowlisted targets, with
 /// balance-delta checks; return data is never read (RT-R3). Users authorize the router on Morpho once
 /// (`setAuthorization`, or `morphoAuthorizeWithSig` in a `multicall`) and approve tokens with `selfPermit`.
-contract StocklineRouter is
-    IStocklineRouter,
-    Initializable,
-    UUPSUpgradeable,
-    ReentrancyGuardTransient,
-    Multicall,
-    EIP712
-{
+contract LendoraRouter is ILendoraRouter, Initializable, UUPSUpgradeable, ReentrancyGuardTransient, Multicall, EIP712 {
     using SafeERC20 for IERC20;
     using MarketParamsLib for MarketParams;
     using SharesMathLib for uint256;
@@ -356,7 +349,7 @@ contract StocklineRouter is
         Market storage m = _s().markets[stock];
         Position memory pos = MORPHO.position(m.params.id(), user);
         uint256 borrowed = MORPHO.expectedBorrowAssets(m.params, user);
-        uint256 price = IStocklineOracle(m.params.oracle).priceAt(t);
+        uint256 price = ILendoraOracle(m.params.oracle).priceAt(t);
         return OracleMath.healthFactor(pos.collateral, price, m.params.lltv, borrowed);
     }
 
@@ -375,7 +368,7 @@ contract StocklineRouter is
                 || m.params.collateralToken != address(CL_USDG) || MORPHO.market(m.params.id()).lastUpdate == 0
                 || IVaultV2Min(m.vault).asset() != m.wrapper
                 || IMorphoMarketV1AdapterV2Min(m.adapter).parentVault() != m.vault
-                || IStocklineOracle(m.params.oracle).WRAPPER() != m.wrapper
+                || ILendoraOracle(m.params.oracle).WRAPPER() != m.wrapper
         ) revert BadMarket();
         Market storage s = _s().markets[stock];
         s.wrapper = m.wrapper;
@@ -444,7 +437,7 @@ contract StocklineRouter is
     /// @dev RT-R1 guard and RT-R2 attestation, before any state change.
     function _openChecks(address stock, Attestation calldata att) internal view returns (Market storage m) {
         m = _listed(stock);
-        uint256 reasons = IStocklineOracle(m.params.oracle).guardReasons();
+        uint256 reasons = ILendoraOracle(m.params.oracle).guardReasons();
         if (reasons != 0) revert GuardTripped(reasons);
         address signer = _s().attestationSigner;
         if (signer == address(0) || att.expiry < block.timestamp) revert BadAttestation();
@@ -456,7 +449,7 @@ contract StocklineRouter is
     /// @dev RT-R1 after the position changed: HF at t + 24h, per-address debt cap, global clUSDG cap. Same values as
     /// `healthFactorAt(stock, user, now + HORIZON)`, with the accrued debt read once for both checks (Q3 gas).
     function _positionChecks(address stock, Market storage m, address user) internal view {
-        IStocklineOracle oracle = IStocklineOracle(m.params.oracle);
+        ILendoraOracle oracle = ILendoraOracle(m.params.oracle);
         uint256 borrowed = MORPHO.expectedBorrowAssets(m.params, user);
         uint256 collateral = MORPHO.position(m.params.id(), user).collateral;
         uint256 hf =

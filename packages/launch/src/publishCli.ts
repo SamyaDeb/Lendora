@@ -1,4 +1,4 @@
-/** `pnpm --filter @stockline/launch publish-deployment [--name 4663] [--replace]`: deployments/<name>.json → addresses.json["4663"] (MN-R6). */
+/** `pnpm --filter @lendora/launch publish-deployment [--name 4663] [--replace]`: deployments/<name>.json → addresses.json["4663"] (MN-R6). */
 import {join} from "node:path";
 import {fileURLToPath} from "node:url";
 import {publishDeployment} from "./publish.js";

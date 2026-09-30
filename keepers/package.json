@@ -1,12 +1,12 @@
 {
-  "name": "@stockline/keepers",
+  "name": "@lendora/keepers",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "pretypecheck": "pnpm --filter @stockline/sdk build",
+    "pretypecheck": "pnpm --filter @lendora/sdk build",
     "typecheck": "tsc --noEmit",
-    "pretest": "pnpm --filter @stockline/sdk build",
+    "pretest": "pnpm --filter @lendora/sdk build",
     "test": "vitest run",
     "allocator": "tsx src/allocator/main.ts",
     "guard": "tsx src/guard/main.ts",
@@ -22,16 +22,16 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
-    "@stockline/indexer": "workspace:*",
-    "@stockline/sdk": "workspace:*",
+    "@lendora/indexer": "workspace:*",
+    "@lendora/sdk": "workspace:*",
     "hono": "^4.13.9",
     "pg": "^8.23.0",
     "viem": "^2.56.9",
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@stockline/api": "workspace:*",
-    "@stockline/devnet": "workspace:*",
+    "@lendora/api": "workspace:*",
+    "@lendora/devnet": "workspace:*",
     "@types/node": "^22.20.4",
     "@types/pg": "^8.23.1",
     "tsx": "^4.21.0",

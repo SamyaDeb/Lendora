@@ -2,12 +2,12 @@
 pragma solidity 0.8.26;
 
 import {Vm} from "forge-std/Vm.sol";
-import {StocklineDeploy} from "./StocklineDeploy.sol";
-import {IStocklineRouter} from "../src/interfaces/IStocklineRouter.sol";
+import {LendoraDeploy} from "./LendoraDeploy.sol";
+import {ILendoraRouter} from "../src/interfaces/ILendoraRouter.sol";
 
 /// @notice Robinhood Chain (4663) configuration for fork runs, read from packages/sdk/external-addresses.json (the
 /// Phase 0 verified address book). Role holders are placeholders (labeled, keyless addresses) unless set by env.
-abstract contract ForkConfig is StocklineDeploy {
+abstract contract ForkConfig is LendoraDeploy {
     Vm private constant VM_ = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
     string internal constant EXTERNAL = "../packages/sdk/external-addresses.json";
 
@@ -16,7 +16,7 @@ abstract contract ForkConfig is StocklineDeploy {
     }
 
     function _placeholder(string memory name) internal pure returns (address) {
-        return address(uint160(uint256(keccak256(bytes(string.concat("stockline.placeholder.", name))))));
+        return address(uint160(uint256(keccak256(bytes(string.concat("lendora.placeholder.", name))))));
     }
 
     function forkCoreConfig(address deployer) public view returns (CoreConfig memory c) {
@@ -30,19 +30,19 @@ abstract contract ForkConfig is StocklineDeploy {
             adapterFactory: _ext("morpho.morphoMarketV1AdapterV2Factory"),
             issuerRegistry: _ext("stockTokenAdmin.accessControlsRegistry"),
             sequencerFeed: address(0), // none on chain 4663 (D3)
-            owner: VM_.envOr("STOCKLINE_OWNER", _placeholder("owner")),
-            curator: VM_.envOr("STOCKLINE_CURATOR", _placeholder("curator")),
-            guardian: VM_.envOr("STOCKLINE_GUARDIAN", _placeholder("guardian")),
-            allocator: VM_.envOr("STOCKLINE_ALLOCATOR", _placeholder("allocator")),
-            guardKeeper: VM_.envOr("STOCKLINE_GUARD_KEEPER", _placeholder("guardKeeper")),
-            treasury: VM_.envOr("STOCKLINE_TREASURY", _placeholder("treasury")),
-            backstopReserve: VM_.envOr("STOCKLINE_BACKSTOP_RESERVE", _placeholder("backstopReserve")),
-            feeKeeper: VM_.envOr("STOCKLINE_FEE_KEEPER", _placeholder("feeKeeper")),
+            owner: VM_.envOr("LENDORA_OWNER", _placeholder("owner")),
+            curator: VM_.envOr("LENDORA_CURATOR", _placeholder("curator")),
+            guardian: VM_.envOr("LENDORA_GUARDIAN", _placeholder("guardian")),
+            allocator: VM_.envOr("LENDORA_ALLOCATOR", _placeholder("allocator")),
+            guardKeeper: VM_.envOr("LENDORA_GUARD_KEEPER", _placeholder("guardKeeper")),
+            treasury: VM_.envOr("LENDORA_TREASURY", _placeholder("treasury")),
+            backstopReserve: VM_.envOr("LENDORA_BACKSTOP_RESERVE", _placeholder("backstopReserve")),
+            feeKeeper: VM_.envOr("LENDORA_FEE_KEEPER", _placeholder("feeKeeper")),
             timelockDelay: 48 hours,
-            attestationSigner: VM_.envOr("STOCKLINE_ATTESTATION_SIGNER", _placeholder("attestationSigner")),
+            attestationSigner: VM_.envOr("LENDORA_ATTESTATION_SIGNER", _placeholder("attestationSigner")),
             globalCollateralCap: 4_000_000e6,
             swapTarget: _ext("uniswap.universalRouter"),
-            swapMode: IStocklineRouter.SwapMode.Transfer
+            swapMode: ILendoraRouter.SwapMode.Transfer
         });
     }
 

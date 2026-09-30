@@ -1,4 +1,4 @@
-import {feedSessions, fullBuffer, type MarketChainState, type Session} from "@stockline/sdk";
+import {feedSessions, fullBuffer, type MarketChainState, type Session} from "@lendora/sdk";
 import type {Incident, MonitorStore, WeekendEntry} from "./store.js";
 
 /**

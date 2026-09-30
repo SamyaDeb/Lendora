@@ -90,7 +90,7 @@ export const RULES: Record<RuleId, RuleMeta> = {
   COLLATERAL_BELOW_BUFFER: {req: "MON-R26", severity: "P2", runbook: rb("collateral-below-buffer.md")},
 };
 
-/** Oracle guard reason bits (StocklineOracleBase), by name. */
+/** Oracle guard reason bits (LendoraOracleBase), by name. */
 export const REASONS: Record<string, bigint> = {
   MANUAL: 1n,
   DEVIATION: 2n,

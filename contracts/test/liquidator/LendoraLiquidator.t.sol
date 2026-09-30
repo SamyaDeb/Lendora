@@ -5,17 +5,17 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IMorpho, MarketParams, Position, Market} from "morpho-blue/src/interfaces/IMorpho.sol";
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
-import {StocklineLiquidator} from "../../src/StocklineLiquidator.sol";
-import {IStocklineRouter} from "../../src/interfaces/IStocklineRouter.sol";
+import {LendoraLiquidator} from "../../src/LendoraLiquidator.sol";
+import {ILendoraRouter} from "../../src/interfaces/ILendoraRouter.sol";
 import {MockSwapAggregator} from "../mocks/MockSwapAggregator.sol";
-import {LocalStockline} from "../utils/LocalStockline.sol";
+import {LocalLendora} from "../utils/LocalLendora.sol";
 
 /// @notice Fallback liquidator (03 LM-R12, 02): seize clUSDG → unwrap → buy stock → wrap → repay, in one tx
 /// through the
 /// Morpho callback, for any position, holding nothing afterwards.
 /// forge-config: default.isolate = true
 /// forge-config: ci.isolate = true
-contract StocklineLiquidatorTest is LocalStockline {
+contract LendoraLiquidatorTest is LocalLendora {
     using MarketParamsLib for MarketParams;
 
     uint256 internal constant I = 1; // NVDA
@@ -23,7 +23,7 @@ contract StocklineLiquidatorTest is LocalStockline {
     address internal lender = makeAddr("lender");
     address internal alice = makeAddr("alice");
     address internal recipient = makeAddr("recipient");
-    StocklineLiquidator internal liq;
+    LendoraLiquidator internal liq;
     IMorpho internal morpho;
     address internal nvda;
 
@@ -48,15 +48,15 @@ contract StocklineLiquidatorTest is LocalStockline {
     /// @dev alice: collateral with a dust borrow through the attested router entry (RT-R8: no debt-free collateral),
     /// then the rest borrowed directly on Morpho (a position sized outside the router's checks, 05 §1 residual).
     function _openDirect(uint256 collateral, uint256 debt) internal {
-        IStocklineRouter.Attestation memory att = _attest(alice);
+        ILendoraRouter.Attestation memory att = _attest(alice);
         vm.prank(alice);
         core.router.borrow(nvda, collateral, DUST, alice, att, block.timestamp);
         vm.prank(alice);
         morpho.borrow(ds[I].market, debt - DUST, 0, alice, alice);
     }
 
-    function _buy(uint256 usdgIn, uint256 minOut) internal view returns (StocklineLiquidator.Swap memory) {
-        return StocklineLiquidator.Swap({
+    function _buy(uint256 usdgIn, uint256 minOut) internal view returns (LendoraLiquidator.Swap memory) {
+        return LendoraLiquidator.Swap({
             target: address(m.dex),
             data: abi.encodeCall(MockSwapAggregator.swap, (address(m.usdg), nvda, usdgIn, 0, address(liq))),
             amountIn: usdgIn,
@@ -64,12 +64,12 @@ contract StocklineLiquidatorTest is LocalStockline {
         });
     }
 
-    function _liquidation(uint256 seized, uint256 shares, StocklineLiquidator.Swap memory s, uint256 minProfit)
+    function _liquidation(uint256 seized, uint256 shares, LendoraLiquidator.Swap memory s, uint256 minProfit)
         internal
         view
-        returns (StocklineLiquidator.Liquidation memory)
+        returns (LendoraLiquidator.Liquidation memory)
     {
-        return StocklineLiquidator.Liquidation({
+        return LendoraLiquidator.Liquidation({
             market: ds[I].market,
             borrower: alice,
             seizedAssets: seized,
@@ -112,8 +112,8 @@ contract StocklineLiquidatorTest is LocalStockline {
     function test_LM_R12_routerOpenedShortIsLiquidatable() public {
         _onboard(makeAddr("bob"), 0, 100_000e6);
         address bob = makeAddr("bob");
-        IStocklineRouter.Attestation memory att = _attest(bob);
-        IStocklineRouter.Swap memory sell = IStocklineRouter.Swap({
+        ILendoraRouter.Attestation memory att = _attest(bob);
+        ILendoraRouter.Swap memory sell = ILendoraRouter.Swap({
             target: address(m.dex),
             data: abi.encodeCall(MockSwapAggregator.swap, (nvda, address(m.usdg), 10e18, 0, address(core.router))),
             amountIn: 10e18,
@@ -122,7 +122,7 @@ contract StocklineLiquidatorTest is LocalStockline {
         vm.prank(bob);
         core.router.openShort(nvda, 3500e6, 10e18, sell, false, bob, att, block.timestamp);
         _setPrice(320e8);
-        StocklineLiquidator.Liquidation memory l = _liquidation(0, 0, _buy(10.1e18 * 320 / 1e12, 10e18), 0);
+        LendoraLiquidator.Liquidation memory l = _liquidation(0, 0, _buy(10.1e18 * 320 / 1e12, 10e18), 0);
         l.borrower = bob;
         l.repaidShares = morpho.position(ds[I].market.id(), bob).borrowShares;
         liq.liquidate(l);
@@ -151,7 +151,7 @@ contract StocklineLiquidatorTest is LocalStockline {
         _openDirect(3500e6, 10e18);
         _setPrice(320e8);
         uint256 shares = morpho.position(ds[I].market.id(), alice).borrowShares;
-        StocklineLiquidator.Swap memory s = _buy(10.1e18 * 320 / 1e12, 10e18);
+        LendoraLiquidator.Swap memory s = _buy(10.1e18 * 320 / 1e12, 10e18);
         s.data = abi.encodeWithSignature("doesNotExist()"); // the target has no such function: the call reverts
         vm.expectRevert();
         liq.liquidate(_liquidation(0, shares, s, 0));
@@ -165,49 +165,49 @@ contract StocklineLiquidatorTest is LocalStockline {
         uint256 shares = morpho.position(ds[I].market.id(), alice).borrowShares;
         uint256 usdgIn = 10.1e18 * 320 / 1e12;
 
-        StocklineLiquidator.Liquidation memory l = _liquidation(0, shares, _buy(usdgIn, 10e18), 1_000_000e6);
+        LendoraLiquidator.Liquidation memory l = _liquidation(0, shares, _buy(usdgIn, 10e18), 1_000_000e6);
         vm.expectRevert(); // InsufficientProfit
         liq.liquidate(l);
 
         l = _liquidation(0, shares, _buy(usdgIn, 20e18), 0);
-        vm.expectRevert(abi.encodeWithSelector(StocklineLiquidator.InsufficientOutput.selector, 10.1e18, 20e18));
+        vm.expectRevert(abi.encodeWithSelector(LendoraLiquidator.InsufficientOutput.selector, 10.1e18, 20e18));
         liq.liquidate(l);
 
         l = _liquidation(0, shares, _buy(usdgIn, 0), 0);
         l.swap.target = makeAddr("evil");
-        vm.expectRevert(abi.encodeWithSelector(StocklineLiquidator.SwapTargetNotAllowed.selector, l.swap.target));
+        vm.expectRevert(abi.encodeWithSelector(LendoraLiquidator.SwapTargetNotAllowed.selector, l.swap.target));
         liq.liquidate(l);
 
         l = _liquidation(0, shares, _buy(usdgIn, 0), 0);
         l.deadline = block.timestamp - 1;
-        vm.expectRevert(StocklineLiquidator.Expired.selector);
+        vm.expectRevert(LendoraLiquidator.Expired.selector);
         liq.liquidate(l);
 
         l = _liquidation(0, shares, _buy(usdgIn, 0), 0);
         l.market.collateralToken = address(m.usdg);
-        vm.expectRevert(StocklineLiquidator.BadMarket.selector);
+        vm.expectRevert(LendoraLiquidator.BadMarket.selector);
         liq.liquidate(l);
 
         l = _liquidation(0, shares, _buy(usdgIn, 0), 0);
         l.recipient = address(0);
-        vm.expectRevert(StocklineLiquidator.ZeroAddress.selector);
+        vm.expectRevert(LendoraLiquidator.ZeroAddress.selector);
         liq.liquidate(l);
 
-        vm.expectRevert(StocklineLiquidator.NotMorpho.selector);
+        vm.expectRevert(LendoraLiquidator.NotMorpho.selector);
         liq.onMorphoLiquidate(1, abi.encode(ds[I].market));
         vm.prank(m.morpho);
-        vm.expectRevert(StocklineLiquidator.NotMorpho.selector); // not inside our own liquidate()
+        vm.expectRevert(LendoraLiquidator.NotMorpho.selector); // not inside our own liquidate()
         liq.onMorphoLiquidate(1, abi.encode(ds[I].market));
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(this)));
-        liq.setSwapTarget(address(1), StocklineLiquidator.SwapMode.Approve);
+        liq.setSwapTarget(address(1), LendoraLiquidator.SwapMode.Approve);
         vm.startPrank(owner);
-        vm.expectRevert(StocklineLiquidator.ZeroAddress.selector);
-        liq.setSwapTarget(m.morpho, StocklineLiquidator.SwapMode.Approve);
-        liq.setSwapTarget(address(1), StocklineLiquidator.SwapMode.Transfer);
+        vm.expectRevert(LendoraLiquidator.ZeroAddress.selector);
+        liq.setSwapTarget(m.morpho, LendoraLiquidator.SwapMode.Approve);
+        liq.setSwapTarget(address(1), LendoraLiquidator.SwapMode.Transfer);
         vm.stopPrank();
         assertEq(uint256(liq.swapModes(address(1))), 2);
-        vm.expectRevert(StocklineLiquidator.ZeroAddress.selector);
-        new StocklineLiquidator(address(0), address(core.clUSDG), owner);
+        vm.expectRevert(LendoraLiquidator.ZeroAddress.selector);
+        new LendoraLiquidator(address(0), address(core.clUSDG), owner);
     }
 }

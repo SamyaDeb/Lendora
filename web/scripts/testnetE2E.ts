@@ -12,7 +12,7 @@
  *      API after the indexer catches up; then the attested edge cases (health, slippage, swap target, someone else's
  *      attestation, vault cap, claim before settlement, over-withdrawal).
  *
- *   pnpm --filter @stockline/web exec tsx scripts/testnetE2E.ts --web http://127.0.0.1:3000 --api http://127.0.0.1:42070 \
+ *   pnpm --filter @lendora/web exec tsx scripts/testnetE2E.ts --web http://127.0.0.1:3000 --api http://127.0.0.1:42070 \
  *     --compliance http://127.0.0.1:42071 --monitor http://127.0.0.1:42073 --rpc https://rpc.testnet.chain.robinhood.com \
  *     [--flows] [--report ../docs/runbooks/testnet-e2e.md]
  */
@@ -27,11 +27,11 @@ import {
   mockAggregatorSwap,
   morphoAbi,
   navOracleAbi,
-  stocklineOracleAbi,
-  stocklineRouterAbi,
+  lendoraOracleAbi,
+  lendoraRouterAbi,
   strategyManagerAbi,
-} from "@stockline/sdk";
-import {ChainDriver, complianceAttestationProvider, connectWallet, smokeFlows, waitForLiquidity} from "@stockline/devnet";
+} from "@lendora/sdk";
+import {ChainDriver, complianceAttestationProvider, connectWallet, smokeFlows, waitForLiquidity} from "@lendora/devnet";
 
 const arg = (n: string, d = "") => {
   const i = process.argv.indexOf(`--${n}`);
@@ -174,7 +174,7 @@ await step(G_A, "compliance direct: client geo headers without the proxy secret 
 await step(G_A, "compliance /health", async () => {
   if (!compliance) return {skip: "no --compliance URL"};
   const h = (await (await status(`${compliance}/health`, 200)).json()) as {signer: string; sanctions: string};
-  const router = await client.readContract({address: d.router!, abi: stocklineRouterAbi, functionName: "attestationSigner"});
+  const router = await client.readContract({address: d.router!, abi: lendoraRouterAbi, functionName: "attestationSigner"});
   if (router.toLowerCase() !== h.signer.toLowerCase()) throw new Error(`compliance signer ${h.signer} is not the router's attestation signer ${router}`);
   return `signer = router.attestationSigner; sanctions ${h.sanctions}`;
 });
@@ -188,19 +188,19 @@ await step(G_A, "monitor /health and the weekend log", async () => {
 // =============================================================== B. Contract edge cases (simulation, no key)
 const G_B = "B · edge cases (simulated)";
 const R = d.router!;
-await step(G_B, "lend: an expired deadline → Expired", async () => refuses(stocklineRouterAbi, R, "lend", [s.stockToken, 10n ** 18n, 0n, probe, (await now()) - 1n], probe, /Expired/));
-await step(G_B, "lend: zero amount → ZeroAmount", async () => refuses(stocklineRouterAbi, R, "lend", [s.stockToken, 0n, 0n, probe, await deadline()], probe, /ZeroAmount/));
-await step(G_B, "lend: an unlisted token → NotListed", async () => refuses(stocklineRouterAbi, R, "lend", [probe, 10n ** 18n, 0n, probe, await deadline()], probe, /NotListed/));
-await step(G_B, "borrow: a forged attestation → BadAttestation (RT-R2)", async () => refuses(stocklineRouterAbi, R, "borrow", [s.stockToken, 1_000n * 10n ** 6n, 10n ** 17n, probe, await badAtt(), await deadline()], probe, /BadAttestation|GuardTripped|MarketClosed/));
-await step(G_B, "borrow: an expired attestation → refused", async () => refuses(stocklineRouterAbi, R, "borrow", [s.stockToken, 1_000n * 10n ** 6n, 10n ** 17n, probe, {expiry: 1n, signature: `0x${"11".repeat(65)}`}, await deadline()], probe, /BadAttestation|Expired/));
+await step(G_B, "lend: an expired deadline → Expired", async () => refuses(lendoraRouterAbi, R, "lend", [s.stockToken, 10n ** 18n, 0n, probe, (await now()) - 1n], probe, /Expired/));
+await step(G_B, "lend: zero amount → ZeroAmount", async () => refuses(lendoraRouterAbi, R, "lend", [s.stockToken, 0n, 0n, probe, await deadline()], probe, /ZeroAmount/));
+await step(G_B, "lend: an unlisted token → NotListed", async () => refuses(lendoraRouterAbi, R, "lend", [probe, 10n ** 18n, 0n, probe, await deadline()], probe, /NotListed/));
+await step(G_B, "borrow: a forged attestation → BadAttestation (RT-R2)", async () => refuses(lendoraRouterAbi, R, "borrow", [s.stockToken, 1_000n * 10n ** 6n, 10n ** 17n, probe, await badAtt(), await deadline()], probe, /BadAttestation|GuardTripped|MarketClosed/));
+await step(G_B, "borrow: an expired attestation → refused", async () => refuses(lendoraRouterAbi, R, "borrow", [s.stockToken, 1_000n * 10n ** 6n, 10n ** 17n, probe, {expiry: 1n, signature: `0x${"11".repeat(65)}`}, await deadline()], probe, /BadAttestation|Expired/));
 await step(G_B, "openShort: a forged attestation → BadAttestation", async () =>
-  refuses(stocklineRouterAbi, R, "openShort", [s.stockToken, 1_000n * 10n ** 6n, 10n ** 17n, {target: d.mocks!.swapAggregator, data: "0x", amountIn: 10n ** 17n, minOut: 0n}, false, probe, await badAtt(), await deadline()], probe, /BadAttestation|GuardTripped|MarketClosed/),
+  refuses(lendoraRouterAbi, R, "openShort", [s.stockToken, 1_000n * 10n ** 6n, 10n ** 17n, {target: d.mocks!.swapAggregator, data: "0x", amountIn: 10n ** 17n, minOut: 0n}, false, probe, await badAtt(), await deadline()], probe, /BadAttestation|GuardTripped|MarketClosed/),
 );
-await step(G_B, "addCollateral without a debt position → NoDebtPosition (RT-R8)", async () => refuses(stocklineRouterAbi, R, "addCollateral", [s.stockToken, 10n ** 6n, probe, await deadline()], probe, /NoDebtPosition/));
-await step(G_B, "router owner action from a stranger → NotOwner", async () => refuses(stocklineRouterAbi, R, "setGlobalCap", [1n], probe, /NotOwner/));
-await step(G_B, "oracle guard trip from a stranger → Unauthorized", async () => refuses(stocklineOracleAbi, s.oracle, "trip", [1n], probe, /Unauthorized/));
+await step(G_B, "addCollateral without a debt position → NoDebtPosition (RT-R8)", async () => refuses(lendoraRouterAbi, R, "addCollateral", [s.stockToken, 10n ** 6n, probe, await deadline()], probe, /NoDebtPosition/));
+await step(G_B, "router owner action from a stranger → NotOwner", async () => refuses(lendoraRouterAbi, R, "setGlobalCap", [1n], probe, /NotOwner/));
+await step(G_B, "oracle guard trip from a stranger → Unauthorized", async () => refuses(lendoraOracleAbi, s.oracle, "trip", [1n], probe, /Unauthorized/));
 await step(G_B, "Morpho: withdraw collateral you don't have → reverts", async () => {
-  const p = await client.readContract({address: R, abi: stocklineRouterAbi, functionName: "market", args: [s.stockToken]});
+  const p = await client.readContract({address: R, abi: lendoraRouterAbi, functionName: "market", args: [s.stockToken]});
   return refuses(morphoAbi, d.morpho, "withdrawCollateral", [p.params, 10n ** 6n, probe, probe], probe, /./);
 });
 if (d.feeSplitter && d.treasuryConverter)
@@ -302,28 +302,28 @@ if (has("flows")) {
     // Sized from the feed price instead, Morpho refused first ("insufficient collateral").
     const collateral = 100n * 10n ** 6n; // USDG → clUSDG 1:1, both 6 dp
     if ((await bal(d.usdg)) < collateral) return {skip: "under 100 USDG"};
-    const {lltv} = (await client.readContract({address: R, abi: stocklineRouterAbi, functionName: "market", args: [s.stockToken]})).params;
-    const price = await client.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "price"});
+    const {lltv} = (await client.readContract({address: R, abi: lendoraRouterAbi, functionName: "market", args: [s.stockToken]})).params;
+    const price = await client.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "price"});
     const amount = (((collateral * price) / 10n ** 36n) * lltv * 100n) / (10n ** 18n * 104n);
-    return refuses(stocklineRouterAbi, R, "borrow", [s.stockToken, collateral, amount, me, att, await deadline()], me, /HealthTooLow|GuardTripped|MarketClosed/);
+    return refuses(lendoraRouterAbi, R, "borrow", [s.stockToken, collateral, amount, me, att, await deadline()], me, /HealthTooLow|GuardTripped|MarketClosed/);
   });
   await step(G_E, "openShort through a swap target that isn't allowlisted → SwapTargetNotAllowed (RT-R3)", async () => {
     const att = await attest(me);
-    return refuses(stocklineRouterAbi, R, "openShort", [s.stockToken, 500n * 10n ** 6n, 10n ** 17n, {target: probe, data: "0x", amountIn: 10n ** 17n, minOut: 0n}, false, me, att, await deadline()], me, /SwapTargetNotAllowed|GuardTripped|MarketClosed/);
+    return refuses(lendoraRouterAbi, R, "openShort", [s.stockToken, 500n * 10n ** 6n, 10n ** 17n, {target: probe, data: "0x", amountIn: 10n ** 17n, minOut: 0n}, false, me, att, await deadline()], me, /SwapTargetNotAllowed|GuardTripped|MarketClosed/);
   });
   await step(G_E, "openShort with a minimum above what the DEX pays → InsufficientOutput (slippage, FE-R4-style bound)", async () => {
     const att = await attest(me);
     const amount = 10n ** 17n;
     const swap = mockAggregatorSwap(d.mocks!.swapAggregator, s.stockToken, d.usdg, amount, 10n ** 12n, R); // 1M USDG for 0.1 NVDA
-    return refuses(stocklineRouterAbi, R, "openShort", [s.stockToken, 500n * 10n ** 6n, amount, swap, false, me, att, await deadline()], me, /InsufficientOutput|GuardTripped|MarketClosed/);
+    return refuses(lendoraRouterAbi, R, "openShort", [s.stockToken, 500n * 10n ** 6n, amount, swap, false, me, att, await deadline()], me, /InsufficientOutput|GuardTripped|MarketClosed/);
   });
   await step(G_E, "someone else's attestation is refused (bound to the wallet)", async () => {
     const att = await attest(me);
-    return refuses(stocklineRouterAbi, R, "borrow", [s.stockToken, 500n * 10n ** 6n, 10n ** 17n, probe, att, await deadline()], probe, /BadAttestation/);
+    return refuses(lendoraRouterAbi, R, "borrow", [s.stockToken, 500n * 10n ** 6n, 10n ** 17n, probe, att, await deadline()], probe, /BadAttestation/);
   });
-  await step(G_E, "withdraw more lent shares than held → refused", async () => refuses(stocklineRouterAbi, R, "withdrawLend", [s.stockToken, 10n ** 30n, 0n, me, await deadline()], me, /./));
+  await step(G_E, "withdraw more lent shares than held → refused", async () => refuses(lendoraRouterAbi, R, "withdrawLend", [s.stockToken, 10n ** 30n, 0n, me, await deadline()], me, /./));
   await step(G_E, "repay with no debt → refused or no-op", async () => {
-    const r = await client.simulateContract({address: R, abi: stocklineRouterAbi, functionName: "repay", args: [s.stockToken, 0n, maxUint256, me, await deadline()], account: me}).catch((e: Error) => ({result: `reverts (${e.message.split("\n")[0].slice(0, 60)})`}));
+    const r = await client.simulateContract({address: R, abi: lendoraRouterAbi, functionName: "repay", args: [s.stockToken, 0n, maxUint256, me, await deadline()], account: me}).catch((e: Error) => ({result: `reverts (${e.message.split("\n")[0].slice(0, 60)})`}));
     return `repay(all) with no debt → ${String((r as {result: unknown}).result)}`;
   });
   await step(G_E, `withdraw the 1 ${T} lent for the checks above (forceDeallocate when idle is short, LM-R22)`, async () => {

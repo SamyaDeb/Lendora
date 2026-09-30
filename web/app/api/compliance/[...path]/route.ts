@@ -5,7 +5,7 @@ import {complianceProxyHeaders, geoPlatform, staticGeo} from "@/lib/compliancePr
 /**
  * Server-side proxy to the compliance service (CP-R1…R3, APP-R10). It runs at the edge of our deployment, where the
  * platform (`GEO_PLATFORM`: vercel | cloudflare) sets the visitor's country and IP, and forwards only those, normalized,
- * with `x-stockline-proxy: $PROXY_SECRET`, the only way the compliance service trusts them. Client-sent geo, IP and
+ * with `x-lendora-proxy: $PROXY_SECRET`, the only way the compliance service trusts them. Client-sent geo, IP and
  * proxy headers are dropped (CP-R8). Locally (`next dev` only) `GEO_PLATFORM=static` + `GEO_STATIC_COUNTRY` stands in
  * for the edge.
  */

@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-/// @title Stockline stock wrapper (docs/prd/03-lending-markets.md §1).
+/// @title Lendora stock wrapper (docs/prd/03-lending-markets.md §1).
 interface IStockWrapper is IERC20Metadata {
     event Wrapped(address indexed caller, address indexed to, uint256 amount);
     event Unwrapped(address indexed caller, address indexed to, uint256 amount);

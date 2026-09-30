@@ -10,7 +10,7 @@ Real data only:
 - measured DEX depth (sim/data/dex_depth.csv) for swap costs, as sim/params/params.py uses it;
 - 10 years of daily closes (sim/data/reference/*_daily.csv) for weekend gaps.
 
-The lending leg has **no observed history** (Stockline is not on mainnet and the 4663 stock-loan markets are empty,
+The lending leg has **no observed history** (Lendora is not on mainnet and the 4663 stock-loan markets are empty,
 01-chain-facts §8): its supply APY is a stated proxy with sensitivities, never a measured number.
 
 The gate needs ≥ 12 months of funding for each launch stock; the venue has ≈ 3 months, so the verdict is
@@ -459,7 +459,7 @@ def main() -> None:
     w("")
     w(f"## Verdict: **{verdict}**")
     w("")
-    w(f"The gate needs ≥ {GATE_MONTHS} months of perp funding for each launch stock on the chosen venue (08 gate item 1). Lighter's Robinhood Chain instance has **{history_days} days** ({months:.1f} months, from {min(f.index.min() for f in fund_all.values()):%Y-%m-%d}); the earliest date with 12 months is **2027-06-26**. Every number below is computed on the observed window only and is **not** a gate result. The borrow-side (lending APY) history does not exist at all (no Stockline mainnet, empty 4663 stock-loan markets), so it is a stated proxy.")
+    w(f"The gate needs ≥ {GATE_MONTHS} months of perp funding for each launch stock on the chosen venue (08 gate item 1). Lighter's Robinhood Chain instance has **{history_days} days** ({months:.1f} months, from {min(f.index.min() for f in fund_all.values()):%Y-%m-%d}); the earliest date with 12 months is **2027-06-26**. Every number below is computed on the observed window only and is **not** a gate result. The borrow-side (lending APY) history does not exist at all (no Lendora mainnet, empty 4663 stock-loan markets), so it is a stated proxy.")
     w("")
     w("| Gate criterion (08) | Observed-window result | Status |")
     w("|---|---|---|")
@@ -560,7 +560,7 @@ def main() -> None:
     w("## 7. What would change the verdict")
     w("")
     w("1. 12 months of Lighter funding (2027-06-26) or a second venue with longer history (Arcus [VERIFY]). Rerun `fetch.py` then `model.py`.")
-    w("2. Observed rSTOCK utilization and supply APY from Stockline mainnet (replaces the lending proxy).")
+    w("2. Observed rSTOCK utilization and supply APY from Lendora mainnet (replaces the lending proxy).")
     w("3. Perp slippage at size (the 1 bp assumption) from a live canary (A39).")
     w("4. Sign-off: [`docs/owner-actions/dn-vault-signoff.md`](../../docs/owner-actions/dn-vault-signoff.md).")
     REPORT.write_text("\n".join(L_) + "\n")

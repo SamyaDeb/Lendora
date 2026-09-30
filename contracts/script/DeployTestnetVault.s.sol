@@ -36,11 +36,11 @@ contract DeployTestnetVault is Script, DnVaultDeploy {
         }
         string memory j = vm.readFile(BOOK);
         (DnConfig memory c, DnSleeveConfig[] memory sl) = configFromBook(
-            j, msg.sender, feeRecipient(j, !live), testnetCap(vm.envOr("STOCKLINE_DN_TESTNET_CAP_USDG", uint256(0)))
+            j, msg.sender, feeRecipient(j, !live), testnetCap(vm.envOr("LENDORA_DN_TESTNET_CAP_USDG", uint256(0)))
         );
         vm.startBroadcast(msg.sender);
         dn = _deployDnVault(c, sl);
-        address feedKeeper = vm.envOr("STOCKLINE_FEED_KEEPER", msg.sender);
+        address feedKeeper = vm.envOr("LENDORA_FEED_KEEPER", msg.sender);
         MockGate(dn.adapter).setOperator(msg.sender, true);
         if (feedKeeper != msg.sender) MockGate(dn.adapter).setOperator(feedKeeper, true);
         MockGate(dn.adapter).setGated(true);
@@ -60,7 +60,7 @@ contract DeployTestnetVault is Script, DnVaultDeploy {
         revert("DeployTestnetVault: no FeeSplitter in the address book: run DeployTestnetFees first (DN-R9)");
     }
 
-    /// @notice A49: the owner's testnet cap (Part C, "open a testnet cap"), `STOCKLINE_DN_TESTNET_CAP_USDG` in whole
+    /// @notice A49: the owner's testnet cap (Part C, "open a testnet cap"), `LENDORA_DN_TESTNET_CAP_USDG` in whole
     /// test USDG (6 dp raw here), default 0. Total cap and every sleeve's spot cap (each sleeve is bounded by the
     /// total). Testnet only: `DnVaultDeploy` still refuses any cap above 0 on 4663 (MN-R7), and this script is
     /// 46630-only.
@@ -76,9 +76,9 @@ contract DeployTestnetVault is Script, DnVaultDeploy {
         view
         returns (DnConfig memory c, DnSleeveConfig[] memory sl)
     {
-        address s2 = vm.envOr("STOCKLINE_NAV_SIGNER_2", address(0));
+        address s2 = vm.envOr("LENDORA_NAV_SIGNER_2", address(0));
         address[] memory signers = new address[](s2 == address(0) ? 1 : 2);
-        signers[0] = vm.envOr("STOCKLINE_NAV_SIGNER_1", deployer);
+        signers[0] = vm.envOr("LENDORA_NAV_SIGNER_1", deployer);
         if (s2 != address(0)) signers[1] = s2;
         c = DnConfig({
             deployer: deployer,
@@ -87,7 +87,7 @@ contract DeployTestnetVault is Script, DnVaultDeploy {
             marketHours: vm.parseJsonAddress(j, string.concat(C, "marketHours")),
             timelock: vm.parseJsonAddress(j, string.concat(C, "timelock")),
             guardian: vm.parseJsonAddress(j, string.concat(C, "roles.guardian")),
-            operator: vm.envOr("STOCKLINE_DN_OPERATOR", deployer),
+            operator: vm.envOr("LENDORA_DN_OPERATOR", deployer),
             feeRecipient: feeRecipient_,
             navSigners: signers,
             swapTarget: vm.parseJsonAddress(j, string.concat(C, "mocks.swapAggregator")),

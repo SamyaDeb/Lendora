@@ -1,6 +1,6 @@
-# Stockline PRD
+# Lendora PRD
 
-Product requirements for **Stockline**, the stock lending layer for Robinhood Chain.
+Product requirements for **Lendora**, the stock lending layer for Robinhood Chain.
 Source: [`../LITEPAPER.md`](../LITEPAPER.md) (draft v0.1, September 2026).
 
 *As of 2026-09-26. Working name. Not investment or legal advice.*
@@ -34,7 +34,7 @@ that Phase 0 must confirm before code depends on it (see [`12-open-questions.md`
 
 ## Key design decisions (summary)
 
-1. **Morpho Blue is the engine.** No custom lending logic. Stockline builds wrappers, an oracle, a router, vaults and data.
+1. **Morpho Blue is the engine.** No custom lending logic. Lendora builds wrappers, an oracle, a router, vaults and data.
 2. **Stock is the loan asset.** One isolated Morpho market per stock: loan = wrapped stock, collateral = gated USDG collateral token.
 3. **Lenders supply through a per-stock Morpho Vault V2** (ERC-4626, official factory; D6). Its share token *is* the receipt
    (`rNVDA`). The vault enforces supply caps, keeps an idle reserve (relative cap = utilization cap) and takes the protocol fee.

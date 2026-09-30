@@ -22,4 +22,4 @@ Tx hashes are fork-local. Ran by: engineering (Claude Code session), owner revie
 | 13 | Unexpected schedule (attestation signer → attacker) decoded and cancelled | governance-change.md | page text: "router.setAttestationSigner(0x00000000000000000000000000000000000bAD01)"; cancelled; execute refused after the delay | 2026-10-12T09:36 | `0x4dfffc89…` `0xdeeaa026…` |
 | 14 | P0 tabletop: wrapper backing shortfall (issuer adminBurn 1 NVDA) | wrapper-backing-shortfall.md | shortfall 1000000000000000000; delisted through the timelock; borrow refused (NotListed); repay + withdraw all worked | 2026-10-13T09:36 | `0x98e5bd30…` `0x93350535…` `0xc02cb3e3…` `0x8add4b38…` |
 
-Re-run: `FORK_DRILLS_46630=1 FORK_DRILLS_REPORT=1 pnpm --filter @stockline/devnet exec vitest run test/forkDrills.test.ts`.
+Re-run: `FORK_DRILLS_46630=1 FORK_DRILLS_REPORT=1 pnpm --filter @lendora/devnet exec vitest run test/forkDrills.test.ts`.

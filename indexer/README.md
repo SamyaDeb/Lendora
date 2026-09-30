@@ -1,11 +1,11 @@
 # indexer
 
-Ponder indexer for Stockline short-interest data (docs/prd/07 §1, SI-R1…R5) → Postgres. Addresses, ABIs and every
-number (accrual, IRM rate, APR/APY, 07 §Definitions fields) come from `@stockline/sdk`.
+Ponder indexer for Lendora short-interest data (docs/prd/07 §1, SI-R1…R5) → Postgres. Addresses, ABIs and every
+number (accrual, IRM rate, APR/APY, 07 §Definitions fields) come from `@lendora/sdk`.
 
 | Req | Where |
 |---|---|
-| SI-R1 | `ponder.config.ts`: Morpho Blue events filtered to Stockline market ids, AdaptiveCurveIrm `BorrowRateUpdate` (same ids), Vault V2 (`rSTOCK`), router, oracle `GuardChanged`, Stock Token `UIMultiplierUpdated`, DEX swaps (mock aggregator on anvil/testnet, Uniswap v3 USDG/WETH pools on the fork) |
+| SI-R1 | `ponder.config.ts`: Morpho Blue events filtered to Lendora market ids, AdaptiveCurveIrm `BorrowRateUpdate` (same ids), Vault V2 (`rSTOCK`), router, oracle `GuardChanged`, Stock Token `UIMultiplierUpdated`, DEX swaps (mock aggregator on anvil/testnet, Uniswap v3 USDG/WETH pools on the fork) |
 | SI-R2 | `ponder.schema.ts`: `market`, `position`, `snapshot` (every block where a stock's state changed, plus heartbeat blocks), `latest_snapshot`, `rollup` + `flow_bucket` (1m/1h/1d), `event_feed`, `dex_volume`. Fields computed by `shortInterestFields` (SDK) |
 | SI-R3 | `chain_head`: indexed head plus the chain's `safe` / `finalized` blocks; the API marks data `confirmed` when its block ≤ `finalized` (Ponder itself rolls back reorged rows) |
 | SI-R4 | Realtime polling 100 ms (anvil) / 200 ms (chains); oracle views read with one batched JSON-RPC request per snapshot |
@@ -20,16 +20,16 @@ snapshot falls back to the previous one or starts once reads succeed.
 
 ```sh
 # anvil (scripts/dev.sh starts everything)
-STOCKLINE_NETWORK=31337 RPC_URL=http://127.0.0.1:8545 DATABASE_URL=postgres://… pnpm --filter @stockline/indexer dev
-# production-style (views for the API in schema "stockline"; DATABASE_SCHEMA = a per-deployment schema)
-STOCKLINE_NETWORK=46630 RPC_URL=… DATABASE_URL=… DATABASE_SCHEMA=… pnpm --filter @stockline/indexer start
+LENDORA_NETWORK=31337 RPC_URL=http://127.0.0.1:8545 DATABASE_URL=postgres://… pnpm --filter @lendora/indexer dev
+# production-style (views for the API in schema "lendora"; DATABASE_SCHEMA = a per-deployment schema)
+LENDORA_NETWORK=46630 RPC_URL=… DATABASE_URL=… DATABASE_SCHEMA=… pnpm --filter @lendora/indexer start
 # SI-R5, daily
-STOCKLINE_NETWORK=… RPC_URL=… DATABASE_URL=… [PAGER_WEBHOOK_URL=…] pnpm --filter @stockline/indexer reconcile
+LENDORA_NETWORK=… RPC_URL=… DATABASE_URL=… [PAGER_WEBHOOK_URL=…] pnpm --filter @lendora/indexer reconcile
 ```
 
 | Env | Default | Meaning |
 |---|---|---|
-| `STOCKLINE_NETWORK` | `31337` | `31337`, `fork-4663` or `46630` (never `4663` in Phase 2) |
+| `LENDORA_NETWORK` | `31337` | `31337`, `fork-4663` or `46630` (never `4663` in Phase 2) |
 | `RPC_URL` / `WS_URL` | anvil | JSON-RPC (archive recommended for exact historical snapshots) |
 | `DATABASE_URL` | PGlite | Postgres |
 | `PONDER_POLLING_MS` | 100 / 200 | realtime polling |
@@ -37,7 +37,7 @@ STOCKLINE_NETWORK=… RPC_URL=… DATABASE_URL=… [PAGER_WEBHOOK_URL=…] pnpm 
 
 ## Tests and measurements
 
-`pnpm --filter @stockline/indexer test`: anvil + the devnet seed week + a throwaway Postgres + `ponder start`.
+`pnpm --filter @lendora/indexer test`: anvil + the devnet seed week + a throwaway Postgres + `ponder start`.
 
 Measured locally (Apple silicon, 2026-09-27, anvil, tick every block):
 

@@ -6,7 +6,7 @@ the oracle math (OR-R1, OR-R20).
 
 **Round 2 / delta (Phase 3):** `FeeSplitter` + `FeeConverter` (270 nSLOC new `src/`), the mainnet deploy scripts
 (`MainnetConfig`, `DeployMainnet`, `VerifyRoles`, 615 nSLOC, deployment logic) and the fee wiring in
-`StocklineDeploy`; no frozen file changed. Details: [`docs/audit/README.md` §8](../audit/README.md#8-round-2--delta-scope-phase-3-2026-09-28).
+`LendoraDeploy`; no frozen file changed. Details: [`docs/audit/README.md` §8](../audit/README.md#8-round-2--delta-scope-phase-3-2026-09-28).
 Bug bounty draft: [`bug-bounty.md`](../audit/bug-bounty.md).
 
 **Shortlist** — firms that reviewed Morpho Vault V2, the code we integrate unmodified (Morpho's published audit list:
@@ -23,8 +23,8 @@ Choose two different firms for the rounds. Sources: https://morpho-org-vault-v2.
 https://www.chainsecurity.com/security-audit/morpho-vault-v2
 
 **RFQ email**
-> Subject: Audit request — Stockline (1.7k nSLOC Solidity, Morpho Blue / Vault V2 integration)
-> Stockline is a stock lending layer on Robinhood Chain using unmodified Morpho Blue and Vault V2. In scope: router
+> Subject: Audit request — Lendora (1.7k nSLOC Solidity, Morpho Blue / Vault V2 integration)
+> Lendora is a stock lending layer on Robinhood Chain using unmodified Morpho Blue and Vault V2. In scope: router
 > (UUPS), oracle with weekend/earnings buffers and guards, collateral wrapper, stock wrapper, calendar, fallback
 > liquidator (1,668 nSLOC, Solidity 0.8.26, Foundry, invariant suites at 1M calls). Package with scope, threat model and
 > known issues attached. Target window: `<dates>`; fix window 1 week; re-review of fixes. Please send availability,

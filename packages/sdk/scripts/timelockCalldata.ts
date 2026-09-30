@@ -2,7 +2,7 @@
  * Timelock calldata for the runbooks (docs/runbooks/*). Prints the target call, the operation id, and the calldata the
  * owner multisig sends to the TimelockController to schedule, execute (after the delay) or cancel it. Never sends.
  *
- *   pnpm --filter @stockline/sdk timelock <action> [key=value …] [--network 31337|46630|4663|fork-4663]
+ *   pnpm --filter @lendora/sdk timelock <action> [key=value …] [--network 31337|46630|4663|fork-4663]
  *        [--salt "<label>"] [--delay <seconds>]
  *
  * Actions and keys:

@@ -1,11 +1,11 @@
-import {resolveDeployment, type ChainDeployment, type DeploymentKey} from "@stockline/sdk";
+import {resolveDeployment, type ChainDeployment, type DeploymentKey} from "@lendora/sdk";
 
 /** API configuration from the environment. Secrets (database/redis URLs with passwords) come only from env. */
 export interface ApiConfig {
   port: number;
   host: string;
   databaseUrl: string;
-  /** Schema of the indexer's tables or views (`ponder start --views-schema`), e.g. "stockline". */
+  /** Schema of the indexer's tables or views (`ponder start --views-schema`), e.g. "lendora". */
   indexerSchema: string;
   /** Schema the API owns for API keys. */
   apiSchema: string;
@@ -41,7 +41,7 @@ function num(env: NodeJS.ProcessEnv, name: string, dflt: number, min: number, ma
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
-  const raw = env.STOCKLINE_NETWORK ?? env.DEPLOYMENT_KEY ?? "31337";
+  const raw = env.LENDORA_NETWORK ?? env.DEPLOYMENT_KEY ?? "31337";
   const {key, chainId, d} = resolveDeployment(raw, "api"); // MN-R6: 4663 only once the launch published it
   if (!env.DATABASE_URL) throw new Error("DATABASE_URL is required");
   if (env.TRUST_PROXY !== undefined && !["true", "false", ""].includes(env.TRUST_PROXY)) throw new Error('TRUST_PROXY must be "true" or "false"');
@@ -49,8 +49,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     port: num(env, "PORT", 42070, 0, 65_535),
     host: env.HOST ?? "0.0.0.0",
     databaseUrl: env.DATABASE_URL,
-    indexerSchema: env.INDEXER_SCHEMA ?? "stockline",
-    apiSchema: env.API_SCHEMA ?? "stockline_api",
+    indexerSchema: env.INDEXER_SCHEMA ?? "lendora",
+    apiSchema: env.API_SCHEMA ?? "lendora_api",
     redisUrl: env.REDIS_URL || undefined,
     rpcUrl: env.RPC_URL ?? "http://127.0.0.1:8545",
     key,

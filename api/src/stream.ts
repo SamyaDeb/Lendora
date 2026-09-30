@@ -4,7 +4,7 @@ import type {Duplex} from "node:stream";
 import {randomBytes} from "node:crypto";
 import type {Redis} from "ioredis";
 import {WebSocketServer, WebSocket} from "ws";
-import {safeErrorLine, type ChainDeployment} from "@stockline/sdk";
+import {safeErrorLine, type ChainDeployment} from "@lendora/sdk";
 import type {IndexerDb, EventCursor} from "./db.js";
 import {envelope, eventView, marketView} from "./model.js";
 import {clientKey, type Limiter} from "./limits.js";
@@ -54,8 +54,8 @@ export class RedisFanout implements Fanout {
   constructor(
     private readonly pub: Redis,
     private readonly sub: Redis,
-    private readonly channel = "stockline:stream",
-    private readonly lockKey = "stockline:stream:leader",
+    private readonly channel = "lendora:stream",
+    private readonly lockKey = "lendora:stream:leader",
   ) {}
   async publish(msg: StreamMessage) {
     await this.pub.publish(this.channel, JSON.stringify(msg));

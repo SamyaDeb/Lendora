@@ -105,7 +105,7 @@ disclosure.
   ([02](02-fork-validation.md)).
 - **Launch incident:** for ~1.5 days after launch (to 2026-06-23 ~09:50 ET) every stock feed published answers scaled
   1e18 while `decimals()` = 8, i.e. prices 10¹⁰ too high ([WS-C §0](../../sim/reports/phase0-weekend-gaps.md)). A naive
-  oracle would have made every Stockline borrower instantly liquidatable at an absurd price.
+  oracle would have made every Lendora borrower instantly liquidatable at an absurd price.
 
 **Options for pause.** (a) Guard input only: trip when `oraclePaused()`, clear after unpause *and* a fresh round.
 (b) Also freeze the buffer at its current value while paused.
@@ -179,7 +179,7 @@ correct. With the weekend buffer, the liquidation *feed* price falls to 115.50/(
   - Gates can restrict who deposits, withdraws or transfers shares.
   - Users can `forceDeallocate` with a penalty "up to 2%".
 
-**What V2 changes for Stockline.**
+**What V2 changes for Lendora.**
 - *Idle market (LM-R21, A5):* not needed. The idle reserve is the vault's own unallocated balance.
 - *Allocator keeper (LM-R30–R34):* same logic. It calls `deallocate` from the stock-market adapter instead of
   `reallocate` into an idle market. Guard trip = deallocate all free liquidity (LM-R31). The Sentinel maps to our
@@ -252,12 +252,12 @@ existing caveat.
 - The wrapper was meant to isolate Morpho from multiplier-driven balance changes and allowlists (03 §1). Neither
   exists.
 - The wrapper creates a **single address** the issuer can block, pause around or `adminBurn`, affecting only
-  Stockline (fork tests). Without it, the choke point would be Morpho Blue itself, which holds Stock Tokens for all 189
+  Lendora (fork tests). Without it, the choke point would be Morpho Blue itself, which holds Stock Tokens for all 189
   markets that use them (19 as loan asset, 170 as collateral).
 
 **Options.**
-- (a) **Keep** the wrapper (LM-R1…R7 as built), with the D10 restatements. Stockline-specific freeze risk is
-  explicit and bounded to Stockline.
+- (a) **Keep** the wrapper (LM-R1…R7 as built), with the D10 restatements. Lendora-specific freeze risk is
+  explicit and bounded to Lendora.
 - (b) **Drop** it: loan token = raw Stock Token; vault asset = raw token; router and liquidator simplify (no
   wrap/unwrap). An issuer action would have to target Morpho as a whole, but any `adminBurn` on Morpho's balance would
   still hit whichever markets withdraw last.

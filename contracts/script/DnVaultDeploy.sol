@@ -8,9 +8,9 @@ import {StrategyManager} from "../src/vault/StrategyManager.sol";
 import {NavOracle} from "../src/vault/NavOracle.sol";
 import {IStrategyManager} from "../src/interfaces/IStrategyManager.sol";
 import {MockPerpVenue} from "../test/mocks/MockPerpVenue.sol";
-import {StocklineDeploy} from "./StocklineDeploy.sol";
+import {LendoraDeploy} from "./LendoraDeploy.sol";
 
-/// @dev Feed getter of `StocklineOracleBase`.
+/// @dev Feed getter of `LendoraOracleBase`.
 interface IStockFeedOf {
     function STOCK_FEED() external view returns (address);
 }
@@ -21,7 +21,7 @@ interface IStockFeedOf {
 /// uses the mock venue only). **Every cap is taken from the config and every deploy config passes 0** (DN-R6, Q11)
 /// until
 /// the simulation gate passes and the risk owner signs. Ownership of the three contracts ends at the timelock.
-abstract contract DnVaultDeploy is StocklineDeploy {
+abstract contract DnVaultDeploy is LendoraDeploy {
     Vm private constant VM_DN = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     /// @notice 08 launch structure: `c` = 5% (buffer), swap floor 1%, NAV max age 15 min open and closed (DN-R5).
@@ -155,7 +155,7 @@ abstract contract DnVaultDeploy is StocklineDeploy {
         }
     }
 
-    /// @notice The DN config for a Stockline deployment: router attestations, the timelock, the guardian, the
+    /// @notice The DN config for a Lendora deployment: router attestations, the timelock, the guardian, the
     /// `FeeSplitter`, the core swap target.
     function _dnConfig(
         CoreConfig memory c,

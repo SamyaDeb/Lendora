@@ -1,12 +1,12 @@
 import {encodeAbiParameters, encodeFunctionData, parseAbiItem, type Hex, type PublicClient} from "viem";
 import {
   morphoAbi,
-  stocklineLiquidatorAbi,
-  stocklineOracleAbi,
+  lendoraLiquidatorAbi,
+  lendoraOracleAbi,
   type ChainDeployment,
   type Address,
   type DeploymentKey,
-  type StockDeployment, safeErrorLine} from "@stockline/sdk";
+  type StockDeployment, safeErrorLine} from "@lendora/sdk";
 import type {TxSender} from "../common/signer.js";
 import type {Health} from "../common/health.js";
 import {marketParams, type MarketParams} from "../common/market.js";
@@ -147,7 +147,7 @@ export interface LiquidatorOptions {
 }
 
 /** Fallback liquidation bot: discovers borrowers from Morpho `Borrow` events, reads positions, liquidates unhealthy
- * ones through `StocklineLiquidator`. Stateless apart from a borrower cache that is rebuilt from logs on restart. */
+ * ones through `LendoraLiquidator`. Stateless apart from a borrower cache that is rebuilt from logs on restart. */
 export class LiquidatorBot {
   private borrowers = new Map<string, Set<`0x${string}`>>();
   private scannedTo = new Map<string, bigint>();
@@ -206,8 +206,8 @@ export class LiquidatorBot {
         const who = [...(await this.discover(ticker, block.number))];
         if (who.length > 0) {
           const [price, answer] = await Promise.all([
-            this.client.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "price"}),
-            this.client.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "stockAnswer"}),
+            this.client.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "price"}),
+            this.client.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "stockAnswer"}),
           ]);
           for (const p of await this.positions(s, who)) {
             const plan = planLiquidation(p, price, BigInt(s.lltv), answer[0], 8, this.opts.slippageBps);
@@ -232,7 +232,7 @@ export class LiquidatorBot {
   private async execute(s: StockDeployment, m: MarketParams, plan: LiquidationPlan, now: bigint): Promise<void> {
     const liquidator = this.d.liquidator!;
     const data = encodeFunctionData({
-      abi: stocklineLiquidatorAbi,
+      abi: lendoraLiquidatorAbi,
       functionName: "liquidate",
       args: [
         {

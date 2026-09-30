@@ -5,7 +5,7 @@ import {Vm} from "forge-std/Vm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IMorpho, MarketParams, Position} from "morpho-blue/src/interfaces/IMorpho.sol";
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
-import {IStocklineRouter} from "../../../src/interfaces/IStocklineRouter.sol";
+import {ILendoraRouter} from "../../../src/interfaces/ILendoraRouter.sol";
 import {IVaultV2Min} from "../../../src/interfaces/external/IMorphoVaultV2.sol";
 import {ForkConfig} from "../../../script/ForkConfig.sol";
 import {Phase1ForkBase} from "./Phase1ForkBase.sol";
@@ -63,7 +63,7 @@ contract RouterForkTest is Phase1ForkBase, ForkConfig {
         vm.stopPrank();
     }
 
-    function _attest(address user) internal view returns (IStocklineRouter.Attestation memory a) {
+    function _attest(address user) internal view returns (ILendoraRouter.Attestation memory a) {
         a.expiry = block.timestamp + 1 days;
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer.privateKey, core.router.attestationDigest(user, a.expiry));
         a.signature = abi.encodePacked(r, s, v);
@@ -71,12 +71,12 @@ contract RouterForkTest is Phase1ForkBase, ForkConfig {
 
     /// @dev UniversalRouter V3_SWAP_EXACT_IN (command 0x00). The deployed version (Sourcify 4663/0x8876…0904) decodes
     /// `(recipient, amountIn, amountOutMin, path, payerIsUser, uint256[] minHopPriceX36)`. payerIsUser = false: the
-    /// Stockline router transfers `amountIn` first (SwapMode.Transfer), UR pays from its balance and sends the output
-    /// to the Stockline router.
+    /// Lendora router transfers `amountIn` first (SwapMode.Transfer), UR pays from its balance and sends the output
+    /// to the Lendora router.
     function _urSwap(address tokenIn, address tokenOut, uint256 amountIn, uint256 minOut)
         internal
         view
-        returns (IStocklineRouter.Swap memory)
+        returns (ILendoraRouter.Swap memory)
     {
         bytes[] memory inputs = new bytes[](1);
         inputs[0] = abi.encode(
@@ -87,7 +87,7 @@ contract RouterForkTest is Phase1ForkBase, ForkConfig {
             false,
             new uint256[](0)
         );
-        return IStocklineRouter.Swap({
+        return ILendoraRouter.Swap({
             target: ur,
             data: abi.encodeCall(IUniversalRouter.execute, (hex"00", inputs, block.timestamp)),
             amountIn: amountIn,
@@ -107,7 +107,7 @@ contract RouterForkTest is Phase1ForkBase, ForkConfig {
         (uint256 p,) = d.oracle.stockAnswer();
         uint256 borrowAmt = 5e18;
         uint256 value = p * 5 / 100; // USDG 6 dp
-        IStocklineRouter.Attestation memory att = _attest(trader);
+        ILendoraRouter.Attestation memory att = _attest(trader);
 
         vm.prank(trader);
         uint256 g = gasleft();
@@ -149,7 +149,7 @@ contract RouterForkTest is Phase1ForkBase, ForkConfig {
     }
 
     function test_RT_fork_lendBorrowRepayWithdrawGas() public {
-        IStocklineRouter.Attestation memory att = _attest(trader);
+        ILendoraRouter.Attestation memory att = _attest(trader);
         deal(NVDA, trader, 10e18, true);
         vm.startPrank(trader);
         uint256 g = gasleft();
@@ -176,7 +176,7 @@ contract RouterForkTest is Phase1ForkBase, ForkConfig {
     }
 
     function test_RT_fork_slippageFailureOnLivePool() public {
-        IStocklineRouter.Attestation memory att = _attest(trader);
+        ILendoraRouter.Attestation memory att = _attest(trader);
         (uint256 p,) = d.oracle.stockAnswer();
         vm.prank(trader);
         vm.expectRevert(); // InsufficientOutput: minOut set 10% above the feed value

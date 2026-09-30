@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import {Vm} from "forge-std/Vm.sol";
 import {ForkConfig} from "./ForkConfig.sol";
 import {DnVaultDeploy} from "./DnVaultDeploy.sol";
-import {IStocklineRouter} from "../src/interfaces/IStocklineRouter.sol";
+import {ILendoraRouter} from "../src/interfaces/ILendoraRouter.sol";
 
 /// @notice Safe views the mainnet checks read (owner count and threshold).
 interface ISafeMin {
@@ -56,28 +56,28 @@ abstract contract MainnetConfig is ForkConfig, DnVaultDeploy {
         address navSigner2;
     }
 
-    /// @notice Phase 4 roles from `STOCKLINE_DN_OPERATOR`, `STOCKLINE_NAV_SIGNER_1`, `STOCKLINE_NAV_SIGNER_2`
+    /// @notice Phase 4 roles from `LENDORA_DN_OPERATOR`, `LENDORA_NAV_SIGNER_1`, `LENDORA_NAV_SIGNER_2`
     /// (required).
     function dnRolesFromEnv() public view returns (DnRoles memory) {
         return DnRoles({
-            operator: VM_M.envAddress("STOCKLINE_DN_OPERATOR"),
-            navSigner1: VM_M.envAddress("STOCKLINE_NAV_SIGNER_1"),
-            navSigner2: VM_M.envAddress("STOCKLINE_NAV_SIGNER_2")
+            operator: VM_M.envAddress("LENDORA_DN_OPERATOR"),
+            navSigner1: VM_M.envAddress("LENDORA_NAV_SIGNER_1"),
+            navSigner2: VM_M.envAddress("LENDORA_NAV_SIGNER_2")
         });
     }
 
-    /// @notice Roles from `STOCKLINE_*` env vars; each one is required (an unset var reverts).
+    /// @notice Roles from `LENDORA_*` env vars; each one is required (an unset var reverts).
     function mainnetRolesFromEnv() public view returns (Roles memory r) {
         r = Roles({
-            owner: VM_M.envAddress("STOCKLINE_OWNER"),
-            curator: VM_M.envAddress("STOCKLINE_CURATOR"),
-            guardian: VM_M.envAddress("STOCKLINE_GUARDIAN"),
-            allocator: VM_M.envAddress("STOCKLINE_ALLOCATOR"),
-            guardKeeper: VM_M.envAddress("STOCKLINE_GUARD_KEEPER"),
-            treasury: VM_M.envAddress("STOCKLINE_TREASURY"),
-            backstopReserve: VM_M.envAddress("STOCKLINE_BACKSTOP_RESERVE"),
-            feeKeeper: VM_M.envAddress("STOCKLINE_FEE_KEEPER"),
-            attestationSigner: VM_M.envAddress("STOCKLINE_ATTESTATION_SIGNER")
+            owner: VM_M.envAddress("LENDORA_OWNER"),
+            curator: VM_M.envAddress("LENDORA_CURATOR"),
+            guardian: VM_M.envAddress("LENDORA_GUARDIAN"),
+            allocator: VM_M.envAddress("LENDORA_ALLOCATOR"),
+            guardKeeper: VM_M.envAddress("LENDORA_GUARD_KEEPER"),
+            treasury: VM_M.envAddress("LENDORA_TREASURY"),
+            backstopReserve: VM_M.envAddress("LENDORA_BACKSTOP_RESERVE"),
+            feeKeeper: VM_M.envAddress("LENDORA_FEE_KEEPER"),
+            attestationSigner: VM_M.envAddress("LENDORA_ATTESTATION_SIGNER")
         });
     }
 
@@ -101,7 +101,7 @@ abstract contract MainnetConfig is ForkConfig, DnVaultDeploy {
         c.timelockDelay = MAINNET_TIMELOCK;
         c.sequencerFeed = address(0); // none on 4663 (D3); L2_GAP keeper path
         c.globalCollateralCap = MAINNET_GLOBAL_CAP;
-        c.swapMode = IStocklineRouter.SwapMode.Transfer; // Q4: UniversalRouter, pay-first
+        c.swapMode = ILendoraRouter.SwapMode.Transfer; // Q4: UniversalRouter, pay-first
     }
 
     /// @notice Launch set on 4663 with caps at 25% of the D8 targets.
@@ -144,7 +144,7 @@ abstract contract MainnetConfig is ForkConfig, DnVaultDeploy {
     }
 
     /// @notice MN-R1…MN-R3: refuse any mainnet config that is not the launch config. Reverts with the first problem.
-    /// MN-R1 every role is non-zero, not a `stockline.placeholder.*` address, distinct from every other role and from
+    /// MN-R1 every role is non-zero, not a `lendora.placeholder.*` address, distinct from every other role and from
     /// the deployer. MN-R2 the five multisigs are contracts with Safe thresholds (owner 4-of-7, guardian 2-of-4, the
     /// rest ≥ 2), so an EOA or an undeployed placeholder is refused. MN-R3 48h timelock, no sequencer feed, $4M
     /// global
@@ -175,7 +175,7 @@ abstract contract MainnetConfig is ForkConfig, DnVaultDeploy {
         require(c.sequencerFeed == address(0), "MN-R3: no sequencer feed on 4663");
         require(c.globalCollateralCap == MAINNET_GLOBAL_CAP, "MN-R3: global clUSDG cap must be $4M");
         require(c.swapTarget != address(0), "MN-R3: swap target unset");
-        require(c.swapMode == IStocklineRouter.SwapMode.Transfer, "MN-R3: swap mode must be Transfer (Q4)");
+        require(c.swapMode == ILendoraRouter.SwapMode.Transfer, "MN-R3: swap mode must be Transfer (Q4)");
         require(s.length == d8TargetsUsd.length && s.length > 0, "MN-R3: stock list");
         for (uint256 i; i < s.length; i++) {
             require(

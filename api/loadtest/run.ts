@@ -3,7 +3,7 @@
  * the full local stack (anvil seed week → Ponder → Postgres → API with Redis). Measures REST latency (autocannon)
  * and WS push latency from the block to each client, while the chain driver produces a state change every second.
  *
- *   pnpm --filter @stockline/api loadtest [--seconds 60] [--clients 200] [--rps 50]
+ *   pnpm --filter @lendora/api loadtest [--seconds 60] [--clients 200] [--rps 50]
  *
  * Writes api/loadtest/results.md. Limits are raised for the test (one process generates all the traffic).
  */
@@ -11,7 +11,7 @@ import {writeFileSync} from "node:fs";
 import autocannon from "autocannon";
 import WebSocket from "ws";
 import {encodeFunctionData} from "viem";
-import {stocklineOracleAbi} from "@stockline/sdk";
+import {lendoraOracleAbi} from "@lendora/sdk";
 import {startStack} from "../test/harness.js";
 
 const arg = (n: string, d: number) => {
@@ -59,7 +59,7 @@ let running = true;
 const driver = (async () => {
   let n = 0;
   while (running) {
-    const data = encodeFunctionData({abi: stocklineOracleAbi, functionName: n++ % 2 === 0 ? "trip" : "clear", args: [1n]});
+    const data = encodeFunctionData({abi: lendoraOracleAbi, functionName: n++ % 2 === 0 ? "trip" : "clear", args: [1n]});
     const r = await s.drv.a.send(s.drv.d.roles.guardian, s.drv.stock("AAPL").oracle, data).catch(() => undefined);
     if (r) blockTimes.set(r.blockNumber, Date.now());
     await new Promise((res) => setTimeout(res, 1000));
@@ -101,7 +101,7 @@ const report = {
 console.log(JSON.stringify(report, null, 2));
 const md = `# API load test (SI-R11)
 
-Run: \`pnpm --filter @stockline/api loadtest --seconds ${SECONDS} --clients ${CLIENTS} --rps ${RPS}\` on ${report.date}
+Run: \`pnpm --filter @lendora/api loadtest --seconds ${SECONDS} --clients ${CLIENTS} --rps ${RPS}\` on ${report.date}
 (local stack: anvil seed week → Ponder → Postgres → API with Redis fan-out; one machine generates all traffic).
 
 | Metric | Result | Target (SI-R11) |

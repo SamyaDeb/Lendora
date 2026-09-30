@@ -2,14 +2,14 @@
 pragma solidity 0.8.26;
 
 import {Test} from "forge-std/Test.sol";
-import {StocklineDeploy} from "../../script/StocklineDeploy.sol";
+import {LendoraDeploy} from "../../script/LendoraDeploy.sol";
 import {LocalMocks} from "../../script/LocalMocks.sol";
-import {IStocklineRouter} from "../../src/interfaces/IStocklineRouter.sol";
+import {ILendoraRouter} from "../../src/interfaces/ILendoraRouter.sol";
 import {IVaultV2Min} from "../../src/interfaces/external/IMorphoVaultV2.sol";
 
 /// @notice Phase 2 fix (found by the testnet dry run): when one key holds every role (the testnet default), the
 /// deploy script keeps it as the vault allocator instead of removing the temporary deployer allocator.
-contract DeployRolesTest is Test, StocklineDeploy, LocalMocks {
+contract DeployRolesTest is Test, LendoraDeploy, LocalMocks {
     function test_LM_R30_deployerThatIsAlsoTheAllocatorKeepsTheRole() public {
         vm.warp(1_789_574_400);
         Mocks memory m = _deployLocalMocks(address(this));
@@ -35,7 +35,7 @@ contract DeployRolesTest is Test, StocklineDeploy, LocalMocks {
             attestationSigner: makeAddr("signer"),
             globalCollateralCap: 4_000_000e6,
             swapTarget: address(m.dex),
-            swapMode: IStocklineRouter.SwapMode.Approve
+            swapMode: ILendoraRouter.SwapMode.Approve
         });
         StockConfig[] memory s = new StockConfig[](1);
         s[0] = StockConfig("NVDA", address(m.tokens[1]), address(m.feeds[1]), 0.52e18, 1_000_000, 250_000);

@@ -24,8 +24,8 @@ interface IStrategyManager {
     struct Sleeve {
         address stockToken;
         address wrapper; // wSTOCK
-        address rVault; // Stockline Vault V2 `rSTOCK`
-        address oracle; // StocklineOracle of the stock (feed price, guard, market hours)
+        address rVault; // Lendora Vault V2 `rSTOCK`
+        address oracle; // LendoraOracle of the stock (feed price, guard, market hours)
         bytes32 perpMarket; // venue market id
         uint128 capUsdg; // DN-R6: max spot value, USDG raw (0 at launch)
         uint16 maxLendBps; // DN-R8: max share of the sleeve's spot lent through rSTOCK

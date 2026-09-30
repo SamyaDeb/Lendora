@@ -5,7 +5,7 @@ created or deployed from this repo without the owner's go.**
 
 | Service | Image | Start | Health | Env template |
 |---|---|---|---|---|
-| indexer | `infra/Dockerfile`, `SERVICE=indexer` | `ponder start --views-schema stockline` | `GET /ready` (:42069) | `indexer/.env.example` |
+| indexer | `infra/Dockerfile`, `SERVICE=indexer` | `ponder start --views-schema lendora` | `GET /ready` (:42069) | `indexer/.env.example` |
 | reconcile (daily cron, SI-R5) | `infra/Dockerfile`, `SERVICE=reconcile` | cron `15 3 * * *` | exit code | `indexer/.env.example` |
 | api | `infra/Dockerfile`, `SERVICE=api` | Hono + WS | `GET /health` (:42070) | `api/.env.example` |
 | compliance | `infra/Dockerfile`, `SERVICE=compliance` | signer | `GET /health` (:42071) | `compliance/.env.example` |
@@ -29,6 +29,6 @@ environment variables, so the required ones per service are listed here and set 
 
 | Service | Required env (besides `DATABASE_URL` / `RPC_URL`) |
 |---|---|
-| compliance | `STOCKLINE_NETWORK`, `COMPLIANCE_SIGNER_KEY` (or remote signer), `PROXY_SECRET`, `TRUST_PROXY=true`, `ALLOWED_ORIGINS`, `SANCTIONS_PROVIDER` + `SANCTIONS_API_KEY` (mainnet refuses `deny-list`), `ATTEST_RPM` (per IP and per wallet) |
+| compliance | `LENDORA_NETWORK`, `COMPLIANCE_SIGNER_KEY` (or remote signer), `PROXY_SECRET`, `TRUST_PROXY=true`, `ALLOWED_ORIGINS`, `SANCTIONS_PROVIDER` + `SANCTIONS_API_KEY` (mainnet refuses `deny-list`), `ATTEST_RPM` (per IP and per wallet) |
 | web | `COMPLIANCE_URL`, `PROXY_SECRET` (same value), `GEO_PLATFORM`, `API_URL_INTERNAL`, `ALERTS_URL`, `NEXT_PUBLIC_*` build args |
 | monitor | `DATABASE_URL` (same Postgres as the indexer), `INDEXER_SCHEMA`, `MONITOR_KEEPERS`, `MONITOR_GAS_WATCH` + `GAS_BURN_WEI_PER_DAY` (MON-R15), one pager at least (`PAGERDUTY_ROUTING_KEY` or `OPSGENIE_API_KEY`; Telegram/webhook optional) |

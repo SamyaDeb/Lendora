@@ -1,6 +1,6 @@
 import type {Pool} from "pg";
 import type {PublicClient} from "viem";
-import {adaptiveCurveIrmAbi, erc20Abi, morphoAbi, type ChainDeployment} from "@stockline/sdk";
+import {adaptiveCurveIrmAbi, erc20Abi, morphoAbi, type ChainDeployment} from "@lendora/sdk";
 
 /**
  * SI-R5 reconciliation: indexed totals vs onchain reads at the indexed head block. Raw Morpho `market()` fields,
@@ -53,7 +53,7 @@ export interface ReconcileReport {
 
 export interface ReconcileOptions {
   pool: Pool;
-  /** Schema with the indexer tables or views (`--views-schema`, default "stockline"). */
+  /** Schema with the indexer tables or views (`--views-schema`, default "lendora"). */
   schema: string;
   client: PublicClient;
   d: ChainDeployment;

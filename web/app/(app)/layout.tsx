@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {width: "device-width", initialScale: 1, themeColor: "#0b0a18", colorScheme: "dark"};
 
 export default async function RootLayout({children}: {children: React.ReactNode}) {
-  const restricted = (await headers()).get("x-stockline-restricted") === "1";
+  const restricted = (await headers()).get("x-lendora-restricted") === "1";
   return (
     <html lang="en" className={instrument.variable} data-session="open">
       <body className="flex min-h-screen flex-col">

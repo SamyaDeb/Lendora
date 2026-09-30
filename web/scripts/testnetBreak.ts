@@ -13,7 +13,7 @@
  *   S. Invariants after all of it: the router holds nothing, backing ≥ supply, the API equals the chain.
  *   Z. Abuse last (it spends rate-limit budget): API and page bursts, compliance attestation flood.
  *
- *   SMOKE_KEY=… TESTNET_GO=yes pnpm --filter @stockline/web exec tsx scripts/testnetBreak.ts --web http://127.0.0.1:3000 \
+ *   SMOKE_KEY=… TESTNET_GO=yes pnpm --filter @lendora/web exec tsx scripts/testnetBreak.ts --web http://127.0.0.1:3000 \
  *     --api http://127.0.0.1:42070 --compliance http://127.0.0.1:42071 --monitor http://127.0.0.1:42073 \
  *     --rpc https://rpc.testnet.chain.robinhood.com [--flows] [--report ../docs/runbooks/testnet-break.md]
  */
@@ -28,11 +28,11 @@ import {
   marketHoursAbi,
   mockAggregatorSwap,
   morphoAbi,
-  stocklineOracleAbi,
-  stocklineRouterAbi,
+  lendoraOracleAbi,
+  lendoraRouterAbi,
   stockWrapperAbi,
-} from "@stockline/sdk";
-import {ChainDriver, complianceAttestationProvider, connectWallet, waitForLiquidity} from "@stockline/devnet";
+} from "@lendora/sdk";
+import {ChainDriver, complianceAttestationProvider, connectWallet, waitForLiquidity} from "@lendora/devnet";
 import {explainError} from "../lib/errors";
 import {arg, has, kit, trim} from "./e2eKit";
 
@@ -60,7 +60,7 @@ const deadline = async () => (await now()) + 1800n;
 const open = await client.readContract({address: d.marketHours, abi: marketHoursAbi, functionName: "isOpen", args: [await now()]});
 const probeKey = generatePrivateKey();
 const probe = privateKeyToAccount(probeKey).address; // a stranger: no funds, no role, never attested
-const params = (await client.readContract({address: R, abi: stocklineRouterAbi, functionName: "market", args: [s.stockToken]})).params;
+const params = (await client.readContract({address: R, abi: lendoraRouterAbi, functionName: "market", args: [s.stockToken]})).params;
 const faucetAbi = [
   {type: "function", name: "claim", stateMutability: "nonpayable", inputs: [{name: "to", type: "address"}], outputs: []},
   {type: "error", name: "TooSoon", inputs: [{name: "nextClaimAt", type: "uint256"}]},
@@ -263,7 +263,7 @@ await step(C, "a sanctioned address (deny-list) is never attested", async () => 
 });
 await step(C, "compliance direct: forged proxy secret is not trusted (CP-R8)", async () => {
   if (!compliance) return {skip: "no --compliance URL"};
-  const r = await get(`${compliance}/v1/compliance/attest`, post(JSON.stringify({address: probe}), "application/json", {"x-stockline-proxy": "0".repeat(64), "x-geo-country": "DE", "x-forwarded-for": "1.2.3.4"}));
+  const r = await get(`${compliance}/v1/compliance/attest`, post(JSON.stringify({address: probe}), "application/json", {"x-lendora-proxy": "0".repeat(64), "x-geo-country": "DE", "x-forwarded-for": "1.2.3.4"}));
   if (r.ok) throw new Error(`attested with a guessed secret (${r.status})`);
   return `${r.status} ${(await r.text()).slice(0, 60)}`;
 });
@@ -290,36 +290,36 @@ const ownerCalls: [string, readonly unknown[]][] = [
   ["transferOwnership", [probe]],
   ["upgradeToAndCall", [probe, "0x"]],
 ];
-for (const [fn, a] of ownerCalls) await step(G_R, `router.${fn} from a stranger → NotOwner`, async () => refuses(stocklineRouterAbi, R, fn, a, probe, /NotOwner/));
+for (const [fn, a] of ownerCalls) await step(G_R, `router.${fn} from a stranger → NotOwner`, async () => refuses(lendoraRouterAbi, R, fn, a, probe, /NotOwner/));
 await step(G_R, "clUSDG.mint outside the router → NotRouter (CL-R2)", async () => d.clUSDG ? refuses(collateralTokenAbi, d.clUSDG, "mint", [probe, E6], probe, /NotRouter/) : {skip: "no clUSDG in the book"});
 await step(G_R, "clUSDG wallet-to-wallet transfer → TransferNotAllowed (CL-R3)", async () => d.clUSDG ? refuses(collateralTokenAbi, d.clUSDG, "transfer", [probe, 0n], who, /TransferNotAllowed/) : {skip: "no clUSDG in the book"});
-await step(G_R, "lend to the zero address is refused (shares would be lost)", async () => refuses(stocklineRouterAbi, R, "lend", [s.stockToken, E18 / 100n, 0n, ZERO, await deadline()], who, /./));
-await step(G_R, "lend more than the balance → ERC20InsufficientBalance", async () => refuses(stocklineRouterAbi, R, "lend", [s.stockToken, 10n ** 30n, 0n, who, await deadline()], who, /ERC20InsufficientBalance|ERC20InsufficientAllowance|balance is too low|transfer/i));
-await step(G_R, "lend with minShares above the preview → InsufficientOutput", async () => (me ? refuses(stocklineRouterAbi, R, "lend", [s.stockToken, E18 / 100n, 10n ** 40n, me, await deadline()], me, /InsufficientOutput/) : {skip: "needs SMOKE_KEY"}));
-await step(G_R, "withdrawLend to the zero address is refused", async () => refuses(stocklineRouterAbi, R, "withdrawLend", [s.stockToken, 1n, 0n, ZERO, await deadline()], who, /./));
+await step(G_R, "lend to the zero address is refused (shares would be lost)", async () => refuses(lendoraRouterAbi, R, "lend", [s.stockToken, E18 / 100n, 0n, ZERO, await deadline()], who, /./));
+await step(G_R, "lend more than the balance → ERC20InsufficientBalance", async () => refuses(lendoraRouterAbi, R, "lend", [s.stockToken, 10n ** 30n, 0n, who, await deadline()], who, /ERC20InsufficientBalance|ERC20InsufficientAllowance|balance is too low|transfer/i));
+await step(G_R, "lend with minShares above the preview → InsufficientOutput", async () => (me ? refuses(lendoraRouterAbi, R, "lend", [s.stockToken, E18 / 100n, 10n ** 40n, me, await deadline()], me, /InsufficientOutput/) : {skip: "needs SMOKE_KEY"}));
+await step(G_R, "withdrawLend to the zero address is refused", async () => refuses(lendoraRouterAbi, R, "withdrawLend", [s.stockToken, 1n, 0n, ZERO, await deadline()], who, /./));
 await step(G_R, "withdrawLend 0 shares does not move funds", async () => {
-  const r = await revertOf(stocklineRouterAbi, R, "withdrawLend", [s.stockToken, 0n, 0n, who, await deadline()], who);
+  const r = await revertOf(lendoraRouterAbi, R, "withdrawLend", [s.stockToken, 0n, 0n, who, await deadline()], who);
   return r ? `reverts: ${r.name || r.text.slice(0, 60)}` : "no-op (0 assets)";
 });
 await step(G_R, "repay with both assets and shares, or neither → ZeroAmount", async () => {
-  await refuses(stocklineRouterAbi, R, "repay", [s.stockToken, 1n, 1n, who, await deadline()], who, /ZeroAmount/);
-  return refuses(stocklineRouterAbi, R, "repay", [s.stockToken, 0n, 0n, who, await deadline()], who, /ZeroAmount/);
+  await refuses(lendoraRouterAbi, R, "repay", [s.stockToken, 1n, 1n, who, await deadline()], who, /ZeroAmount/);
+  return refuses(lendoraRouterAbi, R, "repay", [s.stockToken, 0n, 0n, who, await deadline()], who, /ZeroAmount/);
 });
-await step(G_R, "withdrawCollateral(all) with no collateral → ZeroAmount", async () => refuses(stocklineRouterAbi, R, "withdrawCollateral", [s.stockToken, maxUint256, who, await deadline()], who, /ZeroAmount/));
+await step(G_R, "withdrawCollateral(all) with no collateral → ZeroAmount", async () => refuses(lendoraRouterAbi, R, "withdrawCollateral", [s.stockToken, maxUint256, who, await deadline()], who, /ZeroAmount/));
 await step(G_R, "addCollateral 0 → ZeroAmount; for a wallet with no debt → NoDebtPosition", async () => {
-  await refuses(stocklineRouterAbi, R, "addCollateral", [s.stockToken, 0n, who, await deadline()], who, /ZeroAmount/);
-  return refuses(stocklineRouterAbi, R, "addCollateral", [s.stockToken, E6, probe, await deadline()], who, /NoDebtPosition/);
+  await refuses(lendoraRouterAbi, R, "addCollateral", [s.stockToken, 0n, who, await deadline()], who, /ZeroAmount/);
+  return refuses(lendoraRouterAbi, R, "addCollateral", [s.stockToken, E6, probe, await deadline()], who, /NoDebtPosition/);
 });
 await step(G_R, "a real attestation with its expiry moved by 1 s → BadAttestation", async () => {
   if (!me) return {skip: "needs SMOKE_KEY"};
   const a = await attest();
-  return refuses(stocklineRouterAbi, R, "borrow", [s.stockToken, 100n * E6, E18 / 1000n, me, {...a, expiry: a.expiry + 1n}, await deadline()], me, /BadAttestation/);
+  return refuses(lendoraRouterAbi, R, "borrow", [s.stockToken, 100n * E6, E18 / 1000n, me, {...a, expiry: a.expiry + 1n}, await deadline()], me, /BadAttestation/);
 });
 await step(G_R, "a real attestation after its expiry → BadAttestation (block time override)", async () => {
   if (!me) return {skip: "needs SMOKE_KEY"};
   const a = await attest();
   try {
-    await client.call({account: me, to: R, data: encodeFunctionData({abi: stocklineRouterAbi, functionName: "borrow", args: [s.stockToken, 100n * E6, E18 / 1000n, me, a, a.expiry + 3600n]}), blockOverrides: {time: a.expiry + 1n}} as never);
+    await client.call({account: me, to: R, data: encodeFunctionData({abi: lendoraRouterAbi, functionName: "borrow", args: [s.stockToken, 100n * E6, E18 / 1000n, me, a, a.expiry + 3600n]}), blockOverrides: {time: a.expiry + 1n}} as never);
   } catch (e) {
     const m = String((e as Error).message);
     if (/0x8baa579f|BadAttestation/i.test(m)) return "reverted: BadAttestation";
@@ -330,22 +330,22 @@ await step(G_R, "a real attestation after its expiry → BadAttestation (block t
 });
 await step(G_R, "borrow 0 against collateral (a collateral-only entry) is refused (RT-R8)", async () => {
   if (!me) return {skip: "needs SMOKE_KEY"};
-  return refuses(stocklineRouterAbi, R, "borrow", [s.stockToken, 100n * E6, 0n, me, await attest(), await deadline()], me, /./);
+  return refuses(lendoraRouterAbi, R, "borrow", [s.stockToken, 100n * E6, 0n, me, await attest(), await deadline()], me, /./);
 });
 await step(G_R, "borrow to the zero address is refused", async () => {
   if (!me) return {skip: "needs SMOKE_KEY"};
-  return refuses(stocklineRouterAbi, R, "borrow", [s.stockToken, 100n * E6, E18 / 1000n, ZERO, await attest(), await deadline()], me, /./);
+  return refuses(lendoraRouterAbi, R, "borrow", [s.stockToken, 100n * E6, E18 / 1000n, ZERO, await attest(), await deadline()], me, /./);
 });
 await step(G_R, "openShort selling more than it borrowed → InsufficientOutput", async () => {
   if (!me) return {skip: "needs SMOKE_KEY"};
   const swap = mockAggregatorSwap(d.mocks!.swapAggregator, s.stockToken, d.usdg, E18, 0n, R);
-  return refuses(stocklineRouterAbi, R, "openShort", [s.stockToken, 500n * E6, E18 / 100n, swap, false, me, await attest(), await deadline()], me, /InsufficientOutput|insufficient liquidity/);
+  return refuses(lendoraRouterAbi, R, "openShort", [s.stockToken, 500n * E6, E18 / 100n, swap, false, me, await attest(), await deadline()], me, /InsufficientOutput|insufficient liquidity/);
 });
 await step(G_R, "openShort with Morpho or clUSDG as the swap target → SwapTargetNotAllowed (RT-R3)", async () => {
   if (!me) return {skip: "needs SMOKE_KEY"};
   const a = await attest();
-  await refuses(stocklineRouterAbi, R, "openShort", [s.stockToken, 500n * E6, E18 / 1000n, {target: d.morpho, data: "0x", amountIn: E18 / 1000n, minOut: 0n}, false, me, a, await deadline()], me, /SwapTargetNotAllowed|insufficient liquidity/);
-  return refuses(stocklineRouterAbi, R, "openShort", [s.stockToken, 500n * E6, E18 / 1000n, {target: d.usdg, data: encodeFunctionData({abi: erc20Abi, functionName: "transfer", args: [probe, 1n]}), amountIn: E18 / 1000n, minOut: 0n}, false, me, a, await deadline()], me, /SwapTargetNotAllowed|insufficient liquidity/);
+  await refuses(lendoraRouterAbi, R, "openShort", [s.stockToken, 500n * E6, E18 / 1000n, {target: d.morpho, data: "0x", amountIn: E18 / 1000n, minOut: 0n}, false, me, a, await deadline()], me, /SwapTargetNotAllowed|insufficient liquidity/);
+  return refuses(lendoraRouterAbi, R, "openShort", [s.stockToken, 500n * E6, E18 / 1000n, {target: d.usdg, data: encodeFunctionData({abi: erc20Abi, functionName: "transfer", args: [probe, 1n]}), amountIn: E18 / 1000n, minOut: 0n}, false, me, a, await deadline()], me, /SwapTargetNotAllowed|insufficient liquidity/);
 });
 await step(G_R, "faucet: a second claim inside 24h → TooSoon (decoded)", async () => (me && d.mocks?.faucet ? refuses(faucetAbi, d.mocks.faucet, "claim", [me], me, /TooSoon/) : {skip: "needs SMOKE_KEY and a faucet"}));
 await step(G_R, "faucet: anyone can claim for any fresh address (sybil, testnet only)", async () => {
@@ -396,7 +396,7 @@ if (has("flows")) {
   const bal = (token: `0x${string}`, w: `0x${string}` = me) => client.readContract({address: token, abi: erc20Abi, functionName: "balanceOf", args: [w]});
   const pos = (w: `0x${string}`) => client.readContract({address: d.morpho, abi: morphoAbi, functionName: "position", args: [s.marketId, w]});
   const send = (to: `0x${string}`, abi: readonly unknown[], fn: string, args: readonly unknown[]) => a.send(me, to, encodeFunctionData({abi, functionName: fn, args} as never));
-  const price = () => client.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "price"});
+  const price = () => client.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "price"});
   let lent = false;
   let borrowed = false;
   const ghostKey = generatePrivateKey();
@@ -416,7 +416,7 @@ if (has("flows")) {
     const amount = (((collateral * (await price())) / 10n ** 36n) * params.lltv * 10n) / (E18 * 16n);
     const r = await drv.borrow(T, me, collateral, amount);
     borrowed = true;
-    const hf = await client.readContract({address: R, abi: stocklineRouterAbi, functionName: "healthFactorAt", args: [s.stockToken, me, (await now()) + 86_400n]});
+    const hf = await client.readContract({address: R, abi: lendoraRouterAbi, functionName: "healthFactorAt", args: [s.stockToken, me, (await now()) + 86_400n]});
     return `borrowed ${Number(amount) / 1e18} ${T} in ${r.transactionHash}; HF at t+24h ${(Number(hf) / 1e18).toFixed(3)}`;
   });
   await step(X, "residual (e): router.withdrawCollateral with debt can go below the 24h buffer, down to Morpho's LLTV (05 §1 (e); the app only offers it with no debt)", async () => {
@@ -426,7 +426,7 @@ if (has("flows")) {
     // Leave collateral for Morpho health 1.03 at today's price: Morpho accepts it; the 24h buffer does not.
     const keep = (debt * 10n ** 36n * E18 * 103n) / ((await price()) * params.lltv * 100n) + 1n;
     const amount = p.collateral - keep;
-    const r = await revertOf(stocklineRouterAbi, R, "withdrawCollateral", [s.stockToken, amount, me, await deadline()], me);
+    const r = await revertOf(lendoraRouterAbi, R, "withdrawCollateral", [s.stockToken, amount, me, await deadline()], me);
     if (r) return `refused: ${r.name === "Error" ? String(r.args[0]) : r.name} (residual (e) closed)`;
     return `RESIDUAL (e) confirmed: withdrawing ${Number(amount) / 1e6} of ${Number(p.collateral) / 1e6} USDG would leave Morpho HF 1.03 (HF at t+24h < 1.1); simulated only`;
   });
@@ -440,14 +440,14 @@ if (has("flows")) {
   await step(X, "residual (e) live: a direct Morpho withdrawal to HF(t+24h) 1.05 is accepted and the monitor pages COLLATERAL_BELOW_BUFFER (MON-R26, T10)", async () => {
     if (!borrowed) return {skip: "no position"};
     if (!monitor) return {skip: "no --monitor URL"};
-    const hf24 = await client.readContract({address: R, abi: stocklineRouterAbi, functionName: "healthFactorAt", args: [s.stockToken, me, (await now()) + 86_400n]});
+    const hf24 = await client.readContract({address: R, abi: lendoraRouterAbi, functionName: "healthFactorAt", args: [s.stockToken, me, (await now()) + 86_400n]});
     const p = await pos(me);
     const amount = p.collateral - (p.collateral * 105n * 10n ** 16n + hf24 - 1n) / hf24; // HF is linear in collateral
     const sim = await revertOf(morphoAbi, d.morpho, "withdrawCollateral", [params, amount, me, me], me);
     if (sim) throw new Error(`simulation refused: ${sim.name}`);
     const r = await send(d.morpho, morphoAbi, "withdrawCollateral", [params, amount, me, me]);
     belowBuffer = amount;
-    const after = await client.readContract({address: R, abi: stocklineRouterAbi, functionName: "healthFactorAt", args: [s.stockToken, me, (await now()) + 86_400n]});
+    const after = await client.readContract({address: R, abi: lendoraRouterAbi, functionName: "healthFactorAt", args: [s.stockToken, me, (await now()) + 86_400n]});
     for (let i = 0; i < 60; i++) {
       const hit = await incident("COLLATERAL_BELOW_BUFFER", "open");
       if (hit) return `withdrew ${Number(amount) / 1e6} clUSDG in ${r.transactionHash} (HF at t+24h ${(Number(after) / 1e18).toFixed(3)}); paged ${hit.subject}, path ${String(hit.details.path)}`;
@@ -506,7 +506,7 @@ if (has("flows")) {
   await step(X, "unwind: repay the ghost's debt through the router (anyone may repay anyone), its collateral back to USDG", async () => {
     if (!ghostDebt) return {skip: "nothing to unwind"};
     await send(s.stockToken, erc20Abi, "approve", [R, maxUint256]);
-    await send(R, stocklineRouterAbi, "repay", [s.stockToken, 0n, maxUint256, ghost, await deadline()]);
+    await send(R, lendoraRouterAbi, "repay", [s.stockToken, 0n, maxUint256, ghost, await deadline()]);
     const g = await connectWallet(rpc, ghostKey);
     const c = (await pos(ghost)).collateral;
     await g.send(ghost, d.morpho, encodeFunctionData({abi: morphoAbi, functionName: "withdrawCollateral", args: [params, c, ghost, ghost]}));
@@ -524,7 +524,7 @@ if (has("flows")) {
     const debt = await drv.debtOf(T, me);
     const before = await bal(s.stockToken);
     await send(s.stockToken, erc20Abi, "approve", [R, maxUint256]);
-    await send(R, stocklineRouterAbi, "repay", [s.stockToken, 0n, maxUint256, me, await deadline()]);
+    await send(R, lendoraRouterAbi, "repay", [s.stockToken, 0n, maxUint256, me, await deadline()]);
     const spent = before - (await bal(s.stockToken));
     if ((await pos(me)).borrowShares !== 0n) throw new Error("debt left after repay(all)");
     if (spent > debt + debt / 1000n + 2n) throw new Error(`spent ${spent} for a debt of ${debt}`);
@@ -532,7 +532,7 @@ if (has("flows")) {
   });
   await step(X, "unwind: withdraw all collateral and the lend", async () => {
     if (!lent) return {skip: "nothing lent"};
-    if ((await pos(me)).collateral > 0n) await send(R, stocklineRouterAbi, "withdrawCollateral", [s.stockToken, maxUint256, me, await deadline()]);
+    if ((await pos(me)).collateral > 0n) await send(R, lendoraRouterAbi, "withdrawCollateral", [s.stockToken, maxUint256, me, await deadline()]);
     const r = await drv.withdrawLend(T, me);
     return `withdrawn in ${r.transactionHash}`;
   });

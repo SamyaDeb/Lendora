@@ -1,6 +1,6 @@
 import {ponder, type Context} from "ponder:registry";
 import {dnAccount, dnDay, dnNav, dnRequest, dnSleeve, receiptMarket} from "ponder:schema";
-import {deltaNeutralVaultAbi} from "@stockline/sdk";
+import {deltaNeutralVaultAbi} from "@lendora/sdk";
 import {net} from "./snapshot.js";
 
 /**

@@ -1,5 +1,5 @@
 import {z} from "zod";
-import {resolveDeployment, type ChainDeployment, type DeploymentKey} from "@stockline/sdk";
+import {resolveDeployment, type ChainDeployment, type DeploymentKey} from "@lendora/sdk";
 
 /** Keeper configuration from the environment. Never contains key material except via `KEEPER_PRIVATE_KEY`, which is
  * read only by the env-key signer and never logged. */

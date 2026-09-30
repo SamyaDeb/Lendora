@@ -54,7 +54,7 @@
       {
         "name": "att",
         "type": "tuple",
-        "internalType": "struct IStocklineRouter.Attestation",
+        "internalType": "struct ILendoraRouter.Attestation",
         "components": [
           {
             "name": "expiry",
@@ -94,7 +94,7 @@
       {
         "name": "swap",
         "type": "tuple",
-        "internalType": "struct IStocklineRouter.Swap",
+        "internalType": "struct ILendoraRouter.Swap",
         "components": [
           {
             "name": "target",
@@ -199,7 +199,7 @@
       {
         "name": "swap",
         "type": "tuple",
-        "internalType": "struct IStocklineRouter.Swap",
+        "internalType": "struct ILendoraRouter.Swap",
         "components": [
           {
             "name": "target",
@@ -236,7 +236,7 @@
       {
         "name": "att",
         "type": "tuple",
-        "internalType": "struct IStocklineRouter.Attestation",
+        "internalType": "struct ILendoraRouter.Attestation",
         "components": [
           {
             "name": "expiry",
@@ -579,7 +579,7 @@
         "name": "market",
         "type": "tuple",
         "indexed": false,
-        "internalType": "struct IStocklineRouter.Market",
+        "internalType": "struct ILendoraRouter.Market",
         "components": [
           {
             "name": "wrapper",
@@ -793,7 +793,7 @@
         "name": "mode",
         "type": "uint8",
         "indexed": false,
-        "internalType": "enum IStocklineRouter.SwapMode"
+        "internalType": "enum ILendoraRouter.SwapMode"
       }
     ],
     "anonymous": false

@@ -2,15 +2,15 @@
 pragma solidity 0.8.26;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IStocklineOracle} from "../interfaces/IStocklineOracle.sol";
+import {ILendoraOracle} from "../interfaces/ILendoraOracle.sol";
 import {IMarketHours} from "../interfaces/IMarketHours.sol";
 import {IStockWrapper} from "../interfaces/IStockWrapper.sol";
 import {AggregatorV3Interface} from "../interfaces/external/AggregatorV3Interface.sol";
 import {IRobinhoodStock, IAccessControlsRegistry} from "../interfaces/external/IRobinhoodStock.sol";
 import {OracleMath} from "../libraries/OracleMath.sol";
 
-/// @title StocklineOracleBase
-/// @notice Shared feed handling, closure/event buffer and guard for Stockline's Morpho oracles (docs/prd/04-oracle.md).
+/// @title LendoraOracleBase
+/// @notice Shared feed handling, closure/event buffer and guard for Lendora's Morpho oracles (docs/prd/04-oracle.md).
 /// - Feeds (OR-R2, OR-R4, OR-R7): the latest Chainlink round is used only if it is positive, inside the absolute range
 ///   and inside [bandLow, bandHigh] of the stored last good answer; otherwise the last good answer is used and the
 ///   guard trips. Nothing on the price path reverts on feed conditions.
@@ -20,7 +20,7 @@ import {OracleMath} from "../libraries/OracleMath.sol";
 /// if nobody has poked; `poke()` records references and latches and emits `GuardChanged` for every change.
 /// @dev The multiplier never enters any price (D1). Owner = timelock (OR-R5); the guardian can only raise the buffer
 /// floor or trip; the keeper can trip/clear the reasons it detects offchain.
-abstract contract StocklineOracleBase is IStocklineOracle, Ownable {
+abstract contract LendoraOracleBase is ILendoraOracle, Ownable {
     // ------------------------------------------------------------------ Guard reasons (bitmask)
 
     /// @notice Guard reason bit: guardian manual trip.
@@ -160,12 +160,12 @@ abstract contract StocklineOracleBase is IStocklineOracle, Ownable {
 
     // ------------------------------------------------------------------ Views: feeds
 
-    /// @inheritdoc IStocklineOracle
+    /// @inheritdoc ILendoraOracle
     function stockAnswer() public view returns (uint256 answer, uint256 updatedAt) {
         (answer, updatedAt,) = _readStock();
     }
 
-    /// @inheritdoc IStocklineOracle
+    /// @inheritdoc ILendoraOracle
     function usdgAnswer() public view returns (uint256 answer, uint256 updatedAt) {
         (answer, updatedAt,) = _readUsdg();
     }
@@ -177,13 +177,13 @@ abstract contract StocklineOracleBase is IStocklineOracle, Ownable {
 
     // ------------------------------------------------------------------ Views: buffer (OR-R20)
 
-    /// @inheritdoc IStocklineOracle
+    /// @inheritdoc ILendoraOracle
     function buffer() external view returns (uint256) {
         (, uint256 u) = stockAnswer();
         return bufferAt(block.timestamp, u);
     }
 
-    /// @inheritdoc IStocklineOracle
+    /// @inheritdoc ILendoraOracle
     function bufferAt(uint256 t, uint256 lastGoodUpdatedAt) public view returns (uint256 b) {
         Params memory p = _params;
         b = _max(bufferFloor, _closureBuffer(p, t, lastGoodUpdatedAt));
@@ -222,12 +222,12 @@ abstract contract StocklineOracleBase is IStocklineOracle, Ownable {
 
     // ------------------------------------------------------------------ Views: guard (OR-R30)
 
-    /// @inheritdoc IStocklineOracle
+    /// @inheritdoc ILendoraOracle
     function guardTripped() external view returns (bool) {
         return guardReasons() != 0;
     }
 
-    /// @inheritdoc IStocklineOracle
+    /// @inheritdoc ILendoraOracle
     function guardReasons() public view returns (uint256) {
         return latchedReasons | liveReasons();
     }
@@ -261,7 +261,7 @@ abstract contract StocklineOracleBase is IStocklineOracle, Ownable {
 
     // ------------------------------------------------------------------ Permissionless (OR-R32)
 
-    /// @inheritdoc IStocklineOracle
+    /// @inheritdoc ILendoraOracle
     function poke() external {
         _advance(STOCK_FEED, true);
         _advance(USDG_FEED_ADDRESS, false);

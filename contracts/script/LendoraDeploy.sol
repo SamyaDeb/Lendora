@@ -9,9 +9,9 @@ import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
 import {StockWrapper} from "../src/StockWrapper.sol";
 import {MarketHours} from "../src/MarketHours.sol";
 import {CollateralToken} from "../src/CollateralToken.sol";
-import {StocklineOracle} from "../src/oracles/StocklineOracle.sol";
-import {StocklineOracleBase} from "../src/oracles/StocklineOracleBase.sol";
-import {IStocklineOracle} from "../src/interfaces/IStocklineOracle.sol";
+import {LendoraOracle} from "../src/oracles/LendoraOracle.sol";
+import {LendoraOracleBase} from "../src/oracles/LendoraOracleBase.sol";
+import {ILendoraOracle} from "../src/interfaces/ILendoraOracle.sol";
 import {IMarketHours} from "../src/interfaces/IMarketHours.sol";
 import {VaultV2Ids} from "../src/libraries/VaultV2Ids.sol";
 import {
@@ -22,27 +22,27 @@ import {
 } from "../src/interfaces/external/IMorphoVaultV2.sol";
 import {CalendarJson} from "./lib/CalendarJson.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {StocklineRouter} from "../src/StocklineRouter.sol";
-import {StocklineLiquidator} from "../src/StocklineLiquidator.sol";
-import {IStocklineRouter} from "../src/interfaces/IStocklineRouter.sol";
+import {LendoraRouter} from "../src/LendoraRouter.sol";
+import {LendoraLiquidator} from "../src/LendoraLiquidator.sol";
+import {ILendoraRouter} from "../src/interfaces/ILendoraRouter.sol";
 import {ShortInterestLens} from "../src/ShortInterestLens.sol";
 import {FeeSplitter} from "../src/fees/FeeSplitter.sol";
 import {IFeeSplitter} from "../src/interfaces/IFeeSplitter.sol";
 import {FeeConverter} from "../src/fees/FeeConverter.sol";
 import {IFeeConverter} from "../src/interfaces/IFeeConverter.sol";
 
-/// @title StocklineDeploy
+/// @title LendoraDeploy
 /// @notice Deployment logic shared by the scripts (anvil, fork) and the fork tests, so tests exercise exactly what the
 /// scripts run. Every call is made by the deployer (broadcast in scripts, prank in tests); nothing here broadcasts.
 /// Core: TimelockController, MarketHours (calendar pushed, then owned by the timelock), `clUSDG`.
-/// Per stock (LM-R10, LM-R20, LM-R23): StockWrapper → StocklineOracle → Morpho market (wSTOCK/clUSDG,
+/// Per stock (LM-R10, LM-R20, LM-R23): StockWrapper → LendoraOracle → Morpho market (wSTOCK/clUSDG,
 /// AdaptiveCurveIRM,
 /// LLTV 77%) seeded against share inflation → Vault V2 `rSTOCK` from the official factory → MorphoMarketV1AdapterV2
 /// →
 /// caps (absolute = launch cap from D8, relative = U_MAX) → 10% performance fee to the `FeeSplitter` (FE-R1) →
 /// maxRate → roles (curator multisig,
 /// allocators, sentinel = guardian, owner = timelock) → 48h timelocks on every harmful curator action.
-abstract contract StocklineDeploy {
+abstract contract LendoraDeploy {
     using MarketParamsLib for MarketParams;
 
     Vm private constant VM = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
@@ -81,7 +81,7 @@ abstract contract StocklineDeploy {
         address attestationSigner; // RT-R2 compliance signer
         uint256 globalCollateralCap; // clUSDG raw units ($4M at launch, 10-risk)
         address swapTarget; // RT-R3 first allowlisted target (UniversalRouter on 4663, A8)
-        IStocklineRouter.SwapMode swapMode;
+        ILendoraRouter.SwapMode swapMode;
     }
 
     struct StockConfig {
@@ -97,9 +97,9 @@ abstract contract StocklineDeploy {
         TimelockController timelock;
         MarketHours marketHours;
         CollateralToken clUSDG;
-        StocklineRouter router; // ERC1967 proxy
+        LendoraRouter router; // ERC1967 proxy
         address routerImplementation;
-        StocklineLiquidator liquidator;
+        LendoraLiquidator liquidator;
         ShortInterestLens lens; // Phase 2 (SI-R20, SI-R21)
         FeeSplitter feeSplitter; // Phase 3: every vault's performance fee recipient (FE-R1, FE-R2)
         FeeConverter treasuryConverter; // FE-R4: treasury share → USDG → treasury
@@ -108,7 +108,7 @@ abstract contract StocklineDeploy {
 
     struct StockDeployment {
         StockWrapper wrapper;
-        StocklineOracle oracle;
+        LendoraOracle oracle;
         MarketParams market;
         address vault;
         address adapter;
@@ -131,15 +131,15 @@ abstract contract StocklineDeploy {
         }
         core.marketHours.transferOwnership(address(core.timelock));
 
-        core.clUSDG = new CollateralToken(c.usdg, c.morpho, "Stockline Collateral USDG", "clUSDG");
+        core.clUSDG = new CollateralToken(c.usdg, c.morpho, "Lendora Collateral USDG", "clUSDG");
 
         // RT-R7: UUPS proxy; the deployer lists markets, then `_finalize` hands it to the timelock.
-        core.routerImplementation = address(new StocklineRouter(c.morpho, address(core.clUSDG)));
-        core.router = StocklineRouter(
+        core.routerImplementation = address(new LendoraRouter(c.morpho, address(core.clUSDG)));
+        core.router = LendoraRouter(
             address(
                 new ERC1967Proxy(
                     core.routerImplementation,
-                    abi.encodeCall(StocklineRouter.initialize, (c.deployer, c.attestationSigner, c.globalCollateralCap))
+                    abi.encodeCall(LendoraRouter.initialize, (c.deployer, c.attestationSigner, c.globalCollateralCap))
                 )
             )
         );
@@ -171,9 +171,9 @@ abstract contract StocklineDeploy {
     /// funds) is deployed with the same swap target and handed to the owner multisig.
     function _finalize(CoreConfig memory c, Core memory core) internal returns (Core memory) {
         core.router.transferOwnership(address(core.timelock));
-        core.liquidator = new StocklineLiquidator(c.morpho, address(core.clUSDG), c.deployer);
+        core.liquidator = new LendoraLiquidator(c.morpho, address(core.clUSDG), c.deployer);
         if (c.swapTarget != address(0)) {
-            core.liquidator.setSwapTarget(c.swapTarget, StocklineLiquidator.SwapMode(uint8(c.swapMode)));
+            core.liquidator.setSwapTarget(c.swapTarget, LendoraLiquidator.SwapMode(uint8(c.swapMode)));
         }
         core.liquidator.transferOwnership(c.owner);
         FeeConverter[2] memory convs = [core.treasuryConverter, core.backstopConverter];
@@ -199,8 +199,8 @@ abstract contract StocklineDeploy {
 
     // ------------------------------------------------------------------ Per stock
 
-    function _oracleParams(uint64 sigmaWad) internal pure returns (IStocklineOracle.Params memory) {
-        return IStocklineOracle.Params({
+    function _oracleParams(uint64 sigmaWad) internal pure returns (ILendoraOracle.Params memory) {
+        return ILendoraOracle.Params({
             zWad: 2.5e18,
             sigmaWad: sigmaWad,
             bMinWad: 0.01e18,
@@ -222,8 +222,8 @@ abstract contract StocklineDeploy {
     {
         require(IERC20(s.token).balanceOf(c.deployer) >= 2 * SEED, "deployer needs 2 * SEED raw stock units");
         d.wrapper = new StockWrapper(s.token, s.ticker, address(0)); // LM-R6: no issuer allowlist (D10 R3)
-        d.oracle = new StocklineOracle(
-            StocklineOracleBase.Deployment({
+        d.oracle = new LendoraOracle(
+            LendoraOracleBase.Deployment({
                 stockFeed: s.feed,
                 usdgFeed: c.usdgFeed,
                 stockToken: s.token,
@@ -265,7 +265,7 @@ abstract contract StocklineDeploy {
         core.router
             .listMarket(
                 s.token,
-                IStocklineRouter.Market({
+                ILendoraRouter.Market({
                     wrapper: address(d.wrapper),
                     vault: d.vault,
                     adapter: d.adapter,
@@ -280,7 +280,7 @@ abstract contract StocklineDeploy {
         internal
     {
         IVaultV2Min v = IVaultV2Min(d.vault);
-        v.setName(string.concat("Stockline ", s.ticker));
+        v.setName(string.concat("Lendora ", s.ticker));
         v.setSymbol(string.concat("r", s.ticker));
         v.setCurator(c.deployer); // temporary; all timelocks are still 0
 

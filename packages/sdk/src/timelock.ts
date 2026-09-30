@@ -1,6 +1,6 @@
 import {encodeAbiParameters, encodeFunctionData, keccak256, parseAbi, type Hex} from "viem";
 import type {Address, ChainDeployment} from "./addresses.js";
-import {deltaNeutralVaultAbi, marketHoursAbi, navOracleAbi, stocklineOracleAbi, stocklineRouterAbi, strategyManagerAbi} from "./abis.js";
+import {deltaNeutralVaultAbi, marketHoursAbi, navOracleAbi, lendoraOracleAbi, lendoraRouterAbi, strategyManagerAbi} from "./abis.js";
 
 /**
  * Timelock calldata for the owner actions the runbooks reference (docs/runbooks/*, remediation task 4). The owner of
@@ -31,7 +31,7 @@ export interface EventWindowInput {
   bufferWad: bigint;
 }
 
-/** Oracle `Params` (IStocklineOracle.Params), field for field. */
+/** Oracle `Params` (ILendoraOracle.Params), field for field. */
 export interface OracleParamsInput {
   zWad: bigint;
   sigmaWad: bigint;
@@ -92,15 +92,15 @@ function stock(d: ChainDeployment, ticker: string) {
 export function actionCall(d: ChainDeployment, a: TimelockAction): {target: Address; data: Hex} {
   switch (a.kind) {
     case "oracle.clearMultiplierGuard":
-      return {target: stock(d, a.ticker).oracle, data: encodeFunctionData({abi: stocklineOracleAbi, functionName: "clearMultiplierGuard"})};
+      return {target: stock(d, a.ticker).oracle, data: encodeFunctionData({abi: lendoraOracleAbi, functionName: "clearMultiplierGuard"})};
     case "oracle.resetReferences":
-      return {target: stock(d, a.ticker).oracle, data: encodeFunctionData({abi: stocklineOracleAbi, functionName: "resetReferences"})};
+      return {target: stock(d, a.ticker).oracle, data: encodeFunctionData({abi: lendoraOracleAbi, functionName: "resetReferences"})};
     case "oracle.setBufferFloor":
-      return {target: stock(d, a.ticker).oracle, data: encodeFunctionData({abi: stocklineOracleAbi, functionName: "setBufferFloor", args: [a.floorWad]})};
+      return {target: stock(d, a.ticker).oracle, data: encodeFunctionData({abi: lendoraOracleAbi, functionName: "setBufferFloor", args: [a.floorWad]})};
     case "oracle.setParams":
-      return {target: stock(d, a.ticker).oracle, data: encodeFunctionData({abi: stocklineOracleAbi, functionName: "setParams", args: [a.params]})};
+      return {target: stock(d, a.ticker).oracle, data: encodeFunctionData({abi: lendoraOracleAbi, functionName: "setParams", args: [a.params]})};
     case "oracle.setSequencerFeed":
-      return {target: stock(d, a.ticker).oracle, data: encodeFunctionData({abi: stocklineOracleAbi, functionName: "setSequencerFeed", args: [a.feed]})};
+      return {target: stock(d, a.ticker).oracle, data: encodeFunctionData({abi: lendoraOracleAbi, functionName: "setSequencerFeed", args: [a.feed]})};
     case "marketHours.replaceSessionsFrom":
       return {target: d.marketHours, data: encodeFunctionData({abi: marketHoursAbi, functionName: "replaceSessionsFrom", args: [a.fromIndex, a.sessions.map((s) => ({openTs: s.openTs, closeTs: s.closeTs}))]})};
     case "marketHours.replaceEventsFrom":
@@ -109,15 +109,15 @@ export function actionCall(d: ChainDeployment, a: TimelockAction): {target: Addr
         data: encodeFunctionData({abi: marketHoursAbi, functionName: "replaceEventsFrom", args: [stock(d, a.ticker).stockToken, a.fromIndex, a.events.map((e) => ({startTs: e.startTs, endTs: e.endTs, bufferWad: e.bufferWad}))]}),
       };
     case "router.delistMarket":
-      return {target: router(d), data: encodeFunctionData({abi: stocklineRouterAbi, functionName: "delistMarket", args: [stock(d, a.ticker).stockToken]})};
+      return {target: router(d), data: encodeFunctionData({abi: lendoraRouterAbi, functionName: "delistMarket", args: [stock(d, a.ticker).stockToken]})};
     case "router.setGlobalCap":
-      return {target: router(d), data: encodeFunctionData({abi: stocklineRouterAbi, functionName: "setGlobalCap", args: [a.cap]})};
+      return {target: router(d), data: encodeFunctionData({abi: lendoraRouterAbi, functionName: "setGlobalCap", args: [a.cap]})};
     case "router.setCapOverride":
-      return {target: router(d), data: encodeFunctionData({abi: stocklineRouterAbi, functionName: "setCapOverride", args: [a.user, stock(d, a.ticker).stockToken, a.capUsdWad]})};
+      return {target: router(d), data: encodeFunctionData({abi: lendoraRouterAbi, functionName: "setCapOverride", args: [a.user, stock(d, a.ticker).stockToken, a.capUsdWad]})};
     case "router.setAttestationSigner":
-      return {target: router(d), data: encodeFunctionData({abi: stocklineRouterAbi, functionName: "setAttestationSigner", args: [a.signer]})};
+      return {target: router(d), data: encodeFunctionData({abi: lendoraRouterAbi, functionName: "setAttestationSigner", args: [a.signer]})};
     case "router.setSwapTarget":
-      return {target: router(d), data: encodeFunctionData({abi: stocklineRouterAbi, functionName: "setSwapTarget", args: [a.target, a.mode]})};
+      return {target: router(d), data: encodeFunctionData({abi: lendoraRouterAbi, functionName: "setSwapTarget", args: [a.target, a.mode]})};
     case "dnVault.setTotalCap":
       return {target: dnVault(d).vault, data: encodeFunctionData({abi: deltaNeutralVaultAbi, functionName: "setTotalCap", args: [a.cap]})};
     case "dnStrategy.setSleeveCap":

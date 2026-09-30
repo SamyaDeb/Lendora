@@ -3,15 +3,15 @@ import {
   aggregatorV3Abi,
   marketHoursAbi,
   priceFromTick,
-  stocklineOracleAbi,
+  lendoraOracleAbi,
   twapTick,
   uniswapV3PoolAbi,
-  type ChainDeployment, safeErrorLine} from "@stockline/sdk";
+  type ChainDeployment, safeErrorLine} from "@lendora/sdk";
 import type {TxSender} from "../common/signer.js";
 import type {Health} from "../common/health.js";
 import {L2GapDetector} from "../common/l2gap.js";
 
-/** Oracle reason bits (StocklineOracleBase). */
+/** Oracle reason bits (LendoraOracleBase). */
 export const REASON = {MANUAL: 1n, DEVIATION: 2n, L2_GAP: 4n} as const;
 
 export interface GuardOptions {
@@ -87,7 +87,7 @@ export class GuardKeeper {
   }
 
   private async sendOracle(ticker: string, fn: "poke" | "trip" | "clear", args: bigint[], out: string[]): Promise<void> {
-    const data = encodeFunctionData({abi: stocklineOracleAbi, functionName: fn, args: args as never});
+    const data = encodeFunctionData({abi: lendoraOracleAbi, functionName: fn, args: args as never});
     out.push(`${fn}${args.length ? `(${args[0]})` : ""}`);
     this.log(`[guard] ${ticker} ${fn} ${args.join(",")}`);
     await this.sender.send(this.d.stocks[ticker].oracle, data, `${ticker} ${fn}`);
@@ -98,13 +98,13 @@ export class GuardKeeper {
     const c = this.client;
     const actions: string[] = [];
     const [latched, live, emitted, buffer, stockAnswer, feedRound, usdg, open] = await Promise.all([
-      c.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "latchedReasons"}),
-      c.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "liveReasons"}),
-      c.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "emittedReasons"}),
-      c.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "buffer"}),
-      c.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "stockAnswer"}),
+      c.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "latchedReasons"}),
+      c.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "liveReasons"}),
+      c.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "emittedReasons"}),
+      c.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "buffer"}),
+      c.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "stockAnswer"}),
       c.readContract({address: s.feed, abi: aggregatorV3Abi, functionName: "latestRoundData"}),
-      c.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "usdgAnswer"}),
+      c.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "usdgAnswer"}),
       c.readContract({address: this.d.marketHours, abi: marketHoursAbi, functionName: "isOpen", args: [now]}),
     ]);
 

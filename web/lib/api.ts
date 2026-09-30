@@ -1,4 +1,4 @@
-import {api} from "@stockline/sdk";
+import {api} from "@lendora/sdk";
 import {API_URL, API_URL_SERVER} from "./env";
 
 /** The SDK's typed client for the public API (APP-R5: lists and charts come from the API). */

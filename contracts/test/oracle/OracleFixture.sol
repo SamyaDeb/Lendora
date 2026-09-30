@@ -5,9 +5,9 @@ import {Test} from "forge-std/Test.sol";
 import {StockWrapper} from "../../src/StockWrapper.sol";
 import {MarketHours} from "../../src/MarketHours.sol";
 import {IMarketHours} from "../../src/interfaces/IMarketHours.sol";
-import {StocklineOracle} from "../../src/oracles/StocklineOracle.sol";
-import {StocklineOracleBase} from "../../src/oracles/StocklineOracleBase.sol";
-import {IStocklineOracle} from "../../src/interfaces/IStocklineOracle.sol";
+import {LendoraOracle} from "../../src/oracles/LendoraOracle.sol";
+import {LendoraOracleBase} from "../../src/oracles/LendoraOracleBase.sol";
+import {ILendoraOracle} from "../../src/interfaces/ILendoraOracle.sol";
 import {MockStockToken} from "../mocks/MockStockToken.sol";
 import {MockChainlinkAggregator} from "../mocks/MockChainlinkAggregator.sol";
 import {MockCollateralToken} from "../mocks/MockCollateralToken.sol";
@@ -43,14 +43,14 @@ abstract contract OracleFixture is Test {
     MockChainlinkAggregator internal usdgFeed;
     MockCollateralToken internal clUSDG;
     MarketHours internal mh;
-    StocklineOracle internal oracle;
+    LendoraOracle internal oracle;
 
     address internal owner = makeAddr("timelock");
     address internal guardian = makeAddr("guardian");
     address internal keeper = makeAddr("keeper");
 
-    function _params() internal pure returns (IStocklineOracle.Params memory) {
-        return IStocklineOracle.Params({
+    function _params() internal pure returns (ILendoraOracle.Params memory) {
+        return ILendoraOracle.Params({
             zWad: 2.5e18,
             sigmaWad: 0.52e18,
             bMinWad: 0.01e18,
@@ -66,8 +66,8 @@ abstract contract OracleFixture is Test {
         });
     }
 
-    function _deployment() internal view returns (StocklineOracleBase.Deployment memory) {
-        return StocklineOracleBase.Deployment({
+    function _deployment() internal view returns (LendoraOracleBase.Deployment memory) {
+        return LendoraOracleBase.Deployment({
             stockFeed: address(stockFeed),
             usdgFeed: address(usdgFeed),
             stockToken: address(nvda),
@@ -97,14 +97,14 @@ abstract contract OracleFixture is Test {
         vm.prank(owner);
         mh.replaceSessionsFrom(0, s);
 
-        oracle = new StocklineOracle(_deployment(), _params(), address(clUSDG));
+        oracle = new LendoraOracle(_deployment(), _params(), address(clUSDG));
     }
 
     // ------------------------------------------------------------------ helpers
 
     /// @dev b_full for a closure of `hours_` with the fixture params (SDK-identical math).
     function _full(uint256 seconds_) internal pure returns (uint256) {
-        IStocklineOracle.Params memory p = _params();
+        ILendoraOracle.Params memory p = _params();
         uint256 s = _sqrt(seconds_ * 1e36 / (8760 hours));
         uint256 b = uint256(p.zWad) * p.sigmaWad / WAD * s / WAD;
         if (b < p.bMinWad) b = p.bMinWad;

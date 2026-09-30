@@ -1,6 +1,6 @@
 # Runbook · Collateral withdrawn below the 24h buffer (`COLLATERAL_BELOW_BUFFER`, MON-R26, P2)
 
-**Trigger.** A Morpho `WithdrawCollateral` on a Stockline market, either through the router (`CollateralWithdrawn`,
+**Trigger.** A Morpho `WithdrawCollateral` on a Lendora market, either through the router (`CollateralWithdrawn`,
 `path: router`) or directly on Morpho (`path: direct`), left a position that still has debt with **HF < 1.10 at
 t + 24h**. That is the RT-R1 weekend/earnings buffer every entry must meet. Subject `<ticker>:<borrower>`. It is a
 state rule: re-evaluated every tick on the position as it is now, and it resolves when HF(t + 24h) is back at 1.10 or

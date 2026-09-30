@@ -6,9 +6,9 @@ import {
   expectedMarketBalances,
   marketHoursAbi,
   morphoAbi,
-  stocklineOracleAbi,
-} from "@stockline/sdk";
-import {ChainDriver, seedWeek, startAnvil, startPostgres, USERS, type Anvil, type SeedResult, type Service} from "@stockline/devnet";
+  lendoraOracleAbi,
+} from "@lendora/sdk";
+import {ChainDriver, seedWeek, startAnvil, startPostgres, USERS, type Anvil, type SeedResult, type Service} from "@lendora/devnet";
 import {startIndexer, type IndexerHandle} from "../lib/harness.js";
 import {ConsolePager, reconcile} from "../lib/reconcile.js";
 
@@ -79,8 +79,8 @@ describe("indexer on anvil with the seed week (SI-R1…R5)", () => {
       const block = await a.client.getBlock({blockNumber});
       const [mk, buffer, reasons, open, idle, rat] = await Promise.all([
         a.client.readContract({address: a.d.morpho, abi: morphoAbi, functionName: "market", args: [s.marketId], blockNumber}),
-        a.client.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "buffer", blockNumber}),
-        a.client.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "guardReasons", blockNumber}),
+        a.client.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "buffer", blockNumber}),
+        a.client.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "guardReasons", blockNumber}),
         a.client.readContract({address: a.d.marketHours, abi: marketHoursAbi, functionName: "isOpen", args: [block.timestamp], blockNumber}),
         a.client.readContract({address: s.wrapper, abi: erc20Abi, functionName: "balanceOf", args: [s.vault], blockNumber}),
         a.client.readContract({

@@ -194,7 +194,7 @@ function Movers({title, items}: {title: string; items: {m: Market; c: {abs: numb
 function ApiSection({apiUrl}: {apiUrl: string}) {
   const SNIPPETS: Record<string, string> = {
     curl: `curl ${apiUrl}/v1/markets/NVDA`,
-    TypeScript: `import {api} from "@stockline/sdk";\nconst sl = api.createClient("${apiUrl}");\nconst {data} = await sl.markets();\nconsole.log(data.map((m) => [m.symbol, m.borrowed, m.siPctFloat]));`,
+    TypeScript: `import {api} from "@lendora/sdk";\nconst sl = api.createClient("${apiUrl}");\nconst {data} = await sl.markets();\nconsole.log(data.map((m) => [m.symbol, m.borrowed, m.siPctFloat]));`,
     Python: `import requests\nm = requests.get("${apiUrl}/v1/markets").json()\nfor s in m["data"]:\n    print(s["symbol"], s["borrowed"], s["borrowApr"])`,
     WebSocket: `const ws = new WebSocket("${apiUrl.replace(/^http/, "ws")}/v1/stream");\nws.onopen = () => ws.send(JSON.stringify({channel: "market", symbol: "NVDA"}));\nws.onmessage = (e) => console.log(JSON.parse(e.data));`,
   };

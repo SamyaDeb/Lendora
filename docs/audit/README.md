@@ -1,4 +1,4 @@
-# Stockline · audit package (Phase 3)
+# Lendora · audit package (Phase 3)
 
 Everything an auditor needs to start: scope, architecture, roles and trust, integrations, invariants with their tests,
 how to build and run every suite, and the known issues we accept. Threat model: [threat-model.md](threat-model.md).
@@ -6,7 +6,7 @@ Requirements: [`docs/prd`](../prd/README.md) (IDs such as `RT-R8` are referenced
 
 **Phase 4 (USDG Earn, delta-neutral vault):** separate package, [phase4/README.md](phase4/README.md) (own freeze).
 
-*Prepared 2026-09-28 (remediation task 8). Working name "Stockline" (brand decision Q6 pending; nothing renamed).*
+*Prepared 2026-09-28 (remediation task 8). The product was renamed from Stockline to Lendora on 2026-09-30, after the freeze: at the freeze commit the files and contracts named `Lendora*` here are `Stockline*`.*
 
 ## 1. Scope
 
@@ -19,23 +19,23 @@ nSLOC = non-blank, non-comment lines.
 
 | File | nSLOC | What it is | Upgradeable |
 |---|---:|---|---|
-| `src/StocklineRouter.sol` | 375 | One-transaction user flows; RT-R1 guard/HF/caps, RT-R2 attestation, RT-R8 rescue-only `addCollateral`. UUPS proxy, ERC-7201 storage | Yes (UUPS, owner = 48h timelock) |
-| `src/oracles/StocklineOracleBase.sol` | 351 | Morpho `IOracle` core: Chainlink feed + closure/event buffer + guards (OR-R1…R8, R20…R23, R30…R33) | No |
-| `src/oracles/StocklineOracle.sol` | 28 | Stock-loan market oracle (wSTOCK loan, clUSDG collateral) | No |
+| `src/LendoraRouter.sol` | 375 | One-transaction user flows; RT-R1 guard/HF/caps, RT-R2 attestation, RT-R8 rescue-only `addCollateral`. UUPS proxy, ERC-7201 storage | Yes (UUPS, owner = 48h timelock) |
+| `src/oracles/LendoraOracleBase.sol` | 351 | Morpho `IOracle` core: Chainlink feed + closure/event buffer + guards (OR-R1…R8, R20…R23, R30…R33) | No |
+| `src/oracles/LendoraOracle.sol` | 28 | Stock-loan market oracle (wSTOCK loan, clUSDG collateral) | No |
 | `src/oracles/ReceiptCollateralOracle.sol` | 33 | `rSTOCK`-collateral / USDG-loan oracle (G5, listed later, CL-R10) | No |
 | `src/MarketHours.sol` | 127 | Feed sessions and event windows (OR-R10…R14) | No (owner-set schedule) |
 | `src/StockWrapper.sol` | 66 | Non-rebasing 1:1 wrapper of an ERC-8056 Stock Token (LM-R1…R8) | No |
 | `src/CollateralToken.sol` | 71 | `clUSDG`: gated 1:1 USDG wrapper, router-only mint (CL-R1…R7) | No |
-| `src/StocklineLiquidator.sol` | 115 | Fallback liquidator: Morpho callback unwraps `clUSDG`, swaps, wraps, repays (LM-R12) | No (redeployable) |
+| `src/LendoraLiquidator.sol` | 115 | Fallback liquidator: Morpho callback unwraps `clUSDG`, swaps, wraps, repays (LM-R12) | No (redeployable) |
 | `src/ShortInterestLens.sol` | 65 | View-only aggregation (SI-R20, R21) | No (redeployable) |
 | `src/adapters/BlocklistHolderAllowlist.sol` | 14 | Optional unwrap pre-check against the issuer blocklist (LM-R6) | No |
 | `src/libraries/OracleMath.sol` | 54 | Buffer and health-factor math shared by oracles and router | – |
 | `src/libraries/VaultV2Ids.sol` | 16 | Vault V2 cap ids | – |
-| `src/interfaces/*.sol` | 231 | Stockline interfaces (`IStocklineRouter`, `IStocklineOracle`, `IMarketHours`, `IStockWrapper`, `ICollateralToken`, `IShortInterestLens`, `IHolderAllowlist`) | – |
+| `src/interfaces/*.sol` | 231 | Lendora interfaces (`ILendoraRouter`, `ILendoraOracle`, `IMarketHours`, `IStockWrapper`, `ICollateralToken`, `IShortInterestLens`, `IHolderAllowlist`) | – |
 | `src/interfaces/external/*.sol` | 122 | Minimal copies of third-party interfaces (Vault V2, Chainlink, Robinhood Stock Token, ERC-8056) | – |
 | **Total** | **1,668** | | |
 
-Also in scope, **deployment logic only**: `script/StocklineDeploy.sol` (wiring, roles, caps, timelocks — LM-R10,
+Also in scope, **deployment logic only**: `script/LendoraDeploy.sol` (wiring, roles, caps, timelocks — LM-R10,
 LM-R20…R23) and `script/DeployTestnet.s.sol` role defaults (A27 must not carry to mainnet).
 
 **Out of scope.** Morpho Blue (`lib/morpho-blue` v1.0.0, deployed at `0x9D53…1010`), Morpho Vault V2 and
@@ -46,7 +46,7 @@ call), everything under `test/` (mocks included) and `script/` except the files 
 (keepers, indexer, API, web, compliance) — those have their own review: [offchain-review.md](offchain-review.md) (Phase 3
 task 9). Round 2 / delta scope (fee contracts, mainnet deploy scripts): §8.
 
-**Size note.** `StocklineRouter` runtime is 24,092 bytes: 484 bytes under EIP-170. Any fix that grows it must be
+**Size note.** `LendoraRouter` runtime is 24,092 bytes: 484 bytes under EIP-170. Any fix that grows it must be
 checked with `forge build --sizes`.
 
 ## 2. Architecture
@@ -57,24 +57,24 @@ checked with `forge build --sizes`.
                         └──────────────┬───────────────────────────────┬───────────────────┘
                                        │ tx (viem/wagmi)               │ REST / WS
                                        ▼                               ▼
-┌────────────────── Stockline contracts ──────────────────┐   ┌──── Offchain ─────────────────┐
-│ StocklineRouter (UUPS; borrow/openShort attested)        │   │ Indexer (Ponder) → Postgres   │
+┌────────────────── Lendora contracts ────────────────────┐   ┌──── Offchain ─────────────────┐
+│ LendoraRouter (UUPS; borrow/openShort attested)          │   │ Indexer (Ponder) → Postgres   │
 │ StockWrapper  wNVDA  (non-rebasing wrapper of NVDA)       │   │ Public API · Compliance signer│
 │ CollateralToken clUSDG (gated USDG wrapper)               │   │ Keepers: allocator, guard,    │
-│ StocklineOracle (per market; closure/event buffer, guards)│   │   liquidator, alerts, monitor │
+│ LendoraOracle (per market; closure/event buffer, guards)  │   │   liquidator, alerts, monitor │
 │ MarketHours (feed sessions + event windows)               │   └───────────────────────────────┘
-│ StocklineLiquidator · ShortInterestLens                   │
+│ LendoraLiquidator · ShortInterestLens                     │
 │ TimelockController (owner of the above and the vaults)    │
 └─────────────┬───────────────────────────────┬────────────┘
               ▼                               ▼
    Vault V2 rNVDA ──MarketV1AdapterV2──►  Morpho Blue market
    (caps, idle reserve = unallocated,     loan = wNVDA, collateral = clUSDG,
-    perf fee → FeeSplitter)               oracle = StocklineOracle, IRM = AdaptiveCurve, LLTV 77%
+    perf fee → FeeSplitter)               oracle = LendoraOracle, IRM = AdaptiveCurve, LLTV 77%
                                                     ▲
                                    Chainlink feeds ─┘ (NVDA/USD, USDG/USD)
 ```
 
-Per stock: one `StockWrapper`, one `StocklineOracle`, one Vault V2 with one adapter, one Morpho market. "Pause new
+Per stock: one `StockWrapper`, one `LendoraOracle`, one Vault V2 with one adapter, one Morpho market. "Pause new
 borrowing" is done by **liquidity** (the allocator deallocates free market liquidity on a guard trip, LM-R31), because
 Morpho Blue has no pause; see [02](../prd/02-architecture.md), [03 §4](../prd/03-lending-markets.md), [05](../prd/05-collateral-router.md).
 
@@ -107,12 +107,12 @@ Morpho Blue has no pause; see [02](../prd/02-architecture.md), [03 §4](../prd/0
 
 | ID | Property | Tests |
 |---|---|---|
-| CL-R6 | USDG held by `clUSDG` ≥ `clUSDG.totalSupply` (absent a Paxos freeze/wipe) | `test/CollateralToken/CollateralToken.invariant.t.sol` `invariant_CL_R6_fullyBacked`, `invariant_CL_R6_exactBacking`; `test/router/StocklineRouter.invariant.t.sol` `invariant_CL_R6_clUsdgFullyBacked` (every router flow, misbehaving DEX, 1M calls at `FOUNDRY_PROFILE=deep`) |
+| CL-R6 | USDG held by `clUSDG` ≥ `clUSDG.totalSupply` (absent a Paxos freeze/wipe) | `test/CollateralToken/CollateralToken.invariant.t.sol` `invariant_CL_R6_fullyBacked`, `invariant_CL_R6_exactBacking`; `test/router/LendoraRouter.invariant.t.sol` `invariant_CL_R6_clUsdgFullyBacked` (every router flow, misbehaving DEX, 1M calls at `FOUNDRY_PROFILE=deep`) |
 | LM-R7 | Stock Tokens held by the wrapper ≥ wSTOCK supply (absent `adminBurn`) | `test/StockWrapper/StockWrapper.invariant.t.sol` `invariant_LM_R7_*`, `invariant_LM_R8_noShortfallWithoutAdminBurn`; router invariant `invariant_LM_R7_wrapperFullyBacked` |
 | RT-R5 | The router holds no tokens and no dangling approvals after any call | `invariant_RT_R5_routerHoldsNothing` (router invariant suite) |
-| OR-R8 | Nothing Stockline controls moves `price()` down by more than Morpho's instant-drop bound (17.29% at LLTV 77%) in one block | `test/oracle/StocklineOracle.t.sol` `testFuzz_OR_R8_anyBufferStepWithinMorphoBound`, `testFuzz_OR_R8_liveTransitionsWithinMorphoBound`, `test_OR_R5_R8_paramValidation` |
-| RT-R8 | Collateral enters only with a debt position; the rescue top-up is never blocked | `test/router/StocklineRouter.t.sol` `test_RT_R8_*` (4); upgrade from the Phase 2 implementation: `test/router/StocklineRouterUpgrade.t.sol` |
-| OR-R2 | `price()` never reverts on feed or guard conditions | `test/oracle/StocklineOracle.t.sol` (reverting/zero/negative feeds), `test/fork/phase1/Lifecycle.fork.t.sol` 1e18 incident |
+| OR-R8 | Nothing Lendora controls moves `price()` down by more than Morpho's instant-drop bound (17.29% at LLTV 77%) in one block | `test/oracle/LendoraOracle.t.sol` `testFuzz_OR_R8_anyBufferStepWithinMorphoBound`, `testFuzz_OR_R8_liveTransitionsWithinMorphoBound`, `test_OR_R5_R8_paramValidation` |
+| RT-R8 | Collateral enters only with a debt position; the rescue top-up is never blocked | `test/router/LendoraRouter.t.sol` `test_RT_R8_*` (4); upgrade from the Phase 2 implementation: `test/router/LendoraRouterUpgrade.t.sol` |
+| OR-R2 | `price()` never reverts on feed or guard conditions | `test/oracle/LendoraOracle.t.sol` (reverting/zero/negative feeds), `test/fork/phase1/Lifecycle.fork.t.sol` 1e18 incident |
 | LM-R1 | Wrap/unwrap round trip is lossless | `testFuzz_LM_R1_roundTripIsLossless` |
 | SI-R20 | Lens: borrowed ≤ supplied, utilization ≤ 1 | `testFuzz_SI_R20_borrowedNeverExceedsSuppliedAndUtilizationBounded` |
 
@@ -128,7 +128,7 @@ forge build --sizes
 forge fmt --check
 forge test                                               # 205 tests, fork suites skip without an RPC
 ROBINHOOD_RPC_URL=https://rpc.mainnet.chain.robinhood.com forge test --match-path "test/fork/phase[12]/*"   # latest block (A17)
-FOUNDRY_PROFILE=deep forge test --match-contract StocklineRouterInvariantTest   # 3 x 1,000,000 calls
+FOUNDRY_PROFILE=deep forge test --match-contract LendoraRouterInvariantTest   # 3 x 1,000,000 calls
 forge coverage --report summary                          # every src/ file ≥ 97.8% lines (2026-09-28)
 slither .                                                # config: slither.config.json (triage notes inside); no medium+
 forge doc                                                # NatSpec site → docs/audit/forge-doc (not committed)
@@ -136,7 +136,7 @@ forge doc                                                # NatSpec site → docs
 
 `test/fork/phase0` is pinned to historical blocks and needs an archive RPC (Q7, pending). Offchain:
 `pnpm install && pnpm -r typecheck && pnpm -r lint && pnpm -r test` (needs `anvil`, `postgres`/`initdb` on PATH);
-`pnpm --filter @stockline/web e2e` (Playwright on the full local stack).
+`pnpm --filter @lendora/web e2e` (Playwright on the full local stack).
 
 ## 7. Known issues and accepted risks
 
@@ -185,7 +185,7 @@ commit of Phase 3). nSLOC counted as in §1.
 
 | File | nSLOC | Change |
 |---|---:|---|
-| `script/StocklineDeploy.sol` | 395 (70 changed lines since the freeze) | Deploys `FeeSplitter` (owner = timelock) and the two `FeeConverter`s in `_deployCore`; sets `performanceFeeRecipient = FeeSplitter` and `performanceFee = 10%` per vault **before** `_lockVault` timelocks them; registers each vault with both converters; hands the converters to the timelock in `_finalize`; `_chainJson` split out of `_writeAddresses` (no behavior change) |
+| `script/LendoraDeploy.sol` | 395 (70 changed lines since the freeze) | Deploys `FeeSplitter` (owner = timelock) and the two `FeeConverter`s in `_deployCore`; sets `performanceFeeRecipient = FeeSplitter` and `performanceFee = 10%` per vault **before** `_lockVault` timelocks them; registers each vault with both converters; hands the converters to the timelock in `_finalize`; `_chainJson` split out of `_writeAddresses` (no behavior change) |
 | `script/MainnetConfig.sol` | 180 | New. Mainnet config and the refusal rules MN-R1…MN-R3 (distinct, non-zero, non-deployer, non-placeholder roles; Safe thresholds; 48h; caps at 25% of D8; `Transfer` mode; no sequencer feed) |
 | `script/DeployMainnet.s.sol` | 27 | New. Chain 4663 only and only with `I_HAVE_THE_OWNERS_GO=1` (MN-R4) |
 | `script/VerifyRoles.s.sol` | 408 | New, read-only. Every mainnet-launch §3.4 check plus the Vault V2 code (MN-R5) |

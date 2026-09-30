@@ -2,7 +2,7 @@
 import {useState} from "react";
 import {useQueryClient} from "@tanstack/react-query";
 import {encodeFunctionData, parseUnits} from "viem";
-import {mockStockTokenAbi, mockUsdgAbi} from "@stockline/sdk";
+import {mockStockTokenAbi, mockUsdgAbi} from "@lendora/sdk";
 import {CHAIN_ID, RPC_URL, TICKERS, deployment} from "@/lib/env";
 import {useTrackedWriter, useTxRunner} from "@/lib/flows/common";
 import {faucetAbi, faucetKind} from "@/lib/network";
@@ -12,7 +12,7 @@ import {Button, Icon, Notice, StepList, useToast} from "@/components/ui";
 const ANVIL_DEPLOYER = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
 
 /**
- * Test funds. Testnet: the Stockline faucet (once per address per day). Local anvil (31337) only: gas ETH plus
+ * Test funds. Testnet: the Lendora faucet (once per address per day). Local anvil (31337) only: gas ETH plus
  * USDG and every Stock Token, minted by the unlocked deployer through the local RPC, so any browser wallet can run
  * the whole product. Never shown on other chains, and never on mainnet (MN-R6).
  */

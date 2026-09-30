@@ -109,7 +109,7 @@
       {
         "name": "",
         "type": "tuple",
-        "internalType": "struct IStocklineOracle.Params",
+        "internalType": "struct ILendoraOracle.Params",
         "components": [
           {
             "name": "zWad",
@@ -329,7 +329,7 @@
         "name": "params",
         "type": "tuple",
         "indexed": false,
-        "internalType": "struct IStocklineOracle.Params",
+        "internalType": "struct ILendoraOracle.Params",
         "components": [
           {
             "name": "zWad",

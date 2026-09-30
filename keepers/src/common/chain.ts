@@ -1,5 +1,5 @@
 import {createPublicClient, fallback, http, type Chain, type PublicClient} from "viem";
-import {chainFor as sdkChainFor, chainIdOf, robinhoodChain, type DeploymentKey} from "@stockline/sdk";
+import {chainFor as sdkChainFor, chainIdOf, robinhoodChain, type DeploymentKey} from "@lendora/sdk";
 
 /** Robinhood Chain (4663; ~0.1 s blocks, receipts polled every 500 ms). Keepers send there only once the launch has
  * published the 4663 deployment (MN-R6). */

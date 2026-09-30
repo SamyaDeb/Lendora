@@ -1,6 +1,6 @@
 "use client";
 import {useState} from "react";
-import {underlyingEquivalent} from "@stockline/sdk";
+import {underlyingEquivalent} from "@lendora/sdk";
 import type {LendFlow} from "@/lib/flows/useLendFlow";
 import {num, pct, wad} from "@/lib/format";
 import {AmountInput, Button, Icon, Notice, NumberTicker, Row, Segmented, Stat} from "@/components/ui";

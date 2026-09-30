@@ -2,16 +2,16 @@
 pragma solidity 0.8.26;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {StocklineOracle} from "../../src/oracles/StocklineOracle.sol";
-import {StocklineOracleBase} from "../../src/oracles/StocklineOracleBase.sol";
-import {IStocklineOracle} from "../../src/interfaces/IStocklineOracle.sol";
+import {LendoraOracle} from "../../src/oracles/LendoraOracle.sol";
+import {LendoraOracleBase} from "../../src/oracles/LendoraOracleBase.sol";
+import {ILendoraOracle} from "../../src/interfaces/ILendoraOracle.sol";
 import {IStockWrapper} from "../../src/interfaces/IStockWrapper.sol";
 import {OracleMath} from "../../src/libraries/OracleMath.sol";
 import {MockSequencerUptimeFeed} from "../mocks/MockSequencerUptimeFeed.sol";
 import {MockChainlinkAggregator} from "../mocks/MockChainlinkAggregator.sol";
 import {OracleFixture} from "./OracleFixture.sol";
 
-contract StocklineOracleTest is OracleFixture {
+contract LendoraOracleTest is OracleFixture {
     uint256 internal b48;
     uint256 internal b72;
 
@@ -87,7 +87,7 @@ contract StocklineOracleTest is OracleFixture {
         vm.warp(rounds[0].updatedAt - 60);
         stockFeed.setAnswer(int256(rounds[24].answer));
         usdgFeed.setAnswer(1e8);
-        StocklineOracle o = new StocklineOracle(_deployment(), _params(), address(clUSDG));
+        LendoraOracle o = new LendoraOracle(_deployment(), _params(), address(clUSDG));
         uint256 p0 = o.price();
 
         for (uint256 i; i < 24; i++) {
@@ -154,7 +154,7 @@ contract StocklineOracleTest is OracleFixture {
         // Absolute range: > $1e6 or < $0.01 is rejected even by a re-anchor.
         stockFeed.setAnswer(1e6 * 1e8 + 1);
         vm.prank(owner);
-        vm.expectRevert(abi.encodeWithSelector(IStocklineOracle.InsaneAnswer.selector, address(stockFeed)));
+        vm.expectRevert(abi.encodeWithSelector(ILendoraOracle.InsaneAnswer.selector, address(stockFeed)));
         oracle.resetReferences();
     }
 
@@ -168,9 +168,9 @@ contract StocklineOracleTest is OracleFixture {
 
     function test_OR_R7_constructorRejectsInsaneAnswer() public {
         stockFeed.setAnswer(2_082_200_000_000_000_000); // launch-incident scale
-        StocklineOracleBase.Deployment memory d = _deployment();
-        vm.expectRevert(abi.encodeWithSelector(IStocklineOracle.InsaneAnswer.selector, address(stockFeed)));
-        new StocklineOracle(d, _params(), address(clUSDG));
+        LendoraOracleBase.Deployment memory d = _deployment();
+        vm.expectRevert(abi.encodeWithSelector(ILendoraOracle.InsaneAnswer.selector, address(stockFeed)));
+        new LendoraOracle(d, _params(), address(clUSDG));
     }
 
     // ================================================================== OR-R4 USDG/USD
@@ -196,7 +196,7 @@ contract StocklineOracleTest is OracleFixture {
         nvda.updateMultiplier(4e18); // immediate 4:1 split, no oraclePaused window
         assertTrue(oracle.guardReasons() & oracle.MULTIPLIER() != 0);
         vm.expectEmit(address(oracle));
-        emit IStocklineOracle.MultiplierObserved(1e18, 4e18, false);
+        emit ILendoraOracle.MultiplierObserved(1e18, 4e18, false);
         oracle.poke();
         assertEq(oracle.lastMultiplier(), 4e18);
         assertTrue(oracle.latchedReasons() & oracle.MULTIPLIER() != 0, "latched after poke");
@@ -238,7 +238,7 @@ contract StocklineOracleTest is OracleFixture {
     }
 
     function test_OR_R3_strictModeTripsOnDividend() public {
-        IStocklineOracle.Params memory p = _params();
+        ILendoraOracle.Params memory p = _params();
         p.maxQuietMultiplierStepWad = 0;
         vm.prank(owner);
         oracle.setParams(p);
@@ -326,29 +326,29 @@ contract StocklineOracleTest is OracleFixture {
         uint256 manual = oracle.MANUAL();
         vm.prank(keeper);
         vm.expectEmit(address(oracle));
-        emit IStocklineOracle.GuardChanged(deviation, true);
+        emit ILendoraOracle.GuardChanged(deviation, true);
         oracle.trip(deviation);
         assertTrue(oracle.guardTripped());
 
         vm.prank(keeper);
-        vm.expectRevert(IStocklineOracle.BadReason.selector);
+        vm.expectRevert(ILendoraOracle.BadReason.selector);
         oracle.trip(manual); // keeper cannot use MANUAL
         uint256 l2 = oracle.L2_GAP();
         uint256 stale = oracle.STALE();
         vm.prank(guardian);
         oracle.trip(manual | l2);
         vm.prank(guardian);
-        vm.expectRevert(IStocklineOracle.BadReason.selector);
+        vm.expectRevert(ILendoraOracle.BadReason.selector);
         oracle.trip(stale); // onchain reasons are never set by hand
-        vm.expectRevert(IStocklineOracle.Unauthorized.selector);
+        vm.expectRevert(ILendoraOracle.Unauthorized.selector);
         oracle.trip(deviation);
         vm.prank(guardian);
-        vm.expectRevert(IStocklineOracle.BadReason.selector);
+        vm.expectRevert(ILendoraOracle.BadReason.selector);
         oracle.clear(0);
 
         vm.prank(keeper);
         vm.expectEmit(address(oracle));
-        emit IStocklineOracle.GuardChanged(deviation, false);
+        emit ILendoraOracle.GuardChanged(deviation, false);
         oracle.clear(deviation);
         vm.prank(guardian);
         oracle.clear(manual | l2);
@@ -366,12 +366,12 @@ contract StocklineOracleTest is OracleFixture {
         assertEq(oracle.guardReasons(), oracle.STALE());
         uint256 stale = oracle.STALE();
         vm.expectEmit(address(oracle));
-        emit IStocklineOracle.GuardChanged(stale, true);
+        emit ILendoraOracle.GuardChanged(stale, true);
         vm.prank(makeAddr("anyone"));
         oracle.poke();
         stockFeed.setAnswer(P0);
         vm.expectEmit(address(oracle));
-        emit IStocklineOracle.GuardChanged(stale, false);
+        emit ILendoraOracle.GuardChanged(stale, false);
         oracle.poke();
     }
 
@@ -496,7 +496,7 @@ contract StocklineOracleTest is OracleFixture {
 
     function test_OR_R14_eventBufferClampedToBMax() public {
         _pushEvent(uint64(block.timestamp + 5 hours), uint64(block.timestamp + 6 hours), 0.2e18);
-        IStocklineOracle.Params memory p = _params();
+        ILendoraOracle.Params memory p = _params();
         p.bMaxWad = 0.15e18;
         vm.prank(owner);
         oracle.setParams(p);
@@ -569,7 +569,7 @@ contract StocklineOracleTest is OracleFixture {
         assertGe(after_ * 1e18, before * _lltvTimesLif(0.77e18));
     }
 
-    /// Through the live oracle: from any time in the calendar, one block later (≤ 10 s), after any mix of Stockline
+    /// Through the live oracle: from any time in the calendar, one block later (≤ 10 s), after any mix of Lendora
     /// actions (guardian floor raise, calendar/event push, parameter change within limits, multiplier change), with
     /// the feed unchanged, `price()` never drops by more than Morpho's bound.
     function testFuzz_OR_R8_liveTransitionsWithinMorphoBound(
@@ -595,7 +595,7 @@ contract StocklineOracleTest is OracleFixture {
             _pushEvent(start, start + 1 hours, uint64(bound(eventBuf, 0, 0.2e18)));
         }
         if (actions & 4 != 0) {
-            IStocklineOracle.Params memory p = _params();
+            ILendoraOracle.Params memory p = _params();
             p.sigmaWad = uint64(bound(sigma, 0.05e18, 3e18));
             uint256 since = oracle.lastSigmaUpdate();
             vm.warp((t > since ? t : since) + 8 days); // OR-R21 weekly limit
@@ -612,7 +612,7 @@ contract StocklineOracleTest is OracleFixture {
     // ================================================================== OR-R5 roles and params
 
     function test_OR_R5_onlyOwnerSetters() public {
-        IStocklineOracle.Params memory p = _params();
+        ILendoraOracle.Params memory p = _params();
         vm.startPrank(guardian);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, guardian));
         oracle.setParams(p);
@@ -635,39 +635,39 @@ contract StocklineOracleTest is OracleFixture {
     }
 
     function test_OR_R5_R8_paramValidation() public {
-        IStocklineOracle.Params memory p = _params();
+        ILendoraOracle.Params memory p = _params();
         vm.startPrank(owner);
         p.bMaxWad = 0.2e18 + 1;
-        vm.expectRevert(IStocklineOracle.BadParams.selector);
+        vm.expectRevert(ILendoraOracle.BadParams.selector);
         oracle.setParams(p); // OR-R8 hard cap
         p = _params();
         p.bMinWad = 0.3e18;
-        vm.expectRevert(IStocklineOracle.BadParams.selector);
+        vm.expectRevert(ILendoraOracle.BadParams.selector);
         oracle.setParams(p);
         p = _params();
         p.bandLowWad = 1e18;
-        vm.expectRevert(IStocklineOracle.BadParams.selector);
+        vm.expectRevert(ILendoraOracle.BadParams.selector);
         oracle.setParams(p);
         p = _params();
         p.bandHighWad = 1e18;
-        vm.expectRevert(IStocklineOracle.BadParams.selector);
+        vm.expectRevert(ILendoraOracle.BadParams.selector);
         oracle.setParams(p);
         p = _params();
         p.rampIn = 0;
-        vm.expectRevert(IStocklineOracle.BadParams.selector);
+        vm.expectRevert(ILendoraOracle.BadParams.selector);
         oracle.setParams(p);
         p = _params();
         p.maxQuietMultiplierStepWad = 0.6e18;
-        vm.expectRevert(IStocklineOracle.BadParams.selector);
+        vm.expectRevert(ILendoraOracle.BadParams.selector);
         oracle.setParams(p);
         vm.stopPrank();
     }
 
     function test_OR_R21_sigmaAtMostWeekly() public {
-        IStocklineOracle.Params memory p = _params();
+        ILendoraOracle.Params memory p = _params();
         p.sigmaWad = 0.6e18;
         vm.prank(owner);
-        vm.expectRevert(IStocklineOracle.SigmaUpdateTooSoon.selector);
+        vm.expectRevert(ILendoraOracle.SigmaUpdateTooSoon.selector);
         oracle.setParams(p);
         p.sigmaWad = _params().sigmaWad; // other params can change any time
         p.zWad = 2.33e18;
@@ -682,22 +682,22 @@ contract StocklineOracleTest is OracleFixture {
     }
 
     function test_OR_R5_guardianCanOnlyRaiseFloor() public {
-        vm.expectRevert(IStocklineOracle.Unauthorized.selector);
+        vm.expectRevert(ILendoraOracle.Unauthorized.selector);
         oracle.raiseBufferFloor(0.05e18);
         vm.startPrank(guardian);
         oracle.raiseBufferFloor(0.05e18);
         assertEq(oracle.buffer(), 0.05e18);
-        vm.expectRevert(IStocklineOracle.FloorNotRaised.selector);
+        vm.expectRevert(ILendoraOracle.FloorNotRaised.selector);
         oracle.raiseBufferFloor(0.04e18);
-        vm.expectRevert(IStocklineOracle.FloorNotRaised.selector);
+        vm.expectRevert(ILendoraOracle.FloorNotRaised.selector);
         oracle.raiseBufferFloor(0.2e18 + 1);
         vm.stopPrank();
         vm.startPrank(owner);
-        vm.expectRevert(IStocklineOracle.BadParams.selector);
+        vm.expectRevert(ILendoraOracle.BadParams.selector);
         oracle.setBufferFloor(0.3e18);
         oracle.setBufferFloor(0.01e18);
         assertEq(oracle.bufferFloor(), 0.01e18);
-        IStocklineOracle.Params memory p = _params();
+        ILendoraOracle.Params memory p = _params();
         oracle.setBufferFloor(0.2e18);
         p.bMaxWad = 0.1e18;
         oracle.setParams(p);
@@ -706,20 +706,20 @@ contract StocklineOracleTest is OracleFixture {
     }
 
     function test_constructor_rejectsZeroAddressesAndBadDecimals() public {
-        StocklineOracleBase.Deployment memory d = _deployment();
+        LendoraOracleBase.Deployment memory d = _deployment();
         d.marketHours = address(0);
-        vm.expectRevert(IStocklineOracle.ZeroAddress.selector);
-        new StocklineOracle(d, _params(), address(clUSDG));
-        StocklineOracleBase.Deployment memory ok = _deployment();
-        vm.expectRevert(IStocklineOracle.ZeroAddress.selector);
-        new StocklineOracle(ok, _params(), address(0));
+        vm.expectRevert(ILendoraOracle.ZeroAddress.selector);
+        new LendoraOracle(d, _params(), address(clUSDG));
+        LendoraOracleBase.Deployment memory ok = _deployment();
+        vm.expectRevert(ILendoraOracle.ZeroAddress.selector);
+        new LendoraOracle(ok, _params(), address(0));
         MockChainlinkAggregator weird = new MockChainlinkAggregator(0, "0dp");
         weird.setAnswer(100);
         d = _deployment();
         d.stockFeed = address(weird);
         vm.mockCall(address(clUSDG), abi.encodeWithSignature("decimals()"), abi.encode(uint8(60)));
-        vm.expectRevert(StocklineOracle.BadDecimals.selector);
-        new StocklineOracle(d, _params(), address(clUSDG));
+        vm.expectRevert(LendoraOracle.BadDecimals.selector);
+        new LendoraOracle(d, _params(), address(clUSDG));
     }
 
     function test_views() public view {

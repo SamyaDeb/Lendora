@@ -5,15 +5,15 @@ import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IMorpho} from "morpho-blue/src/interfaces/IMorpho.sol";
-import {StocklineDeploy} from "../../script/StocklineDeploy.sol";
+import {LendoraDeploy} from "../../script/LendoraDeploy.sol";
 import {LocalMocks} from "../../script/LocalMocks.sol";
-import {IStocklineRouter} from "../../src/interfaces/IStocklineRouter.sol";
+import {ILendoraRouter} from "../../src/interfaces/ILendoraRouter.sol";
 import {IVaultV2Min} from "../../src/interfaces/external/IMorphoVaultV2.sol";
 import {MockStockToken} from "../mocks/MockStockToken.sol";
 
-/// @notice The full local deployment (script/StocklineDeploy.sol + mocks) as a test fixture: unmodified Morpho Blue,
+/// @notice The full local deployment (script/LendoraDeploy.sol + mocks) as a test fixture: unmodified Morpho Blue,
 /// AdaptiveCurveIrm and Vault V2 from pinned sources, real wrappers, oracles, clUSDG and router behind its proxy.
-abstract contract LocalStockline is Test, StocklineDeploy, LocalMocks {
+abstract contract LocalLendora is Test, LendoraDeploy, LocalMocks {
     uint256 internal constant WED_0916_16Z = 1_789_574_400; // Wed 2026-09-16 12:00 ET
 
     Mocks internal m;
@@ -52,7 +52,7 @@ abstract contract LocalStockline is Test, StocklineDeploy, LocalMocks {
             attestationSigner: signer.addr,
             globalCollateralCap: 4_000_000e6,
             swapTarget: address(m.dex),
-            swapMode: IStocklineRouter.SwapMode.Approve
+            swapMode: ILendoraRouter.SwapMode.Approve
         });
         StockConfig[] memory s = new StockConfig[](3);
         s[0] = StockConfig("SPY", address(m.tokens[0]), address(m.feeds[0]), 0.17e18, 1_000_000, 75_000);
@@ -67,7 +67,7 @@ abstract contract LocalStockline is Test, StocklineDeploy, LocalMocks {
 
     // ------------------------------------------------------------------ helpers
 
-    function _attest(address user) internal view returns (IStocklineRouter.Attestation memory a) {
+    function _attest(address user) internal view returns (ILendoraRouter.Attestation memory a) {
         a.expiry = block.timestamp + 1 days;
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer.privateKey, core.router.attestationDigest(user, a.expiry));
         a.signature = abi.encodePacked(r, s, v);

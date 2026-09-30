@@ -1,17 +1,17 @@
 {
-  "name": "@stockline/devnet",
+  "name": "@lendora/devnet",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Local chain for Stockline: anvil with the DeployLocal state, and a chain driver that seeds realistic activity (Phase 2 task 0).",
+  "description": "Local chain for Lendora: anvil with the DeployLocal state, and a chain driver that seeds realistic activity (Phase 2 task 0).",
   "exports": {
     ".": "./src/index.ts",
     "./fixtures/*": "./fixtures/*"
   },
   "scripts": {
-    "pretypecheck": "pnpm --filter @stockline/sdk build",
+    "pretypecheck": "pnpm --filter @lendora/sdk build",
     "typecheck": "tsc --noEmit",
-    "pretest": "pnpm --filter @stockline/sdk build",
+    "pretest": "pnpm --filter @lendora/sdk build",
     "test": "vitest run",
     "drive": "tsx src/cli.ts",
     "state:dump": "tsx src/cli.ts dump-state",
@@ -19,7 +19,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@stockline/sdk": "workspace:*",
+    "@lendora/sdk": "workspace:*",
     "pg": "^8.23.0",
     "viem": "^2.56.9"
   },

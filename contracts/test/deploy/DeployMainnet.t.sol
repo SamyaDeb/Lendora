@@ -10,9 +10,9 @@ import {MainnetConfig} from "../../script/MainnetConfig.sol";
 import {DeployMainnet} from "../../script/DeployMainnet.s.sol";
 import {VerifyRoles} from "../../script/VerifyRoles.s.sol";
 import {LocalMocks} from "../../script/LocalMocks.sol";
-import {IStocklineRouter} from "../../src/interfaces/IStocklineRouter.sol";
+import {ILendoraRouter} from "../../src/interfaces/ILendoraRouter.sol";
 import {IVaultV2Min} from "../../src/interfaces/external/IMorphoVaultV2.sol";
-import {StocklineLiquidator} from "../../src/StocklineLiquidator.sol";
+import {LendoraLiquidator} from "../../src/LendoraLiquidator.sol";
 import {IFeeSplitter} from "../../src/interfaces/IFeeSplitter.sol";
 import {VaultV2Ids} from "../../src/libraries/VaultV2Ids.sol";
 import {MockSafe} from "../mocks/MockSafe.sol";
@@ -166,7 +166,7 @@ contract DeployMainnetTest is Test, MainnetConfig, LocalMocks {
         _expectBad(x, "MN-R3: no sequencer feed on 4663");
 
         x = _rehearsalConfig(roles);
-        x.swapMode = IStocklineRouter.SwapMode.Approve;
+        x.swapMode = ILendoraRouter.SwapMode.Approve;
         _expectBad(x, "MN-R3: swap mode must be Transfer (Q4)");
 
         x = _rehearsalConfig(roles);
@@ -236,7 +236,7 @@ contract DeployMainnetTest is Test, MainnetConfig, LocalMocks {
     function test_MN_R5_lifecycle_lendBorrowRepayWithdraw() public {
         _lend(NVDA, 100e18);
         _onboard(alice, 20_000e6);
-        IStocklineRouter.Attestation memory att = _attest(alice);
+        ILendoraRouter.Attestation memory att = _attest(alice);
         vm.prank(alice);
         core.router.borrow(address(m.tokens[NVDA]), 5000e6, 10e18, alice, att, block.timestamp);
         assertEq(m.tokens[NVDA].balanceOf(alice), 10e18, "borrowed Stock Tokens");
@@ -267,14 +267,14 @@ contract DeployMainnetTest is Test, MainnetConfig, LocalMocks {
         _lend(NVDA, 100e18);
         _onboard(alice, 20_000e6);
         address nvda = address(m.tokens[NVDA]);
-        IStocklineRouter.Swap memory sell = IStocklineRouter.Swap({
+        ILendoraRouter.Swap memory sell = ILendoraRouter.Swap({
             target: address(dex),
             data: abi.encodeCall(MockPayFirstSwap.swap, (nvda, address(m.usdg), 5e18, address(core.router))),
             amountIn: 5e18,
             minOut: 1
         });
         uint256 before = m.usdg.balanceOf(alice);
-        IStocklineRouter.Attestation memory att = _attest(alice);
+        ILendoraRouter.Attestation memory att = _attest(alice);
         vm.prank(alice);
         uint256 out = core.router.openShort(nvda, 3000e6, 5e18, sell, false, alice, att, block.timestamp);
         assertEq(
@@ -283,7 +283,7 @@ contract DeployMainnetTest is Test, MainnetConfig, LocalMocks {
         assertApproxEqRel(out, 5 * 225.66e6, 1e12, "sold at the pay-first DEX rate");
 
         uint256 usdgIn = 1300e6; // buys back ~5.76 NVDA ≥ the 5 NVDA debt
-        IStocklineRouter.Swap memory buy = IStocklineRouter.Swap({
+        ILendoraRouter.Swap memory buy = ILendoraRouter.Swap({
             target: address(dex),
             data: abi.encodeCall(MockPayFirstSwap.swap, (address(m.usdg), nvda, usdgIn, address(core.router))),
             amountIn: usdgIn,
@@ -297,7 +297,7 @@ contract DeployMainnetTest is Test, MainnetConfig, LocalMocks {
     function test_MN_R5_lifecycle_liquidationThroughTheOwnerSafesLiquidator() public {
         _lend(NVDA, 100e18);
         _onboard(alice, 20_000e6);
-        IStocklineRouter.Attestation memory att = _attest(alice);
+        ILendoraRouter.Attestation memory att = _attest(alice);
         vm.prank(alice);
         core.router.borrow(address(m.tokens[NVDA]), 5000e6, 10e18, alice, att, block.timestamp);
         int256 up = 406e8; // +80%: debt $4,060 > 77% × $5,000
@@ -306,12 +306,12 @@ contract DeployMainnetTest is Test, MainnetConfig, LocalMocks {
 
         uint256 seize = 3000e6;
         address bot = makeAddr("liquidatorBot");
-        StocklineLiquidator.Liquidation memory l = StocklineLiquidator.Liquidation({
+        LendoraLiquidator.Liquidation memory l = LendoraLiquidator.Liquidation({
             market: ds[NVDA].market,
             borrower: alice,
             seizedAssets: seize,
             repaidShares: 0,
-            swap: StocklineLiquidator.Swap({
+            swap: LendoraLiquidator.Swap({
                 target: address(dex),
                 data: abi.encodeCall(
                     MockPayFirstSwap.swap, (address(m.usdg), address(m.tokens[NVDA]), seize, address(core.liquidator))
@@ -334,7 +334,7 @@ contract DeployMainnetTest is Test, MainnetConfig, LocalMocks {
     function test_MN_R5_lifecycle_feesReachTheConvertersAndOnlyTheTimelockChangesTheSplit() public {
         _lend(NVDA, 100e18);
         _onboard(alice, 200_000e6);
-        IStocklineRouter.Attestation memory att = _attest(alice);
+        ILendoraRouter.Attestation memory att = _attest(alice);
         vm.prank(alice);
         core.router.borrow(address(m.tokens[NVDA]), 100_000e6, 80e18, alice, att, block.timestamp);
         vm.warp(block.timestamp + 30 days);
@@ -500,7 +500,7 @@ contract DeployMainnetTest is Test, MainnetConfig, LocalMocks {
         revert(string.concat("no check named ", name));
     }
 
-    function _attest(address user) internal view returns (IStocklineRouter.Attestation memory a) {
+    function _attest(address user) internal view returns (ILendoraRouter.Attestation memory a) {
         a.expiry = block.timestamp + 1 days;
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer.privateKey, core.router.attestationDigest(user, a.expiry));
         a.signature = abi.encodePacked(r, s, v);

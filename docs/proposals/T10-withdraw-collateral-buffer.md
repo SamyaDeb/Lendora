@@ -5,7 +5,7 @@
 
 ## Problem
 
-`StocklineRouter.withdrawCollateral` is an exit, so it has no RT-R1 check. A borrower with debt can withdraw down to
+`LendoraRouter.withdrawCollateral` is an exit, so it has no RT-R1 check. A borrower with debt can withdraw down to
 Morpho's LLTV at today's price, below the 24h weekend/earnings buffer. Shown by
 [`test_T10_residualE_withdrawLeavesHfAt24hBelowBuffer`](../../contracts/test/router/WithdrawCollateralBuffer.t.sol):
 on a Friday at 16:00 ET, a withdrawal leaves HF **1.030 now** and **0.940 at t + 24h**. Morpho accepts it, and the
@@ -40,7 +40,7 @@ function withdrawCollateral(address stock, uint256 amount, address receiver, uin
   already maps `HealthTooLow`.
 
 **Measured locally** (applied to a working copy, then reverted; nothing committed):
-- `StocklineRouter` runtime grows by 307 bytes (24,092 → 24,399), leaving 177 bytes of EIP-170 margin, down from 484.
+- `LendoraRouter` runtime grows by 307 bytes (24,092 → 24,399), leaving 177 bytes of EIP-170 margin, down from 484.
 - The skipped `test_T10_proposed_withdrawCollateralChecksHfAt24h` passes.
 - The residual test fails with `HealthTooLow(0.9396e18)`, as intended; it would be flipped to `expectRevert` in the fix commit.
 - Every other `test/router/*` suite passes.
@@ -53,7 +53,7 @@ detection only: the monitor rule `COLLATERAL_BELOW_BUFFER` (MON-R26, P2, [runboo
 1. Branch `fix/T10-withdraw-buffer`. Commit the router change and flip the tests: drop the `vm.skip`, and the
    residual test becomes `expectRevert`. Then the full quality bar
    ([fix-workflow §3](../audit/fix-workflow.md): fmt, `forge test`, slither, coverage ≥ 95%, `forge build --sizes`,
-   `pnpm -r …`), and `StocklineRouterUpgrade.t.sol` extended for the upgrade (state kept, new check live).
+   `pnpm -r …`), and `LendoraRouterUpgrade.t.sol` extended for the upgrade (state kept, new check live).
 2. Deploy the new implementation (no proxy change). The owner (timelock) schedules
    `upgradeToAndCall(newImpl, "")` on the router proxy. The delay is **24h on testnet 46630** (`getMinDelay()` =
    86,400 on `0x4A30…2F82314`) and **48h on mainnet** (RT-R7). The monitor pages the schedule (MON-R16,
@@ -63,10 +63,10 @@ detection only: the monitor rule `COLLATERAL_BELOW_BUFFER` (MON-R26, P2, [runboo
 
 ## Effect on the audit freeze
 
-`StocklineRouter.sol` is frozen at `docs/audit/FREEZE` (`84bfc62`). This is a post-freeze change to an audited
+`LendoraRouter.sol` is frozen at `docs/audit/FREEZE` (`84bfc62`). This is a post-freeze change to an audited
 function:
 - It goes in README §8.3 "Post-freeze diff" (file · commit · why · test) as its own finding ID (e.g. `INT-T10`).
-- The auditor re-reviews `git diff $(cat docs/audit/FREEZE) <fix> -- contracts/src/StocklineRouter.sol` (about +5
+- The auditor re-reviews `git diff $(cat docs/audit/FREEZE) <fix> -- contracts/src/LendoraRouter.sol` (about +5
   lines) before mainnet.
 - It also spends 307 of the 484 bytes of router headroom. Any later router fix would have to fit in 177 bytes, or
   first move code out (for example to a library).

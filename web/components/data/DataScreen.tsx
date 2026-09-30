@@ -5,7 +5,7 @@ import {API_URL} from "@/lib/env";
 import {DataView} from "./DataView";
 import {WeekendPanel} from "./WeekendPanel";
 import {RevenuePanel} from "./RevenuePanel";
-import type {api} from "@stockline/sdk";
+import type {api} from "@lendora/sdk";
 
 type MarketsResponse = Awaited<ReturnType<ReturnType<typeof browserApi>["markets"]>>;
 

@@ -30,21 +30,21 @@ import {
   getDeployment,
   mockSwapAggregatorAbi,
   morphoAbi,
-  stocklineOracleAbi,
-  stocklineRouterAbi,
+  lendoraOracleAbi,
+  lendoraRouterAbi,
   stockWrapperAbi,
   vaultV2FullAbi,
   type ChainDeployment,
-} from "@stockline/sdk";
+} from "@lendora/sdk";
 
-/** The DeployLocal state (contracts/script/DeployLocal.s.sol), matching `@stockline/sdk` addresses.json["31337"].
- * Regenerate with `pnpm --filter @stockline/devnet state:dump` after changing the deployment. */
+/** The DeployLocal state (contracts/script/DeployLocal.s.sol), matching `@lendora/sdk` addresses.json["31337"].
+ * Regenerate with `pnpm --filter @lendora/devnet state:dump` after changing the deployment. */
 export const FIXTURE_STATE = fileURLToPath(new URL("../fixtures/anvil-state.hex", import.meta.url));
 export const CONTRACTS_DIR = fileURLToPath(new URL("../../../contracts", import.meta.url));
 /** Anvil's first default account: the DeployLocal deployer and the mocks' admin. Address only; anvil holds the key. */
 export const DEPLOYER = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" as const;
 
-/** A connection to an anvil node with the Stockline deployment. Every tx is sent from an impersonated or unlocked
+/** A connection to an anvil node with the Lendora deployment. Every tx is sent from an impersonated or unlocked
  * account: no key material. */
 export interface Anvil {
   url: string;
@@ -100,7 +100,7 @@ export async function connectAnvil(url: string, stop: () => void = () => {}): Pr
   const chainId = await client.getChainId();
   if (chainId === 4663) throw new Error("refusing an anvil fork of Robinhood Chain mainnet for driving");
   const d = getDeployment(chainId);
-  if (!d) throw new Error(`no ${chainId} deployment in @stockline/sdk addresses.json`);
+  if (!d) throw new Error(`no ${chainId} deployment in @lendora/sdk addresses.json`);
   return {
     url,
     client,
@@ -126,9 +126,9 @@ export async function connectAnvil(url: string, stop: () => void = () => {}): Pr
   };
 }
 
-const decodeAbis = [stocklineRouterAbi, morphoAbi, stocklineOracleAbi, vaultV2FullAbi, stockWrapperAbi, collateralTokenAbi, mockSwapAggregatorAbi, feeConverterAbi, feeSplitterAbi];
+const decodeAbis = [lendoraRouterAbi, morphoAbi, lendoraOracleAbi, vaultV2FullAbi, stockWrapperAbi, collateralTokenAbi, mockSwapAggregatorAbi, feeConverterAbi, feeSplitterAbi];
 
-/** Replays a reverted call (state is unchanged by a revert) and decodes the error against Stockline ABIs. */
+/** Replays a reverted call (state is unchanged by a revert) and decodes the error against Lendora ABIs. */
 export async function revertReason(client: PublicClient, from: `0x${string}`, to: `0x${string}`, data: Hex): Promise<string> {
   try {
     await client.call({account: from, to, data});
@@ -216,7 +216,7 @@ export interface StartOptions {
   args?: string[];
 }
 
-/** Start anvil with the Stockline deployment. Without an explicit port, anvil binds port 0 and we read the port it
+/** Start anvil with the Lendora deployment. Without an explicit port, anvil binds port 0 and we read the port it
  * chose from its output: picking a "free" port first races when suites run in parallel (`pnpm -r test`), and a
  * suite could end up talking to another suite's chain. */
 export async function startAnvil(opts: StartOptions = {}): Promise<Anvil> {
@@ -226,7 +226,7 @@ export async function startAnvil(opts: StartOptions = {}): Promise<Anvil> {
   const load = state === "fixture" ? ["--load-state", fixtureStateFile()] : [];
   // Each node keeps its disk states in its own temp dir, removed when it stops: anvil otherwise leaves one
   // `~/.foundry/anvil/tmp/anvil-state-*` per run behind (48 GB after a Phase 4 session filled the disk).
-  const cache = mkdtempSync(join(tmpdir(), "stockline-anvil-cache-"));
+  const cache = mkdtempSync(join(tmpdir(), "lendora-anvil-cache-"));
   const cleanup = () => rmSync(cache, {recursive: true, force: true});
   const proc: ChildProcess = spawn("anvil", ["--port", String(opts.port ?? 0), "--cache-path", cache, ...load, ...(opts.args ?? [])], {stdio: ["ignore", "pipe", "ignore"]});
   proc.on("exit", cleanup);
@@ -271,7 +271,7 @@ export async function startAnvil(opts: StartOptions = {}): Promise<Anvil> {
  * dir by content hash. */
 export function fixtureStateFile(path = FIXTURE_STATE): string {
   const hex = readFileSync(path, "utf8").trim();
-  const file = join(tmpdir(), `stockline-anvil-state-${createHash("sha256").update(hex).digest("hex").slice(0, 16)}.json`);
+  const file = join(tmpdir(), `lendora-anvil-state-${createHash("sha256").update(hex).digest("hex").slice(0, 16)}.json`);
   if (!existsSync(file)) {
     const raw = Buffer.from(hex.replace(/^0x/, ""), "hex");
     writeFileSync(file, raw[0] === 0x1f && raw[1] === 0x8b ? gunzipSync(raw) : raw);

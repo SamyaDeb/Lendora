@@ -10,12 +10,12 @@ confirm** (Q14); nothing is listed until mainnet addresses exist and the owner s
 
 | Contract | Source | Notes |
 |---|---|---|
-| `StocklineRouter` (proxy + implementation) | `contracts/src/StocklineRouter.sol` | UUPS, owner = 48h timelock |
-| `StocklineOracle` (one per stock) | `contracts/src/oracles/StocklineOracle.sol`, `StocklineOracleBase.sol` | |
+| `LendoraRouter` (proxy + implementation) | `contracts/src/LendoraRouter.sol` | UUPS, owner = 48h timelock |
+| `LendoraOracle` (one per stock) | `contracts/src/oracles/LendoraOracle.sol`, `LendoraOracleBase.sol` | |
 | `MarketHours` | `contracts/src/MarketHours.sol` | |
 | `StockWrapper` (wSTOCK, one per stock) | `contracts/src/StockWrapper.sol` | |
 | `CollateralToken` (`clUSDG`) | `contracts/src/CollateralToken.sol` | |
-| `StocklineLiquidator` | `contracts/src/StocklineLiquidator.sol` | |
+| `LendoraLiquidator` | `contracts/src/LendoraLiquidator.sol` | |
 | `FeeSplitter`, `FeeConverter` (×2) | `contracts/src/fees/*.sol` | |
 | `ShortInterestLens` | `contracts/src/ShortInterestLens.sol` | view-only; Low at most |
 | Libraries used by the above | `contracts/src/libraries/*.sol` | |

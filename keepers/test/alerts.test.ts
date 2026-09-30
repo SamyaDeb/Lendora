@@ -1,8 +1,8 @@
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import pg from "pg";
 import {generatePrivateKey, privateKeyToAccount} from "viem/accounts";
-import {alertSettingsMessage, nextClosure, type AlertSettings} from "@stockline/sdk";
-import {startStack, type Stack} from "@stockline/api/harness";
+import {alertSettingsMessage, nextClosure, type AlertSettings} from "@lendora/sdk";
+import {startStack, type Stack} from "@lendora/api/harness";
 import {Health} from "../src/common/health.js";
 import {alertsApp} from "../src/alerts/server.js";
 import {SettingsStore} from "../src/alerts/settings.js";
@@ -94,7 +94,7 @@ describe("alerts service (APP-R8)", () => {
       }
     })();
     const before = fake.sent.length;
-    const r = await s.drv.a.send("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", s.config.d.mocks!.NVDA_feed, (await import("viem")).encodeFunctionData({abi: (await import("@stockline/sdk")).mockAggregatorAbi, functionName: "setAnswer", args: [(s.drv.prices.NVDA * 106n) / 100n]}));
+    const r = await s.drv.a.send("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", s.config.d.mocks!.NVDA_feed, (await import("viem")).encodeFunctionData({abi: (await import("@lendora/sdk")).mockAggregatorAbi, functionName: "setAnswer", args: [(s.drv.prices.NVDA * 106n) / 100n]}));
     const tBlock = Date.now();
     const deadline = tBlock + 60_000;
     while (fake.sent.length === before && Date.now() < deadline) await new Promise((res) => setTimeout(res, 50));

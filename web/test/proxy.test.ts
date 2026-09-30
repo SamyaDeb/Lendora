@@ -15,14 +15,14 @@ describe("APP-R2 geo-block (proxy.ts)", () => {
     for (const p of ["/", "/portfolio", "/terms", "/api/compliance/terms"]) {
       const r = proxy(req(p, "US"));
       expect(r.headers.get("x-middleware-rewrite"), p).toBeNull();
-      expect(r.headers.get("x-middleware-request-x-stockline-restricted"), p).toBe("1");
+      expect(r.headers.get("x-middleware-request-x-lendora-restricted"), p).toBe("1");
     }
   });
 
   it("lets allowed countries through untouched", () => {
     const r = proxy(req("/short/NVDA", "DE"));
     expect(r.headers.get("x-middleware-rewrite")).toBeNull();
-    expect(r.headers.get("x-middleware-request-x-stockline-restricted")).toBeNull();
+    expect(r.headers.get("x-middleware-request-x-lendora-restricted")).toBeNull();
   });
 });
 

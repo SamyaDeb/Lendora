@@ -34,8 +34,8 @@ real price moves while the oracle is frozen, liquidations lag reality.
 ```sh
 cast send $ORACLE "poke()" --rpc-url $RPC --private-key $OPS_KEY          # anyone: record the latest round, sync reasons
 cast calldata "raiseBufferFloor(uint256)" 50000000000000000              # guardian Safe, to = $ORACLE (5%)
-pnpm --filter @stockline/sdk timelock oracle.resetReferences ticker=NVDA --network $NET --salt "$(date -u +%F) NVDA re-anchor"
-pnpm --filter @stockline/sdk timelock oracle.setBufferFloor ticker=NVDA floorWad=0 --network $NET --salt "$(date -u +%F) NVDA floor 0"
+pnpm --filter @lendora/sdk timelock oracle.resetReferences ticker=NVDA --network $NET --salt "$(date -u +%F) NVDA re-anchor"
+pnpm --filter @lendora/sdk timelock oracle.setBufferFloor ticker=NVDA floorWad=0 --network $NET --salt "$(date -u +%F) NVDA floor 0"
 ```
 
 **Who signs.** Anyone for `poke`; guardian 2-of-4 for the floor raise; owner 4-of-7 via timelock for re-anchor and
@@ -43,7 +43,7 @@ lowering the floor.
 
 ## Comms
 
-> **Monitoring — NVDA price feed <delayed | rejected an out-of-range update>** (<UTC>). Stockline keeps using the last
+> **Monitoring — NVDA price feed <delayed | rejected an out-of-range update>** (<UTC>). Lendora keeps using the last
 > good price; new borrowing in NVDA is paused until the feed is healthy. Repay, close and withdraw work.
 
 ## Post-mortem

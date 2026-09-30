@@ -3,7 +3,7 @@ import {readFileSync, writeFileSync} from "node:fs";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {encodeFunctionData, getAddress, type Hex, type TransactionReceipt} from "viem";
 import {
-  decodeStocklineCall,
+  decodeLendoraCall,
   erc20Abi,
   feeConverterAbi,
   feeSplitterAbi,
@@ -12,8 +12,8 @@ import {
   mockSwapAggregatorAbi,
   morphoAbi,
   saltOf,
-  stocklineOracleAbi,
-  stocklineRouterAbi,
+  lendoraOracleAbi,
+  lendoraRouterAbi,
   stockWrapperAbi,
   timelockAbi,
   timelockOperation,
@@ -25,7 +25,7 @@ import {
   navOracleAbi,
   strategyManagerAbi,
   type TimelockAction,
-} from "@stockline/sdk";
+} from "@lendora/sdk";
 import {generatePrivateKey, privateKeyToAccount} from "viem/accounts";
 import {CONTRACTS_DIR, startAnvil, type Anvil} from "../src/anvil.js";
 import {ChainDriver, GUARD} from "../src/driver.js";
@@ -37,7 +37,7 @@ import {DnDriver, NAV_SIGNERS} from "../src/dn.js";
  * 46630** (the real testnet deployment and its 24h timelock; nothing is sent to the testnet). The testnet deployer holds
  * every testnet role (A27) and operates the gated mocks, so it is impersonated here as it would sign there.
  *
- * Opt-in (needs the public testnet RPC): `FORK_DRILLS_46630=1 pnpm --filter @stockline/devnet exec vitest run
+ * Opt-in (needs the public testnet RPC): `FORK_DRILLS_46630=1 pnpm --filter @lendora/devnet exec vitest run
  * test/forkDrills.test.ts` (`TESTNET_RPC_URL` overrides the RPC). With `FORK_DRILLS_REPORT=1` it writes
  * docs/runbooks/fork-drills-46630.md.
  */
@@ -66,8 +66,8 @@ describe.skipIf(!RUN)("runbook drills and fee turn-on on an anvil fork of 46630 
   const borrower = "0x5700000000000000000000000000000000000c01" as const;
   const lender = "0x5700000000000000000000000000000000000c02" as const;
   const fees = {} as {feeSplitter: `0x${string}`; treasuryConverter: `0x${string}`; backstopConverter: `0x${string}`};
-  const guardian = (t: string, fn: "trip" | "clear") => a.send(a.d.roles.guardian as `0x${string}`, a.d.stocks[t].oracle, call(stocklineOracleAbi, fn, [GUARD.MANUAL]));
-  const reasons = (t: string) => a.client.readContract({address: a.d.stocks[t].oracle, abi: stocklineOracleAbi, functionName: "guardReasons"});
+  const guardian = (t: string, fn: "trip" | "clear") => a.send(a.d.roles.guardian as `0x${string}`, a.d.stocks[t].oracle, call(lendoraOracleAbi, fn, [GUARD.MANUAL]));
+  const reasons = (t: string) => a.client.readContract({address: a.d.stocks[t].oracle, abi: lendoraOracleAbi, functionName: "guardReasons"});
   const log = async (drill: string, runbook: string, result: string, rs: (TransactionReceipt | undefined)[]) =>
     steps.push({drill, runbook, result, txs: rs.filter((r): r is TransactionReceipt => !!r).map((r) => r.transactionHash), at: await drv.now()});
 
@@ -264,7 +264,7 @@ describe.skipIf(!RUN)("runbook drills and fee turn-on on an anvil fork of 46630 
     const m = await a.client.readContract({address: a.d.morpho, abi: morphoAbi, functionName: "market", args: [nvda.marketId]});
     const free = m.totalSupplyAssets - m.totalBorrowAssets;
     const amount = free < allocated ? free : allocated;
-    const params = await a.client.readContract({address: a.d.router!, abi: stocklineRouterAbi, functionName: "market", args: [nvda.stockToken]});
+    const params = await a.client.readContract({address: a.d.router!, abi: lendoraRouterAbi, functionName: "market", args: [nvda.stockToken]});
     const dataArg = encodeFunctionData({abi: [{type: "function", name: "f", inputs: [{type: "tuple", components: [{name: "loanToken", type: "address"}, {name: "collateralToken", type: "address"}, {name: "oracle", type: "address"}, {name: "irm", type: "address"}, {name: "lltv", type: "uint256"}]}], outputs: [], stateMutability: "pure"}], functionName: "f", args: [params.params]}).slice(10);
     const r = await a.send(a.d.roles.guardian as `0x${string}`, nvda.vault, call(vaultV2FullAbi, "deallocate", [nvda.adapter, `0x${dataArg}`, amount]));
     const after = await a.client.readContract({address: nvda.vault, abi: vaultV2FullAbi, functionName: "allocation", args: [id]});
@@ -313,7 +313,7 @@ describe.skipIf(!RUN)("runbook drills and fee turn-on on an anvil fork of 46630 
     const attacker = "0x00000000000000000000000000000000000bad01" as const;
     const o = timelockOperation(a.d, {kind: "router.setAttestationSigner", signer: attacker} as TimelockAction, {delay, salt: saltOf("fork unexpected signer change")});
     const s = await a.send(op, tl, o.scheduleCalldata);
-    const decoded = decodeStocklineCall(a.d, a.d.router!, o.data as Hex);
+    const decoded = decodeLendoraCall(a.d, a.d.router!, o.data as Hex);
     expect(decoded.summary).toMatch(/setAttestationSigner/);
     const c = await a.send(op, tl, call(timelockAbi, "cancel", [o.id]));
     await drv.freshRounds((await drv.now()) + delay + 1n);
@@ -330,7 +330,7 @@ describe.skipIf(!RUN)("runbook drills and fee turn-on on an anvil fork of 46630 
     const g = await governed({kind: "router.delistMarket", ticker: "NVDA"}, "NVDA delist");
     await expect(drv.borrow("NVDA", borrower, 1_000n * E6, E18)).rejects.toThrow(/NotListed/);
     await drv.repay("NVDA", borrower);
-    const w = await a.send(borrower, a.d.router!, call(stocklineRouterAbi, "withdrawCollateral", [nvda.stockToken, 2n ** 256n - 1n, borrower, (await drv.now()) + 600n]));
+    const w = await a.send(borrower, a.d.router!, call(lendoraRouterAbi, "withdrawCollateral", [nvda.stockToken, 2n ** 256n - 1n, borrower, (await drv.now()) + 600n]));
     const pos = await a.client.readContract({address: a.d.morpho, abi: morphoAbi, functionName: "position", args: [nvda.marketId, borrower]});
     expect(pos.borrowShares).toBe(0n);
     expect(pos.collateral).toBe(0n);
@@ -351,7 +351,7 @@ describe.skipIf(!RUN)("runbook drills and fee turn-on on an anvil fork of 46630 
       "|---|---|---|---|---|---|",
       ...steps.map((s, i) => `| ${i + 1} | ${s.drill} | ${s.runbook} | ${s.result} | ${new Date(Number(s.at) * 1000).toISOString().slice(0, 16)} | ${s.txs.map((h) => `\`${h.slice(0, 10)}…\``).join(" ") || "–"} |`),
       "",
-      "Re-run: `FORK_DRILLS_46630=1 FORK_DRILLS_REPORT=1 pnpm --filter @stockline/devnet exec vitest run test/forkDrills.test.ts`.",
+      "Re-run: `FORK_DRILLS_46630=1 FORK_DRILLS_REPORT=1 pnpm --filter @lendora/devnet exec vitest run test/forkDrills.test.ts`.",
       "",
     ];
     writeFileSync(new URL("../../../docs/runbooks/fork-drills-46630.md", import.meta.url), lines.join("\n"));

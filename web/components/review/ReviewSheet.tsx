@@ -7,7 +7,7 @@ import {et, num, pct} from "@/lib/format";
 import {Button, ButtonLink, HealthMeter, Icon, Notice, NumberTicker, Row, Sheet, StepList} from "@/components/ui";
 
 export interface ReviewRisk {
-  /** Preview from @stockline/sdk (borrow, short, add collateral, close). */
+  /** Preview from @lendora/sdk (borrow, short, add collateral, close). */
   pv: Preview;
   hfBefore?: bigint;
   /** Collateral the router requires to open, and the weekend part of it (USDG, 6 dp). */

@@ -1,27 +1,27 @@
 {
-  "name": "@stockline/indexer",
+  "name": "@lendora/indexer",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "pretypecheck": "pnpm --filter @stockline/sdk build",
+    "pretypecheck": "pnpm --filter @lendora/sdk build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "pretest": "pnpm --filter @stockline/sdk build",
+    "pretest": "pnpm --filter @lendora/sdk build",
     "test": "vitest run",
-    "dev": "ponder dev --schema stockline_dev --disable-ui",
-    "start": "ponder start --views-schema stockline",
+    "dev": "ponder dev --schema lendora_dev --disable-ui",
+    "start": "ponder start --views-schema lendora",
     "reconcile": "tsx scripts/reconcile.ts"
   },
   "dependencies": {
-    "@stockline/sdk": "workspace:*",
+    "@lendora/sdk": "workspace:*",
     "hono": "^4.13.9",
     "pg": "^8.23.0",
     "ponder": "^0.17.12",
     "viem": "^2.56.9"
   },
   "devDependencies": {
-    "@stockline/devnet": "workspace:*",
+    "@lendora/devnet": "workspace:*",
     "@types/node": "^22.20.4",
     "@types/pg": "^8.23.1",
     "tsx": "^4.21.0",

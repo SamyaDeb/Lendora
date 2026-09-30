@@ -12,7 +12,7 @@ liquidity pull for that print (D5), so an earnings gap can exceed the buffer.
 
 1. `cast call $MH "lastSessionClose()(uint256)"`, `cast call $MH "sessionCount()(uint256)"`;
    events: `cast call $MH "eventCount(address)(uint256)" $STOCK` and `eventAt(address,uint256)`.
-2. Regenerate the calendar if needed: `pnpm --filter @stockline/sdk gen:sessions <from> <to>` (NYSE holidays, A9 early
+2. Regenerate the calendar if needed: `pnpm --filter @lendora/sdk gen:sessions <from> <to>` (NYSE holidays, A9 early
    closes) and update `data/events.json` from the company's IR page (`confirmed: true`, A10). Commit.
 3. Build the timelock operation (below). Timelock is 48h: push at least 3 days before it is needed.
 
@@ -30,9 +30,9 @@ liquidity pull for that print (D5), so an earnings gap can exceed the buffer.
 ```sh
 N=$(cast call $MH "sessionCount()(uint256)" --rpc-url $RPC)
 LAST=$(cast call $MH "lastSessionClose()(uint256)" --rpc-url $RPC)
-pnpm --filter @stockline/sdk timelock marketHours.replaceSessionsFrom fromIndex=$N sessions=sdk:$((LAST+1)) --network $NET --salt "$(date -u +%F) sessions"
+pnpm --filter @lendora/sdk timelock marketHours.replaceSessionsFrom fromIndex=$N sessions=sdk:$((LAST+1)) --network $NET --salt "$(date -u +%F) sessions"
 E=$(cast call $MH "eventCount(address)(uint256)" $STOCK --rpc-url $RPC)
-pnpm --filter @stockline/sdk timelock marketHours.replaceEventsFrom ticker=AAPL fromIndex=$E events=sdk:$(date +%s) --network $NET --salt "$(date -u +%F) AAPL earnings"
+pnpm --filter @lendora/sdk timelock marketHours.replaceEventsFrom ticker=AAPL fromIndex=$E events=sdk:$(date +%s) --network $NET --salt "$(date -u +%F) AAPL earnings"
 ```
 
 Rehearsed on anvil: an earnings window pushed through the real timelock (`runbooks.test.ts`); the runway and missing-

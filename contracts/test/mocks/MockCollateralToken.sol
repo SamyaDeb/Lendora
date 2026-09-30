@@ -7,7 +7,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 contract MockCollateralToken is ERC20 {
     uint256 public valuePerToken = 1e18;
 
-    constructor() ERC20("Stockline Collateral USDG", "clUSDG") {}
+    constructor() ERC20("Lendora Collateral USDG", "clUSDG") {}
 
     function decimals() public pure override returns (uint8) {
         return 6;

@@ -11,7 +11,7 @@ import {openLiveDrills, runLiveDrills, drillsMarkdown} from "../src/liveDrills.j
 /** A bare anvil with a given chain id (no deployment), for the refusals. */
 async function bareAnvil(chainId: number): Promise<{url: string; stop: () => void}> {
   const port = await freePort();
-  const cache = mkdtempSync(join(tmpdir(), "stockline-anvil-cache-"));
+  const cache = mkdtempSync(join(tmpdir(), "lendora-anvil-cache-"));
   const p: ChildProcess = spawn("anvil", ["--port", String(port), "--chain-id", String(chainId), "--cache-path", cache], {stdio: "ignore"});
   const url = `http://127.0.0.1:${port}`;
   const c = createPublicClient({transport: http(url)});

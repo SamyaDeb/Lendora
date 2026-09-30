@@ -1,7 +1,7 @@
 /**
  * US Eastern time → UTC, with DST handled here (never onchain, OR-R11).
  * Rule since 2007: EDT (UTC−4) from the second Sunday of March 02:00 local to the first Sunday of November 02:00 local;
- * EST (UTC−5) otherwise. Stockline only converts 17:00 and 20:00 ET, which are never ambiguous.
+ * EST (UTC−5) otherwise. Lendora only converts 17:00 and 20:00 ET, which are never ambiguous.
  */
 
 /** Calendar date (no time zone). `month` is 1–12. */

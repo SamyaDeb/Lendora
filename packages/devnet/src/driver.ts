@@ -20,20 +20,20 @@ import {
   morphoAbi,
   planAllocation,
   tickForAnswer,
-  stocklineOracleAbi,
-  stocklineRouterAbi,
+  lendoraOracleAbi,
+  lendoraRouterAbi,
   stockWrapperAbi,
   vaultV2Abi,
   type AllocatorAction,
   type ChainDeployment,
   type StockDeployment,
-} from "@stockline/sdk";
+} from "@lendora/sdk";
 import {DEPLOYER, type Anvil} from "./anvil.js";
 
 const WAD = 10n ** 18n;
 /** Feed answers (8 dp) of the mocks at deployment (contracts/script/LocalMocks.sol, 01-chain-facts §4). */
 export const INITIAL_PRICES: Record<string, bigint> = {SPY: 772_33000000n, NVDA: 225_66000000n, AAPL: 341_45000000n};
-/** Oracle guard reason bits (StocklineOracleBase). */
+/** Oracle guard reason bits (LendoraOracleBase). */
 export const GUARD = {MANUAL: 1n, DEVIATION: 2n, L2_GAP: 4n, STALE: 8n, TOKEN_PAUSED: 128n} as const;
 
 export interface DriverEvent {
@@ -64,7 +64,7 @@ export interface DriverOptions {
 export const tickForPrice = tickForAnswer;
 
 /**
- * Seeds realistic Stockline activity on anvil (Phase 2 task 0): lends, borrows, shorts, repays, closes, liquidations,
+ * Seeds realistic Lendora activity on anvil (Phase 2 task 0): lends, borrows, shorts, repays, closes, liquidations,
  * feed rounds across weekends, issuer pauses and guard trips. Drives the mocks exactly like the real world would
  * (feed rounds, DEX rates and pool ticks move together) and calls the real contracts through the router. Every action
  * is recorded in `events` so tests of the indexer, API, web app and alerts can assert against it.
@@ -192,7 +192,7 @@ export class ChainDriver {
     const s = this.stock(ticker);
     await this.mintStock(ticker, user, amount);
     await this.approve(s.stockToken, user, this.d.router!);
-    const r = await this.a.send(user, this.d.router!, this.call(stocklineRouterAbi, "lend", [s.stockToken, amount, 0n, user, await this.deadline()]));
+    const r = await this.a.send(user, this.d.router!, this.call(lendoraRouterAbi, "lend", [s.stockToken, amount, 0n, user, await this.deadline()]));
     await this.record("lend", r, {ticker, user, detail: {amount: amount.toString()}});
     return r;
   }
@@ -202,7 +202,7 @@ export class ChainDriver {
     const s = this.stock(ticker);
     const sh = shares ?? (await this.a.client.readContract({address: s.vault, abi: erc20Abi, functionName: "balanceOf", args: [user]}));
     await this.approve(s.vault, user, this.d.router!);
-    const r = await this.a.send(user, this.d.router!, this.call(stocklineRouterAbi, "withdrawLend", [s.stockToken, sh, 0n, user, await this.deadline()]));
+    const r = await this.a.send(user, this.d.router!, this.call(lendoraRouterAbi, "withdrawLend", [s.stockToken, sh, 0n, user, await this.deadline()]));
     await this.record("withdrawLend", r, {ticker, user, detail: {shares: sh.toString()}});
     return r;
   }
@@ -222,7 +222,7 @@ export class ChainDriver {
         c.readContract({address: s.wrapper, abi: erc20Abi, functionName: "balanceOf", args: [s.vault]}),
         c.readContract({address: s.adapter, abi: marketAdapterAbi, functionName: "expectedSupplyAssets", args: [s.marketId]}),
         c.readContract({address: this.d.morpho, abi: morphoAbi, functionName: "market", args: [s.marketId]}),
-        c.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "guardTripped"}),
+        c.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "guardTripped"}),
         c.readContract({address: s.vault, abi: vaultV2Abi, functionName: "allocation", args: [ids[2]]}),
         c.readContract({address: s.vault, abi: vaultV2Abi, functionName: "absoluteCap", args: [ids[2]]}),
         c.readContract({address: s.vault, abi: vaultV2Abi, functionName: "relativeCap", args: [ids[2]]}),
@@ -246,10 +246,10 @@ export class ChainDriver {
     this.signer = privateKeyToAccount(this.opts.attestationKey ?? generatePrivateKey());
     // Live chains (testnet): the deployment already installed the compliance key; the owner (a timelock) cannot be
     // impersonated there, so only anvil needs the owner call below.
-    const current = await this.a.client.readContract({address: this.d.router!, abi: stocklineRouterAbi, functionName: "attestationSigner"});
+    const current = await this.a.client.readContract({address: this.d.router!, abi: lendoraRouterAbi, functionName: "attestationSigner"});
     if (current.toLowerCase() === this.signer.address.toLowerCase()) return this.signer.address;
-    const owner = await this.a.client.readContract({address: this.d.router!, abi: stocklineRouterAbi, functionName: "owner"});
-    await this.a.send(owner, this.d.router!, this.call(stocklineRouterAbi, "setAttestationSigner", [this.signer.address]));
+    const owner = await this.a.client.readContract({address: this.d.router!, abi: lendoraRouterAbi, functionName: "owner"});
+    await this.a.send(owner, this.d.router!, this.call(lendoraRouterAbi, "setAttestationSigner", [this.signer.address]));
     return this.signer.address;
   }
 
@@ -280,7 +280,7 @@ export class ChainDriver {
   async borrow(ticker: string, user: `0x${string}`, collateral: bigint, amount: bigint): Promise<TransactionReceipt> {
     await this.borrowerSetup(user, collateral);
     const att = await this.attest(user);
-    const r = await this.a.send(user, this.d.router!, this.call(stocklineRouterAbi, "borrow", [this.stock(ticker).stockToken, collateral, amount, user, att, await this.deadline()]));
+    const r = await this.a.send(user, this.d.router!, this.call(lendoraRouterAbi, "borrow", [this.stock(ticker).stockToken, collateral, amount, user, att, await this.deadline()]));
     await this.record("borrow", r, {ticker, user, detail: {collateral: collateral.toString(), amount: amount.toString()}});
     return r;
   }
@@ -292,7 +292,7 @@ export class ChainDriver {
     const att = await this.attest(user);
     const expected = (amount * this.prices[ticker] * 10n ** 6n) / (10n ** 8n * WAD);
     const swap = mockAggregatorSwap(this.d.mocks!.swapAggregator, s.stockToken, this.d.usdg, amount, (expected * 99n) / 100n, this.d.router!);
-    const r = await this.a.send(user, this.d.router!, this.call(stocklineRouterAbi, "openShort", [s.stockToken, collateral, amount, swap, compound, user, att, await this.deadline()]));
+    const r = await this.a.send(user, this.d.router!, this.call(lendoraRouterAbi, "openShort", [s.stockToken, collateral, amount, swap, compound, user, att, await this.deadline()]));
     await this.record("openShort", r, {ticker, user, detail: {collateral: collateral.toString(), amount: amount.toString(), compound: String(compound)}});
     return r;
   }
@@ -305,7 +305,7 @@ export class ChainDriver {
     await this.mintUsdg(user, usdgIn);
     await this.approve(this.d.usdg, user, this.d.router!);
     const swap = mockAggregatorSwap(this.d.mocks!.swapAggregator, this.d.usdg, s.stockToken, usdgIn, debt, this.d.router!);
-    const r = await this.a.send(user, this.d.router!, this.call(stocklineRouterAbi, "closeShort", [s.stockToken, usdgIn, swap, user, await this.deadline()]));
+    const r = await this.a.send(user, this.d.router!, this.call(lendoraRouterAbi, "closeShort", [s.stockToken, usdgIn, swap, user, await this.deadline()]));
     await this.record("closeShort", r, {ticker, user, detail: {usdgIn: usdgIn.toString(), debt: debt.toString()}});
     return r;
   }
@@ -317,7 +317,7 @@ export class ChainDriver {
     await this.mintStock(ticker, user, pull);
     await this.approve(s.stockToken, user, this.d.router!);
     const args = assets !== undefined ? [s.stockToken, assets, 0n, user, await this.deadline()] : [s.stockToken, 0n, maxUint256, user, await this.deadline()];
-    const r = await this.a.send(user, this.d.router!, this.call(stocklineRouterAbi, "repay", args));
+    const r = await this.a.send(user, this.d.router!, this.call(lendoraRouterAbi, "repay", args));
     await this.record("repay", r, {ticker, user, detail: {assets: String(assets ?? "all")}});
     return r;
   }
@@ -325,20 +325,20 @@ export class ChainDriver {
   /** US-B5 rescue top-up (RT-R8): only for a position with debt; the router reverts `NoDebtPosition` otherwise. */
   async addCollateral(ticker: string, user: `0x${string}`, amount: bigint): Promise<TransactionReceipt> {
     await this.borrowerSetup(user, amount);
-    const r = await this.a.send(user, this.d.router!, this.call(stocklineRouterAbi, "addCollateral", [this.stock(ticker).stockToken, amount, user, await this.deadline()]));
+    const r = await this.a.send(user, this.d.router!, this.call(lendoraRouterAbi, "addCollateral", [this.stock(ticker).stockToken, amount, user, await this.deadline()]));
     await this.record("addCollateral", r, {ticker, user, detail: {amount: amount.toString()}});
     return r;
   }
 
   async withdrawCollateral(ticker: string, user: `0x${string}`, amount: bigint): Promise<TransactionReceipt> {
-    const r = await this.a.send(user, this.d.router!, this.call(stocklineRouterAbi, "withdrawCollateral", [this.stock(ticker).stockToken, amount, user, await this.deadline()]));
+    const r = await this.a.send(user, this.d.router!, this.call(lendoraRouterAbi, "withdrawCollateral", [this.stock(ticker).stockToken, amount, user, await this.deadline()]));
     await this.record("withdrawCollateral", r, {ticker, user, detail: {amount: amount.toString()}});
     return r;
   }
 
   // ------------------------------------------------------------------ liquidations
 
-  /** A standard Morpho liquidation (no Stockline helper): the liquidator wraps Stock Tokens and repays `fraction` of
+  /** A standard Morpho liquidation (no Lendora helper): the liquidator wraps Stock Tokens and repays `fraction` of
    * the borrower's shares, seizing `clUSDG`. */
   async liquidate(ticker: string, borrower: `0x${string}`, liquidator: `0x${string}`, fractionBps = 5000n): Promise<TransactionReceipt> {
     const s = this.stock(ticker);
@@ -359,7 +359,7 @@ export class ChainDriver {
 
   async poke(tickers = this.tickers): Promise<void> {
     for (const t of tickers) {
-      const r = await this.a.send(this.op, this.stock(t).oracle, this.call(stocklineOracleAbi, "poke"));
+      const r = await this.a.send(this.op, this.stock(t).oracle, this.call(lendoraOracleAbi, "poke"));
       await this.record("poke", r, {ticker: t});
     }
   }
@@ -373,7 +373,7 @@ export class ChainDriver {
 
   /** Guardian `trip` / `clear` of an offchain reason (MANUAL by default). */
   async guardian(ticker: string, action: "trip" | "clear", reason: bigint = GUARD.MANUAL): Promise<void> {
-    const r = await this.a.send(this.d.roles.guardian, this.stock(ticker).oracle, this.call(stocklineOracleAbi, action, [reason]));
+    const r = await this.a.send(this.d.roles.guardian, this.stock(ticker).oracle, this.call(lendoraOracleAbi, action, [reason]));
     await this.record(`guardian:${action}`, r, {ticker, detail: {reason: reason.toString()}});
   }
 
@@ -411,7 +411,7 @@ export class ChainDriver {
   }
 
   async healthFactor(ticker: string, user: `0x${string}`, at?: bigint): Promise<bigint> {
-    return this.a.client.readContract({address: this.d.router!, abi: stocklineRouterAbi, functionName: "healthFactorAt", args: [this.stock(ticker).stockToken, user, at ?? (await this.now())]});
+    return this.a.client.readContract({address: this.d.router!, abi: lendoraRouterAbi, functionName: "healthFactorAt", args: [this.stock(ticker).stockToken, user, at ?? (await this.now())]});
   }
 
   async isOpen(t?: bigint): Promise<boolean> {

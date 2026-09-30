@@ -6,11 +6,11 @@ interface IMintableMock {
     function mint(address to, uint256 amount) external;
 }
 
-/// @title StocklineFaucet (testnet only)
+/// @title LendoraFaucet (testnet only)
 /// @notice Hands testers mock Stock Tokens and USDG on Robinhood Chain testnet (46630): each address can claim a fixed
 /// drip once per `cooldown`. The faucet is an operator of the gated mocks; it holds no funds. Never deployed on
 /// mainnet (the deploy script refuses any other chain).
-contract StocklineFaucet {
+contract LendoraFaucet {
     struct Drip {
         address token;
         uint256 amount;

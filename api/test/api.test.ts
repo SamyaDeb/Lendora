@@ -4,8 +4,8 @@ import WebSocket from "ws";
 import {encodeFunctionData, parseAbiItem, parseUnits, zeroAddress} from "viem";
 import {privateKeyToAccount, generatePrivateKey} from "viem/accounts";
 import {createSiweMessage} from "viem/siwe";
-import {api as sdkApi, feeSplitterAbi, shortInterestLensAbi, stocklineRouterAbi} from "@stockline/sdk";
-import {USERS} from "@stockline/devnet";
+import {api as sdkApi, feeSplitterAbi, shortInterestLensAbi, lendoraRouterAbi} from "@lendora/sdk";
+import {USERS} from "@lendora/devnet";
 import {startStack, type Stack} from "./harness.js";
 
 /** SI-R10…R14 and the 07 acceptance "dashboard numbers equal lens snapshot() at the same block". */
@@ -33,7 +33,7 @@ describe("public API on the indexed seed week (SI-R10…R14)", () => {
       expect(body.asOfBlock, path).toMatch(/^\d+$/);
       expect(Number.isNaN(Date.parse(body.asOfTime)), path).toBe(false);
       expect(typeof body.confirmed, path).toBe("boolean");
-      expect(body.scope).toContain("Stockline markets only");
+      expect(body.scope).toContain("Lendora markets only");
       expect(r.headers.get("x-as-of-block")).toBe(body.asOfBlock);
       expect(r.headers.get("x-data-terms")).toBe("/v1/terms"); // SI-R14
     }
@@ -142,7 +142,7 @@ describe("public API on the indexed seed week (SI-R10…R14)", () => {
     const snap = (await getJson("/v1/markets/NVDA")) as unknown as {asOfBlock: string; data: {time: string}};
     const block = BigInt(snap.asOfBlock);
     const t = BigInt(Date.parse(snap.data.time) / 1000);
-    const hf = await s.anvil.client.readContract({address: s.config.d.router!, abi: stocklineRouterAbi, functionName: "healthFactorAt", args: [s.config.d.stocks.NVDA.stockToken, USERS.heidi, t], blockNumber: block});
+    const hf = await s.anvil.client.readContract({address: s.config.d.router!, abi: lendoraRouterAbi, functionName: "healthFactorAt", args: [s.config.d.stocks.NVDA.stockToken, USERS.heidi, t], blockNumber: block});
     expect(parseUnits(nvda.healthFactor, 18)).toBe(hf); // exact, WAD
   });
 
@@ -165,7 +165,7 @@ describe("public API on the indexed seed week (SI-R10…R14)", () => {
     // Sign-In with Ethereum → key (shown once).
     const account = privateKeyToAccount(generatePrivateKey());
     const {nonce} = (await (await fetch(`${limited.url}/v1/auth/nonce`, {headers: {"x-forwarded-for": "203.0.113.9"}})).json()) as {nonce: string};
-    const message = createSiweMessage({address: account.address, chainId: 31337, domain: "localhost", nonce, uri: "http://localhost", version: "1", statement: "Create a Stockline API key."});
+    const message = createSiweMessage({address: account.address, chainId: 31337, domain: "localhost", nonce, uri: "http://localhost", version: "1", statement: "Create a Lendora API key."});
     const signature = await account.signMessage({message});
     const created = await fetch(`${limited.url}/v1/auth/keys`, {method: "POST", headers: {"content-type": "application/json", "x-forwarded-for": "203.0.113.9"}, body: JSON.stringify({message, signature, label: "test"})});
     expect(created.status).toBe(201);
@@ -249,7 +249,7 @@ describe("public API on the indexed seed week (SI-R10…R14)", () => {
   });
 
   it("SI_R10 fan-out through Redis: two API instances, one publisher, both push to their clients", async () => {
-    const redis = await (await import("@stockline/devnet")).startRedis();
+    const redis = await (await import("@lendora/devnet")).startRedis();
     const instances: Awaited<ReturnType<Stack["startApi"]>>[] = [];
     try {
       const a1 = await s.startApi({redisUrl: redis.url});

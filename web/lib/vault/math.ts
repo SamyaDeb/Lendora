@@ -1,4 +1,4 @@
-import {etToUnix, isTradingDay, type YMD} from "@stockline/sdk";
+import {etToUnix, isTradingDay, type YMD} from "@lendora/sdk";
 import type {VaultOverview, VaultUser, VaultWindow, WithdrawPreview} from "./types";
 
 /** DN-R1: queued withdrawals settle within 72 hours or at the next US market open, whichever is later. */

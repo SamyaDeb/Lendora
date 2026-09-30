@@ -82,7 +82,7 @@ export class PagerDutyPager implements Pager {
             dedup_key: p.key,
             payload: {
               summary: `[${p.severity}] ${p.title}`,
-              source: "stockline-monitor",
+              source: "lendora-monitor",
               severity: p.severity === "P0" ? "critical" : p.severity === "P1" ? "error" : "warning",
               custom_details: {...p.details, runbook: p.runbook, block: p.block.toString()},
             },
@@ -104,11 +104,11 @@ export class OpsgeniePager implements Pager {
     const alias = encodeURIComponent(p.key);
     const r =
       p.action === "resolve"
-        ? await fetch(`${this.base}/v2/alerts/${alias}/close?identifierType=alias`, {method: "POST", headers, body: json({source: "stockline-monitor"}), signal: AbortSignal.timeout(10_000)})
+        ? await fetch(`${this.base}/v2/alerts/${alias}/close?identifierType=alias`, {method: "POST", headers, body: json({source: "lendora-monitor"}), signal: AbortSignal.timeout(10_000)})
         : await fetch(`${this.base}/v2/alerts`, {
             method: "POST",
             headers,
-            body: json({message: `[${p.severity}] ${p.title}`.slice(0, 130), alias: p.key, priority: p.severity === "P0" ? "P1" : p.severity === "P1" ? "P2" : "P3", details: {...p.details, runbook: p.runbook ?? ""}, source: "stockline-monitor"}),
+            body: json({message: `[${p.severity}] ${p.title}`.slice(0, 130), alias: p.key, priority: p.severity === "P0" ? "P1" : p.severity === "P1" ? "P2" : "P3", details: {...p.details, runbook: p.runbook ?? ""}, source: "lendora-monitor"}),
             signal: AbortSignal.timeout(10_000),
           });
     if (!r.ok) throw new Error(`opsgenie ${r.status}`);

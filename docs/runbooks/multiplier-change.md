@@ -29,7 +29,7 @@ checks that the feed and the multiplier agree. Dividends (≤ 5%) never trip it.
 
 ```sh
 cast send $ORACLE "poke()" --rpc-url $RPC --private-key $OPS_KEY
-pnpm --filter @stockline/sdk timelock oracle.clearMultiplierGuard ticker=SPY --network $NET --salt "$(date -u +%F) SPY multiplier confirm"
+pnpm --filter @lendora/sdk timelock oracle.clearMultiplierGuard ticker=SPY --network $NET --salt "$(date -u +%F) SPY multiplier confirm"
 ```
 
 Rehearsed on anvil: an unannounced +30% change latches `MULTIPLIER`; the confirm through the real timelock clears it

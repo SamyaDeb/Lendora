@@ -1,7 +1,7 @@
 import {expect, test, type Page} from "@playwright/test";
 import {createPublicClient, http, type PublicClient} from "viem";
-import {erc20Abi, getDeployment, morphoAbi, stocklineRouterAbi} from "@stockline/sdk";
-import {ChainDriver, connectAnvil} from "@stockline/devnet";
+import {erc20Abi, getDeployment, morphoAbi, lendoraRouterAbi} from "@lendora/sdk";
+import {ChainDriver, connectAnvil} from "@lendora/devnet";
 import {E2E_ACCOUNT} from "./stack";
 
 /**
@@ -80,7 +80,7 @@ test.describe.serial("Lendora app on anvil", () => {
     await expect(page.getByTestId("rv-liq-now")).toContainText("$"); // liquidation price shown before confirming
     await confirmReview(page);
     const block = await client.getBlock();
-    const onchainHf = await client.readContract({address: d.router!, abi: stocklineRouterAbi, functionName: "healthFactorAt", args: [d.stocks.NVDA.stockToken, E2E_ACCOUNT, block.timestamp]});
+    const onchainHf = await client.readContract({address: d.router!, abi: lendoraRouterAbi, functionName: "healthFactorAt", args: [d.stocks.NVDA.stockToken, E2E_ACCOUNT, block.timestamp]});
     const pos = await position("NVDA");
     const m = await client.readContract({address: d.morpho, abi: morphoAbi, functionName: "market", args: [d.stocks.NVDA.marketId]});
     const debt = (pos.borrowShares * (m.totalBorrowAssets + 1n) + m.totalBorrowShares + 10n ** 6n - 1n) / (m.totalBorrowShares + 10n ** 6n);
@@ -100,7 +100,7 @@ test.describe.serial("Lendora app on anvil", () => {
     await page.getByTestId("submit").click();
     await confirmReview(page);
     const block = await client.getBlock();
-    const onchainHf = await client.readContract({address: d.router!, abi: stocklineRouterAbi, functionName: "healthFactorAt", args: [d.stocks.AAPL.stockToken, E2E_ACCOUNT, block.timestamp]});
+    const onchainHf = await client.readContract({address: d.router!, abi: lendoraRouterAbi, functionName: "healthFactorAt", args: [d.stocks.AAPL.stockToken, E2E_ACCOUNT, block.timestamp]});
     expect(within01pct(previewHf, onchainHf)).toBe(true);
   });
 
@@ -156,7 +156,7 @@ test.describe.serial("Lendora app on anvil", () => {
   test("APP-R8 alert settings are saved with a signed message", async () => {
     await page.goto("/alerts");
     await page.getByLabel("Alert when health factor is below").fill("1.4");
-    await page.getByLabel("Webhook URL (HTTPS)").fill("http://127.0.0.1:9/stockline");
+    await page.getByLabel("Webhook URL (HTTPS)").fill("http://127.0.0.1:9/lendora");
     await page.getByRole("button", {name: "Save alert settings"}).click();
     await expect(page.getByText("Saved.")).toBeVisible();
     await page.reload();

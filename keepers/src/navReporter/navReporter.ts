@@ -9,7 +9,7 @@ import {
   strategyManagerAbi,
   type ChainDeployment,
   type NavReport,
-} from "@stockline/sdk";
+} from "@lendora/sdk";
 import type {TxSender, TypedDataSigner} from "../common/signer.js";
 import type {Health} from "../common/health.js";
 

@@ -11,7 +11,7 @@ import {
   strategyManagerAbi,
   vaultV2FullAbi,
   type ChainDeployment,
-} from "@stockline/sdk";
+} from "@lendora/sdk";
 import type {TxSender} from "../common/signer.js";
 import type {Health} from "../common/health.js";
 

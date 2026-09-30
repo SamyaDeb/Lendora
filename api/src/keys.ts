@@ -44,10 +44,10 @@ export class MemoryNonceStore implements NonceStore {
 export class RedisNonceStore implements NonceStore {
   constructor(private readonly redis: Redis) {}
   async put(nonce: string, ttlSec: number) {
-    await this.redis.set(`stockline:siwe:${nonce}`, "1", "EX", ttlSec);
+    await this.redis.set(`lendora:siwe:${nonce}`, "1", "EX", ttlSec);
   }
   async take(nonce: string) {
-    return (await this.redis.del(`stockline:siwe:${nonce}`)) === 1;
+    return (await this.redis.del(`lendora:siwe:${nonce}`)) === 1;
   }
 }
 

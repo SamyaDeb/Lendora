@@ -3,7 +3,7 @@ import {cors} from "hono/cors";
 import type {Context} from "hono";
 import type {HttpBindings} from "@hono/node-server";
 import {formatUnits} from "viem";
-import {HF_MIN_OPEN_WAD, U_MAX_WAD, nextClosure, nextEvent, safeErrorLine} from "@stockline/sdk";
+import {HF_MIN_OPEN_WAD, U_MAX_WAD, nextClosure, nextEvent, safeErrorLine} from "@lendora/sdk";
 import type {ApiConfig} from "./config.js";
 import type {IndexerDb, EventCursor} from "./db.js";
 import type {Limiter} from "./limits.js";
@@ -16,7 +16,7 @@ import * as S from "./schemas.js";
 import {registerVaultRoutes} from "./vault.js";
 
 /**
- * Stockline public API (docs/prd/07 §2, SI-R10…R14). Mounted at `/v1`; `WS /v1/stream` is attached by the server
+ * Lendora public API (docs/prd/07 §2, SI-R10…R14). Mounted at `/v1`; `WS /v1/stream` is attached by the server
  * (src/stream.ts). Every data response carries `asOfBlock`, `asOfTime` and `confirmed` in the body and as
  * `X-As-Of-*` headers (SI-R13), and `X-Data-Terms` (SI-R14).
  */
@@ -37,8 +37,8 @@ type Env = {Bindings: HttpBindings; Variables: {keyId?: string; address?: string
 
 export const TERMS = {
   terms:
-    "Stockline short-interest data is provided as is, for information only. It is not investment advice and not an offer of securities. Values come from public onchain state of Stockline markets on Robinhood Chain and may be delayed, incomplete or revised by chain reorganizations until confirmed.",
-  attribution: "Please attribute as: \"Data: Stockline (stockline.xyz)\".",
+    "Lendora short-interest data is provided as is, for information only. It is not investment advice and not an offer of securities. Values come from public onchain state of Lendora markets on Robinhood Chain and may be delayed, incomplete or revised by chain reorganizations until confirmed.",
+  attribution: "Please attribute as: \"Data: Lendora (lendora.xyz)\".",
   warranty: "No warranty of any kind, express or implied, including accuracy, availability or fitness for a purpose.",
 };
 const TERMS_URL = "/v1/terms";
@@ -253,7 +253,7 @@ export function createApp(deps: AppDeps) {
         const cols = Object.keys(S.HistoryPoint.shape) as (keyof (typeof rows)[number])[];
         const esc = (v: unknown) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
         const body = [cols.join(","), ...rows.map((r) => cols.map((k) => esc(r[k])).join(","))].join("\n") + "\n";
-        c.header("Content-Disposition", `attachment; filename="stockline-${t}-${q.interval}.csv"`);
+        c.header("Content-Disposition", `attachment; filename="lendora-${t}-${q.interval}.csv"`);
         return c.body(body, 200, {"Content-Type": "text/csv; charset=utf-8"});
       }
       return c.json({...e, symbol: t, interval: q.interval, data: rows}, 200);
@@ -289,7 +289,7 @@ export function createApp(deps: AppDeps) {
       method: "get",
       path: "/v1/positions/{address}",
       tags: ["positions"],
-      summary: "Positions of a wallet in Stockline markets (public onchain data)",
+      summary: "Positions of a wallet in Lendora markets (public onchain data)",
       request: {params: z.object({address: S.Address})},
       responses: {200: json(S.PositionsResponse, "Positions"), ...errors},
     }),
@@ -438,7 +438,7 @@ export function createApp(deps: AppDeps) {
     createRoute({method: "get", path: "/v1/auth/nonce", tags: ["auth"], summary: "One-time nonce for a Sign-In with Ethereum message", responses: {200: json(S.NonceResponse, "Nonce")}}),
     async (c) =>
       c.json(
-        {nonce: await keys.nonce(), domain: config.siweDomain, chainId: config.chainId, statement: "Create a Stockline API key. This signature does not move funds or grant any permission."},
+        {nonce: await keys.nonce(), domain: config.siweDomain, chainId: config.chainId, statement: "Create a Lendora API key. This signature does not move funds or grant any permission."},
         200,
       ),
   );
@@ -501,16 +501,16 @@ export function openApiInfo(config: Pick<ApiConfig, "chainId">) {
   return {
     openapi: "3.1.0",
     info: {
-      title: "Stockline short-interest API",
+      title: "Lendora short-interest API",
       version: "1.0.0",
       description: [
-        "Live short interest for Stockline markets on Robinhood Chain (docs/prd/07). Scope: Stockline markets only.",
+        "Live short interest for Lendora markets on Robinhood Chain (docs/prd/07). Scope: Lendora markets only.",
         "Every data response carries `asOfBlock`, `asOfTime` and `confirmed` (finalized) — SI-R13.",
         "Limits (SI-R10): free 60 req/min and 1 WebSocket connection per IP; keyed 600 req/min and 10 connections. Create a key with Sign-In with Ethereum at `POST /v1/auth/keys`.",
         "WebSocket `/v1/stream`: send `{\"channel\":\"market\",\"symbol\":\"NVDA\"}` or `{\"channel\":\"events\",\"symbol\":\"*\"}`; `\"op\":\"unsubscribe\"` to stop.",
         `Chain id ${config.chainId}. Data as is, no warranty; attribution requested (${TERMS_URL}).`,
       ].join("\n\n"),
-      license: {name: "Data terms", url: "https://stockline.xyz/terms/data"},
+      license: {name: "Data terms", url: "https://lendora.xyz/terms/data"},
     },
     servers: [{url: "/"}],
   };

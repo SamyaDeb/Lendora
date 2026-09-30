@@ -1,8 +1,8 @@
-import {safeErrorLine} from "@stockline/sdk";
+import {safeErrorLine} from "@lendora/sdk";
 import {Hono} from "hono";
 import type {PublicClient} from "viem";
 import {isAddress} from "viem";
-import type {AlertSettings, Address} from "@stockline/sdk";
+import type {AlertSettings, Address} from "@lendora/sdk";
 import type {Health} from "../common/health.js";
 import {masked, SettingsError, validateSettings, verifySave, type SettingsStore} from "./settings.js";
 

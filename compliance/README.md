@@ -16,7 +16,7 @@ Denials return `403 {code, error}` with `RESTRICTED_REGION`, `GEO_UNKNOWN`, `DAT
 
 **Geo headers.** The service reads the country from edge headers (`x-vercel-ip-country`, `cf-ipcountry`, …). On
 Railway nothing sets them, so the web app calls the service server-side from the edge and forwards them with
-`x-stockline-proxy: $PROXY_SECRET`; with `PROXY_SECRET` set, headers from anyone else are ignored (geo unknown →
+`x-lendora-proxy: $PROXY_SECRET`; with `PROXY_SECRET` set, headers from anyone else are ignored (geo unknown →
 no attestation).
 
 **Signer.** `COMPLIANCE_SIGNER_KEY` / `_KEY_FILE` (secret manager) or `COMPLIANCE_REMOTE_SIGNER_URL` (KMS/HSM bridge;
@@ -24,6 +24,6 @@ every signature is verified against `COMPLIANCE_SIGNER_ADDRESS`). The router's `
 timelock (24h on testnet). Terms text: `terms/terms-<version>.md` (**draft, pending counsel, CP-R6**).
 
 ```sh
-pnpm --filter @stockline/compliance dev    # env: .env.example; scripts/dev.sh sets it up on anvil
-pnpm --filter @stockline/compliance test   # anvil + Postgres: attestations verified by the deployed router
+pnpm --filter @lendora/compliance dev    # env: .env.example; scripts/dev.sh sets it up on anvil
+pnpm --filter @lendora/compliance test   # anvil + Postgres: attestations verified by the deployed router
 ```

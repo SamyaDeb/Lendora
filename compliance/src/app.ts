@@ -3,7 +3,7 @@ import {cors} from "hono/cors";
 import type {HttpBindings} from "@hono/node-server";
 import {z} from "zod";
 import {isAddress, type Address} from "viem";
-import {safeErrorLine} from "@stockline/sdk";
+import {safeErrorLine} from "@lendora/sdk";
 import {Denied, type ComplianceService, type Terms} from "./service.js";
 import {HeaderGeoResolver} from "./checks.js";
 
@@ -20,7 +20,7 @@ type Env = {Bindings: HttpBindings};
 
 export interface AppOptions {
   trustProxy: boolean;
-  /** When set, geo and client-IP headers are trusted only on requests carrying `x-stockline-proxy: <secret>` (the
+  /** When set, geo and client-IP headers are trusted only on requests carrying `x-lendora-proxy: <secret>` (the
    * web app's server-side proxy at the edge, which sets them from the platform). Without it, geo is unknown. */
   proxySecret?: string;
   /** Local anvil only: the country assumed when no geo header is present (never set on testnet/mainnet). */
@@ -48,7 +48,7 @@ export function createComplianceApp(svc: ComplianceService, terms: Terms, o: App
     }
     return ++h.n > o.attestRpm;
   };
-  const trusted = (c: Context<Env>) => !o.proxySecret || c.req.header("x-stockline-proxy") === o.proxySecret;
+  const trusted = (c: Context<Env>) => !o.proxySecret || c.req.header("x-lendora-proxy") === o.proxySecret;
   const geoOf = (c: Context<Env>) => {
     const g = trusted(c) ? geo.resolve((n) => c.req.header(n)) : {country: null, region: null};
     return g.country || !o.devDefaultCountry ? g : {country: o.devDefaultCountry, region: null};

@@ -5,8 +5,8 @@ import {
   mockStockTokenAbi,
   morphoAbi,
   saltOf,
-  stocklineOracleAbi,
-  stocklineRouterAbi,
+  lendoraOracleAbi,
+  lendoraRouterAbi,
   timelockAbi,
   timelockOperation,
   type TimelockAction,
@@ -14,7 +14,7 @@ import {
   feeSplitterAbi,
   vaultCuratorOperation,
   vaultV2FullAbi,
-} from "@stockline/sdk";
+} from "@lendora/sdk";
 import {DEPLOYER, startAnvil, type Anvil} from "../src/anvil.js";
 import {ChainDriver, GUARD} from "../src/driver.js";
 import {SEED_WED} from "../src/scenario.js";
@@ -34,7 +34,7 @@ describe("runbook rehearsals on anvil (docs/runbooks)", () => {
   let drv: ChainDriver;
   const borrower = "0x5700000000000000000000000000000000000b01" as const;
   const lender = "0x5700000000000000000000000000000000000b02" as const;
-  const reasons = (t: string) => a.client.readContract({address: a.d.stocks[t].oracle, abi: stocklineOracleAbi, functionName: "guardReasons"});
+  const reasons = (t: string) => a.client.readContract({address: a.d.stocks[t].oracle, abi: lendoraOracleAbi, functionName: "guardReasons"});
 
   /** schedule → wait the min delay (fresh rounds keep the feeds alive) → execute, as the runbooks say. */
   async function governed(action: TimelockAction, label: string) {
@@ -93,7 +93,7 @@ describe("runbook rehearsals on anvil (docs/runbooks)", () => {
     await governed({kind: "oracle.resetReferences", ticker: "AAPL"}, "rehearsal AAPL re-anchor");
     await drv.poke(["AAPL"]);
     expect((await reasons("AAPL")) & 16n).toBe(0n);
-    const [answer] = await a.client.readContract({address: a.d.stocks.AAPL.oracle, abi: stocklineOracleAbi, functionName: "stockAnswer"});
+    const [answer] = await a.client.readContract({address: a.d.stocks.AAPL.oracle, abi: lendoraOracleAbi, functionName: "stockAnswer"});
     expect(answer).toBe(drv.prices.AAPL);
   }, 120_000);
 
@@ -109,7 +109,7 @@ describe("runbook rehearsals on anvil (docs/runbooks)", () => {
   it("issuer-pause-or-blocklist.md (A25): token pause trips the guard; USDG-side exits still work", async () => {
     await drv.issuerPause("NVDA", true);
     expect((await reasons("NVDA")) & GUARD.TOKEN_PAUSED).toBe(GUARD.TOKEN_PAUSED);
-    await a.send(borrower, a.d.router!, call(stocklineRouterAbi, "withdrawCollateral", [a.d.stocks.NVDA.stockToken, 500n * E6, borrower, (await drv.now()) + 600n]));
+    await a.send(borrower, a.d.router!, call(lendoraRouterAbi, "withdrawCollateral", [a.d.stocks.NVDA.stockToken, 500n * E6, borrower, (await drv.now()) + 600n]));
     await drv.issuerPause("NVDA", false);
     await drv.poke(["NVDA"]);
     expect((await reasons("NVDA")) & GUARD.TOKEN_PAUSED).toBe(0n);
@@ -160,7 +160,7 @@ describe("runbook rehearsals on anvil (docs/runbooks)", () => {
     await governed({kind: "router.delistMarket", ticker: "NVDA"}, "rehearsal NVDA delist");
     await expect(drv.borrow("NVDA", borrower, 1_000n * E6, E18)).rejects.toThrow(/NotListed/);
     await drv.repay("NVDA", borrower);
-    await a.send(borrower, a.d.router!, call(stocklineRouterAbi, "withdrawCollateral", [a.d.stocks.NVDA.stockToken, 2n ** 256n - 1n, borrower, (await drv.now()) + 600n]));
+    await a.send(borrower, a.d.router!, call(lendoraRouterAbi, "withdrawCollateral", [a.d.stocks.NVDA.stockToken, 2n ** 256n - 1n, borrower, (await drv.now()) + 600n]));
     const pos = await a.client.readContract({address: a.d.morpho, abi: morphoAbi, functionName: "position", args: [a.d.stocks.NVDA.marketId, borrower]});
     expect(pos.borrowShares).toBe(0n);
     expect(pos.collateral).toBe(0n);
@@ -170,7 +170,7 @@ describe("runbook rehearsals on anvil (docs/runbooks)", () => {
     await drv.lend("AAPL", lender, 50n * E18);
     await drv.allocate(["AAPL"]);
     await governed({kind: "router.setGlobalCap", cap: 1n}, "rehearsal global cap freeze");
-    expect(await a.client.readContract({address: a.d.router!, abi: stocklineRouterAbi, functionName: "globalCap"})).toBe(1n);
+    expect(await a.client.readContract({address: a.d.router!, abi: lendoraRouterAbi, functionName: "globalCap"})).toBe(1n);
     await expect(drv.borrow("AAPL", borrower, 5_000n * E6, E18)).rejects.toThrow(/GlobalCapExceeded/);
   }, 120_000);
 });

@@ -1,5 +1,5 @@
-We're building Stockline, a stock lending layer for Robinhood Chain on unmodified Morpho Blue and Morpho Vault V2.
-Phases 0–2 and the remediation are done, and **Stockline is deployed on Robinhood Chain testnet (chain id 46630)**
+We're building Lendora, a stock lending layer for Robinhood Chain on unmodified Morpho Blue and Morpho Vault V2.
+Phases 0–2 and the remediation are done, and **Lendora is deployed on Robinhood Chain testnet (chain id 46630)**
 since 2026-09-28 (349 txs, 50 contracts, smoke flows 13/13; `packages/sdk/addresses.json` → `chains["46630"]`).
 
 This session **tests the testnet product the way real users and operators will use it**: every backend service
@@ -84,7 +84,7 @@ value and are never used anywhere else.
 - Add `scripts/dev.sh --network 46630`: Postgres and Redis only (no anvil, no `DeployLocal`); refuses unless the RPC
   reports chain id 46630; env from `.env` plus the exported secrets; starts, with logs in `.dev/logs/` and a health
   summary at the end:
-  indexer (46630 from `startBlock`) + reconcile, API, compliance (`STOCKLINE_NETWORK=46630`, `PROXY_SECRET`,
+  indexer (46630 from `startBlock`) + reconcile, API, compliance (`LENDORA_NETWORK=46630`, `PROXY_SECRET`,
   `TRUST_PROXY=true`, sanctions `deny-list`), keepers with `DRY_RUN=false` (allocator, guard, liquidator, alerts,
   feed mirror (mainnet read-only → testnet mock feeds), monitor (console + file pager until a real pager key exists)),
   web (`next dev`, chain 46630).
@@ -98,7 +98,7 @@ value and are never used anywhere else.
 ### Step 2 · Service-level tests against the testnet
 
 Write them as a re-runnable suite (e.g. `packages/devnet/test/testnet/*.test.ts`, skipped unless
-`STOCKLINE_TESTNET=1`) so they can run again before each weekend. Record results in
+`LENDORA_TESTNET=1`) so they can run again before each weekend. Record results in
 `docs/runbooks/testnet-test-report.md`.
 
 | Service | Checks |
@@ -109,7 +109,7 @@ Write them as a re-runnable suite (e.g. `packages/devnet/test/testnet/*.test.ts`
 | Compliance | Attest OK for an allowed country with the secret; each denial code: `RESTRICTED_REGION` (US, CA, GB, CH, AE), `GEO_UNKNOWN` (no or spoofed header without secret, CP-R8), `DATACENTER_IP`, `SANCTIONED` (deny-list address), `TERMS_REQUIRED`; per-IP and per-wallet rate limit; attestation accepted by the router on 46630 and rejected after expiry or for another wallet (RT-R2) |
 | Allocator | Keeps idle ≈ 10% of assets (LM-R30); reacts to a large deposit/withdraw within a few blocks; pulls liquidity on guard trip and in pre-earnings windows (LM-R31); `/health` |
 | Guard keeper | Pokes land (`ReferenceUpdated`); DEX TWAP deviation trip/clear against the mock pools (OR-R31); L2 gap detection; `/health` |
-| Liquidator | Detects an unhealthy position and liquidates through `StocklineLiquidator` with profit guard; bad-debt path |
+| Liquidator | Detects an unhealthy position and liquidates through `LendoraLiquidator` with profit guard; bad-debt path |
 | Feed mirror | Testnet mock feed rounds equal mainnet Chainlink rounds (answer, timing) for SPY/NVDA/AAPL/USDG; stops pushing during the real weekend freeze |
 | Alerts (APP-R8) | Settings saved via signed message; HF-threshold alert and the 24h/4h pre-ramp weekend warning delivered (console/webhook), < 60 s after the triggering block; no duplicates after restart |
 | Monitor (MON-R1…R14) | Each rule fires once and resolves once in step 4 drills; `/incidents`, `/weekends`; keeper liveness via their `/health` |
@@ -120,7 +120,7 @@ Write them as a re-runnable suite (e.g. `packages/devnet/test/testnet/*.test.ts`
 anvil account, which doesn't exist on testnet. Add an e2e-only connector that signs locally with a throwaway test-user
 key passed through env (`E2E_TESTNET_USER_KEY`), enabled only when `NEXT_PUBLIC_E2E=testnet` in a dev or test build
 (never in `next build` for deployment: a test asserts the production bundle contains no e2e connector). Add
-`web/e2e/testnet.spec.ts` (separate Playwright project, runs only with `STOCKLINE_TESTNET=1`) that drives the local web
+`web/e2e/testnet.spec.ts` (separate Playwright project, runs only with `LENDORA_TESTNET=1`) that drives the local web
 app against the testnet for these journeys, each with its own funded test user:
 
 1. **New visitor**: markets page loads with live data; wrong network prompt; connect wallet; accept terms (APP-R10).

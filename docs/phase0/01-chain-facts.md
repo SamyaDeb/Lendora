@@ -14,7 +14,7 @@ from event logs. Blockscout's API (`robinhoodchain.blockscout.com/api`) sits beh
 so verified source code was taken from **Sourcify** (`sourcify.dev/server/v2/contract/4663/<address>`), which reports
 exact matches for the contracts cited. Raw pulls are cached in `sim/data/raw/` by `sim/phase0/rpc.py`.
 
-## Summary: what changes for Stockline
+## Summary: what changes for Lendora
 
 | # | Finding | Status | Impact |
 |---|---|---|---|
@@ -91,7 +91,7 @@ Roles live in the registry (OZ `AccessControl`). Holders from `RoleGranted`/`Rol
 decoded in full); all role holders have **no code (EOAs or MPC keys; not distinguishable onchain)**. No timelock on any.
 The deployer `0x0743…1279` renounced `DEFAULT_ADMIN_ROLE` and `BEACON_UPGRADER_ROLE` at blocks 8,692–8,695.
 
-| Power | Function | Role holder (granted at block) | Effect on Stockline |
+| Power | Function | Role holder (granted at block) | Effect on Lendora |
 |---|---|---|---|
 | Upgrade all Stock Tokens | `registry.upgradeTo(impl)` | BEACON_UPGRADER `0xCd8C6182e7C6Ca3B5156D6a90a67719d7e2Be094` (8,646) | Any behavior can change for all 195 tokens at once, instantly |
 | Admin of all roles | `grantRole` / `revokeRole` | DEFAULT_ADMIN `0xD6f8378F8e440c65F8382F5f2728c78DfD55B66d` (7,802) | Can create any role holder. Used at blocks 616,387/618,536 (grant/revoke MINTER to `0x…dead`) |
@@ -183,7 +183,7 @@ onchain at latest (fork test log: `docs/phase0/evidence/fork-run.log`, block 73,
 | Morpho liquidations | **248** `Liquidate` events from block 6,059,772 to 73,043,137, from **65 distinct callers** | VERIFIED onchain | Morpho logs to block 73,186,137 (`sim/data/raw/morpho_liq.json`) |
 | Bad debt | 4 liquidations realized bad debt (blocks 26,776,969; 26,803,224; 28,832,937; 54,225,285) | VERIFIED onchain | e.g. tx `0xc7aae48d…d9b1` |
 | Where | 204 of 248 in a single USDG-loan market (collateral `0x63c12667…`); 2 in NVDA-collateral markets | VERIFIED onchain | decoded by market id |
-| Liquidators for stock-**loan** markets | None yet (the existing stock-loan markets are empty) | NO (so far) | Stockline's fallback liquidator is required, as the PRD already says |
+| Liquidators for stock-**loan** markets | None yet (the existing stock-loan markets are empty) | NO (so far) | Lendora's fallback liquidator is required, as the PRD already says |
 
 ## 9. What still needs a human or a key
 

@@ -1,5 +1,5 @@
 import {createPublicClient, http, type PublicClient} from "viem";
-import {stocklineOracleAbi, type ChainDeployment} from "@stockline/sdk";
+import {lendoraOracleAbi, type ChainDeployment} from "@lendora/sdk";
 
 /** Live chain reads the API needs beyond the indexer: oracle params (timelocked, cached 10 min) and the chain head
  * (indexer lag in `/status`, cached 1 s). */
@@ -45,7 +45,7 @@ export class RpcChainReader implements ChainReader {
   async oracleParams(ticker: string): Promise<OracleParams> {
     const hit = this.params.get(ticker);
     if (hit && Date.now() - hit.at < 600_000) return hit.p;
-    const r = await this.client.readContract({address: this.d.stocks[ticker].oracle, abi: stocklineOracleAbi, functionName: "params"});
+    const r = await this.client.readContract({address: this.d.stocks[ticker].oracle, abi: lendoraOracleAbi, functionName: "params"});
     const p = {
       z: BigInt(r.zWad),
       sigma: BigInt(r.sigmaWad),

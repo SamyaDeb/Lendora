@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {render} from "@testing-library/react";
-import type {api} from "@stockline/sdk";
+import type {api} from "@lendora/sdk";
 import {RevenuePanel} from "@/components/data/RevenuePanel";
 
 const body = (bySymbol: api.RevenueResponse["data"]["totals"]["bySymbol"]): api.RevenueResponse =>
@@ -9,7 +9,7 @@ const body = (bySymbol: api.RevenueResponse["data"]["totals"]["bySymbol"]): api.
     asOfTime: "2026-10-01T16:00:00.000Z",
     confirmed: false,
     safe: false,
-    scope: "Stockline markets only",
+    scope: "Lendora markets only",
     from: "2026-07-03T00:00:00.000Z",
     to: "2026-10-01T23:59:59.000Z",
     rateKind: "variable",

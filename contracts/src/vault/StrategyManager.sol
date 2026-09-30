@@ -12,11 +12,11 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IStrategyManager} from "../interfaces/IStrategyManager.sol";
 import {IDeltaNeutralVault} from "../interfaces/IDeltaNeutralVault.sol";
 import {IPerpAdapter} from "../interfaces/IPerpAdapter.sol";
-import {IStocklineOracle} from "../interfaces/IStocklineOracle.sol";
+import {ILendoraOracle} from "../interfaces/ILendoraOracle.sol";
 import {IStockWrapper} from "../interfaces/IStockWrapper.sol";
 import {IMarketHours} from "../interfaces/IMarketHours.sol";
 
-/// @dev Feed getters of `StocklineOracleBase` (not part of `IStocklineOracle`), as in `FeeConverter`.
+/// @dev Feed getters of `LendoraOracleBase` (not part of `ILendoraOracle`), as in `FeeConverter`.
 interface IOracleFeedsDN {
     function STOCK_FEED() external view returns (address);
     function USDG_FEED_ADDRESS() external view returns (address);
@@ -283,7 +283,7 @@ contract StrategyManager is IStrategyManager, Ownable, ReentrancyGuardTransient 
     function addSleeve(Sleeve calldata s) external onlyOwner returns (uint256 id) {
         if (
             s.stockToken == address(0) || IStockWrapper(s.wrapper).underlying() != s.stockToken
-                || IERC4626(s.rVault).asset() != s.wrapper || IStocklineOracle(s.oracle).WRAPPER() != s.wrapper
+                || IERC4626(s.rVault).asset() != s.wrapper || ILendoraOracle(s.oracle).WRAPPER() != s.wrapper
         ) revert BadParam();
         if (s.maxLendBps > BPS) revert BadParam();
         if (_isSleeveContract[s.stockToken]) revert SleeveExists(s.stockToken);
@@ -416,9 +416,9 @@ contract StrategyManager is IStrategyManager, Ownable, ReentrancyGuardTransient 
     /// @dev Swaps price against the feed, so the stock oracle's guard must be clear; buying also needs the feed session
     /// open (08 weekend rule: no spot buys while closed; selling stays possible for an emergency top-up).
     function _requireTradable(uint256 id, Sleeve memory s, bool buying) internal view {
-        uint256 reasons = IStocklineOracle(s.oracle).guardReasons();
+        uint256 reasons = ILendoraOracle(s.oracle).guardReasons();
         if (reasons != 0) revert GuardTripped(id, reasons);
-        if (buying && !IMarketHours(IStocklineOracle(s.oracle).MARKET_HOURS()).isOpen(block.timestamp)) {
+        if (buying && !IMarketHours(ILendoraOracle(s.oracle).MARKET_HOURS()).isOpen(block.timestamp)) {
             revert MarketClosed();
         }
     }
@@ -430,7 +430,7 @@ contract StrategyManager is IStrategyManager, Ownable, ReentrancyGuardTransient 
         view
         returns (uint256 stockAns, uint256 usdgAns, uint256 num, uint256 den)
     {
-        IStocklineOracle o = IStocklineOracle(s.oracle);
+        ILendoraOracle o = ILendoraOracle(s.oracle);
         // Only the answers are needed; the guard (checked before trades and by `NavOracle.fresh`) covers their age.
         // slither-disable-next-line unused-return
         (stockAns,) = o.stockAnswer();

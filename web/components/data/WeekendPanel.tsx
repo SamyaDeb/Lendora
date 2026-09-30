@@ -1,7 +1,7 @@
 "use client";
 import {useQuery} from "@tanstack/react-query";
 import {usePublicClient} from "wagmi";
-import {getExternal, priceFromTick, twapTick, uniswapV3PoolAbi} from "@stockline/sdk";
+import {getExternal, priceFromTick, twapTick, uniswapV3PoolAbi} from "@lendora/sdk";
 import {deployment} from "@/lib/env";
 import type {Market} from "@/lib/api";
 import {num, pct} from "@/lib/format";

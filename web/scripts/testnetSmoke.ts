@@ -9,14 +9,14 @@
  * attested through compliance) and the USDG Earn deposit / instant withdrawal / queued request / settle / claim (when
  * the vault's cap is above 0). On 46630 sending needs `TESTNET_GO=yes`; 4663 is refused.
  *
- *   pnpm --filter @stockline/web exec tsx scripts/testnetSmoke.ts --web URL --api URL --compliance URL --rpc URL \
+ *   pnpm --filter @lendora/web exec tsx scripts/testnetSmoke.ts --web URL --api URL --compliance URL --rpc URL \
  *     [--monitor URL] [--geo-header x-vercel-ip-country=US] [--flows] [--report ../docs/runbooks/testnet-smoke.md]
  */
 import {writeFileSync} from "node:fs";
 import {createPublicClient, http, type Hex} from "viem";
 import {privateKeyToAccount} from "viem/accounts";
-import {getDeployment} from "@stockline/sdk";
-import {ChainDriver, complianceAttestationProvider, connectWallet, smokeFlows, vaultSmoke} from "@stockline/devnet";
+import {getDeployment} from "@lendora/sdk";
+import {ChainDriver, complianceAttestationProvider, connectWallet, smokeFlows, vaultSmoke} from "@lendora/devnet";
 
 const arg = (n: string, d = "") => {
   const i = process.argv.indexOf(`--${n}`);

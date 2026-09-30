@@ -68,7 +68,7 @@ residual items below marked `[VERIFY]`.
 |---|---|---|---|
 | Perp funding, hourly, SPY/NVDA/AAPL | Lighter RH `fundings` | 2026-06-26 → 2026-09-29 (≈ 94 days) | **No** |
 | Perp/spot basis | Lighter `candles` (mark, index) vs Chainlink rounds (`sim/data/feeds`) | ≈ 94 days (perps) | **No** |
-| Borrow utilization / APY proxy | Stockline has no mainnet markets; Morpho stock-loan markets on 4663 are empty (01-chain-facts §8). Proxy: Phase 0 utilization assumptions and the AdaptiveCurve IRM at target | Modelled, not observed | **No** (proxy) |
+| Borrow utilization / APY proxy | Lendora has no mainnet markets; Morpho stock-loan markets on 4663 are empty (01-chain-facts §8). Proxy: Phase 0 utilization assumptions and the AdaptiveCurve IRM at target | Modelled, not observed | **No** (proxy) |
 | Weekend gaps | `sim/data` 10y daily closes | 10 years | Yes |
 | DEX depth | `sim/data/dex_depth.csv` | snapshots 2026-09 | Yes (snapshot) |
 

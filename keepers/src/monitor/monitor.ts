@@ -20,11 +20,11 @@ import {
   readMarket,
   safeErrorLine,
   stockMarketState,
-  stocklineOracleAbi,
+  lendoraOracleAbi,
   stockWrapperAbi,
   type ChainDeployment,
   type MarketChainState,
-} from "@stockline/sdk";
+} from "@lendora/sdk";
 import type {Health} from "../common/health.js";
 import {L2GapDetector} from "../common/l2gap.js";
 import type {Page, PageAction, Pager, Severity} from "./pager.js";
@@ -161,7 +161,7 @@ export interface TickResult {
   weekend: string[];
 }
 
-const guardChanged = stocklineOracleAbi.find((x) => x.type === "event" && x.name === "GuardChanged")!;
+const guardChanged = lendoraOracleAbi.find((x) => x.type === "event" && x.name === "GuardChanged")!;
 const morphoLogEvents = morphoEventsAbi.filter((x) => x.type === "event" && (x.name === "Liquidate" || x.name === "Borrow" || x.name === "WithdrawCollateral"));
 const supplyCollateralEvent = morphoEventsAbi.find((x) => x.type === "event" && x.name === "SupplyCollateral")!;
 
@@ -305,7 +305,7 @@ export class Monitor {
   private rampInCache = new Map<string, bigint>();
   private async rampIn(ticker: string): Promise<bigint | undefined> {
     if (!this.rampInCache.has(ticker)) {
-      const p = await this.client.readContract({address: this.d.stocks[ticker].oracle, abi: stocklineOracleAbi, functionName: "params"});
+      const p = await this.client.readContract({address: this.d.stocks[ticker].oracle, abi: lendoraOracleAbi, functionName: "params"});
       this.rampInCache.set(ticker, BigInt(p.rampIn));
     }
     return this.rampInCache.get(ticker);
@@ -317,7 +317,7 @@ export class Monitor {
     const s = this.d.stocks[t];
     const [shortfall, params, round, open, windows] = await Promise.all([
       this.client.readContract({address: s.wrapper, abi: stockWrapperAbi, functionName: "backingShortfall"}),
-      this.client.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "params"}),
+      this.client.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "params"}),
       this.client.readContract({address: s.feed, abi: aggregatorV3Abi, functionName: "latestRoundData"}),
       this.client.readContract({address: this.d.marketHours, abi: marketHoursAbi, functionName: "isOpen", args: [st.now]}),
       this.client.readContract({address: this.d.marketHours, abi: marketHoursAbi, functionName: "closureWindows", args: [st.now]}),
@@ -449,8 +449,8 @@ export class Monitor {
     if (liquidatable) {
       const s = this.d.stocks[ticker];
       const [price, answer] = await Promise.all([
-        this.client.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "price"}),
-        this.client.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "stockAnswer"}),
+        this.client.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "price"}),
+        this.client.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "stockAnswer"}),
       ]);
       const plan = planLiquidation({borrower: address, collateral: pos.collateral, borrowShares: pos.borrowShares, borrowed}, price, BigInt(s.lltv), answer[0], 8, 0n);
       if (plan) {

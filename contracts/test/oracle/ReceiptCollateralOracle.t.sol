@@ -2,8 +2,8 @@
 pragma solidity 0.8.26;
 
 import {ReceiptCollateralOracle} from "../../src/oracles/ReceiptCollateralOracle.sol";
-import {StocklineOracleBase} from "../../src/oracles/StocklineOracleBase.sol";
-import {IStocklineOracle} from "../../src/interfaces/IStocklineOracle.sol";
+import {LendoraOracleBase} from "../../src/oracles/LendoraOracleBase.sol";
+import {ILendoraOracle} from "../../src/interfaces/ILendoraOracle.sol";
 import {OracleMath} from "../../src/libraries/OracleMath.sol";
 import {MockUSDG} from "../mocks/MockUSDG.sol";
 import {MockERC4626Vault} from "../mocks/MockERC4626Vault.sol";
@@ -49,9 +49,9 @@ contract ReceiptCollateralOracleTest is OracleFixture {
     }
 
     function test_constructorChecks() public {
-        StocklineOracleBase.Deployment memory d = _deployment();
-        IStocklineOracle.Params memory p = _params();
-        vm.expectRevert(IStocklineOracle.ZeroAddress.selector);
+        LendoraOracleBase.Deployment memory d = _deployment();
+        ILendoraOracle.Params memory p = _params();
+        vm.expectRevert(ILendoraOracle.ZeroAddress.selector);
         new ReceiptCollateralOracle(d, p, address(0), address(usdg));
         MockUSDG weird = new MockUSDG(0);
         vm.mockCall(address(vault), abi.encodeWithSignature("decimals()"), abi.encode(uint8(60)));

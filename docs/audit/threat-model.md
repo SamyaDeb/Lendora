@@ -7,7 +7,7 @@ under `contracts/test/` unless noted. Roles and trust assumptions: [README §3](
 
 | Attempt | Control | Test |
 |---|---|---|
-| Call `borrow`/`openShort` without a valid attestation, with someone else's, an expired one or one for another chain | EIP-712 attestation bound to user, chain (domain) and expiry (RT-R2); signer `address(0)` blocks all | `router/StocklineRouter.t.sol` `test_RT_R2_attestationBoundToUserChainAndExpiry`; `compliance/test/compliance.test.ts` `RT_R2 …` |
+| Call `borrow`/`openShort` without a valid attestation, with someone else's, an expired one or one for another chain | EIP-712 attestation bound to user, chain (domain) and expiry (RT-R2); signer `address(0)` blocks all | `router/LendoraRouter.t.sol` `test_RT_R2_attestationBoundToUserChainAndExpiry`; `compliance/test/compliance.test.ts` `RT_R2 …` |
 | Mint `clUSDG` through `addCollateral` with no position, then borrow directly on Morpho (the 2026-09-27 finding) | `addCollateral` requires `borrowShares > 0` for `onBehalf` (RT-R8) | `test_RT_R8_unattestedUserCannotCreateCollateral` |
 | Obtain `clUSDG` any other way (buy it, receive it) | Transfers only to/from Morpho, the router or mint/burn (CL-R3) | `CollateralToken/CollateralToken.t.sol` CL-R3 tests |
 | Borrow directly on Morpho with collateral already there (attested once, repaid-but-not-withdrawn, seized) | Accepted residual (05 §1): bounded by vault caps and allocator pulls; `DIRECT_BORROW` pages (MON-R10) | `test_RT_R8_residualDirectBorrowDocumented`; `keepers/test/monitor.test.ts` `MON_R10` |
@@ -22,14 +22,14 @@ under `contracts/test/` unless noted. Roles and trust assumptions: [README §3](
 | Lie in return data (inflated `amountOut`) | Output measured by balance delta; return data never read (RT-R3) | `test_RT_R3_neverTrustsSwapReturnData`; liquidator `test_guardsAndAuth` |
 | Partial fill, fee, slippage | User `minOut`/`maxIn`; unsold input refunded | `test_RT_R3_partialFillRefundsStockAndSlippageReverts` |
 | Keep a dangling approval | Approval reset to 0 after each swap; router holds nothing (RT-R5) | `invariant_RT_R5_routerHoldsNothing` (1M calls, misbehaving DEX) |
-| Revert inside the swap to grief a liquidation | The whole liquidation reverts atomically; nothing half-done | `liquidator/StocklineLiquidator.t.sol` `test_LM_R12_revertingSwapBubblesUpAndUndoesTheLiquidation`, router `test_RT_R3_revertingSwapTargetBubblesItsError` |
+| Revert inside the swap to grief a liquidation | The whole liquidation reverts atomically; nothing half-done | `liquidator/LendoraLiquidator.t.sol` `test_LM_R12_revertingSwapBubblesUpAndUndoesTheLiquidation`, router `test_RT_R3_revertingSwapTargetBubblesItsError` |
 | Reenter the router / liquidator during the swap | `nonReentrant` (transient) on every entry; liquidator callback requires `msg.sender == Morpho` and its own in-liquidation flag | Router invariant suite; liquidator auth tests |
 
 ## 3. Oracle manipulation via thin pools
 
 | Attempt | Control | Test |
 |---|---|---|
-| Move the DEX to move `price()` | `price()` uses Chainlink only; the DEX floor is off (D8); the DEX is only a guard input | `oracle/StocklineOracle.t.sol` (price independent of DEX) |
+| Move the DEX to move `price()` | `price()` uses Chainlink only; the DEX floor is off (D8); the DEX is only a guard input | `oracle/LendoraOracle.t.sol` (price independent of DEX) |
 | Move the DEX to trip the guard (grief) | DEVIATION trip only pauses new borrows; clears after 30 min under threshold | `keepers/test/guard.test.ts` deviation tests |
 | Push a bad Chainlink round (e.g. 1e18 scaling) | Sanity band ×0.5–×2 and $0.01–$1e6; last good answer kept; guard trips (OR-R7) | `test_phase1_exit_1e18FeedIncident` (fork), oracle vector tests |
 | Exploit a stale feed | STALE guard (heartbeat + 10 min in an open session); pages MON-R5 | oracle STALE tests; `MON_R5` |
@@ -64,7 +64,7 @@ exits. Recovery: owner rotates `setGuardian` and the vault sentinel through the 
 The strongest role: a malicious router upgrade could abuse router allowances and Morpho authorizations granted by users.
 Controls: 4-of-7 multisig on hardware wallets; 48h delay on every action (users can revoke approvals and Morpho
 authorization, and exit, in that window; the UI explains revocation, RT-R7); the monitor pages every `CallScheduled`,
-`CallExecuted` (P0 if the schedule was never seen) and role change on every Stockline contract, with the call decoded
+`CallExecuted` (P0 if the schedule was never seen) and role change on every Lendora contract, with the call decoded
 (MON-R16…R18, `keepers/test/monitor.test.ts`). Tests: `test_RT_R7_upgradeOnlyByTimelockAndInitializeOnce`,
 `test_RT_R7_R8_upgradeFromPhase2ImplementationThroughTimelock`, `packages/devnet/test/runbooks.test.ts` (real timelock
 operations).

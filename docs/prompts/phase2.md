@@ -1,4 +1,4 @@
-We're building Stockline, a stock lending layer for Robinhood Chain (chain id 4663, testnet 46630) built on unmodified
+We're building Lendora, a stock lending layer for Robinhood Chain (chain id 4663, testnet 46630) built on unmodified
 Morpho Blue and Morpho Vault V2. Phase 0 (validation) and Phase 1 (lending core contracts, deploy scripts, keepers) are
 complete. This session **builds Phase 2: indexer, API, short-interest lens, web app, alerts, compliance and testnet**,
 until every Phase 2 exit criterion that can be met by engineering alone passes.
@@ -14,9 +14,9 @@ until every Phase 2 exit criterion that can be met by engineering alone passes.
 4. `docs/phase0/01-chain-facts.md` (real addresses, testnet RPC/explorer, finality: `safe` ≈ 11.5 min, `finalized`
    ≈ 18 min, ~0.1 s blocks)
 5. The existing code:
-   - `contracts/src/` — especially `StocklineRouter.sol` (events, `Attestation(address user,uint256 expiry)` EIP-712
-     type, `healthFactorAt`), `oracles/StocklineOracleBase.sol` (`GuardChanged`), `MarketHours.sol`
-   - `contracts/script/` — `StocklineDeploy.sol`, `DeployLocal.s.sol`, `DeployFork.s.sol`, `ForkConfig.sol`,
+   - `contracts/src/` — especially `LendoraRouter.sol` (events, `Attestation(address user,uint256 expiry)` EIP-712
+     type, `healthFactorAt`), `oracles/LendoraOracleBase.sol` (`GuardChanged`), `MarketHours.sol`
+   - `contracts/script/` — `LendoraDeploy.sol`, `DeployLocal.s.sol`, `DeployFork.s.sol`, `ForkConfig.sol`,
      `LocalMocks.sol`
    - `packages/sdk/` — `src/` (math, calendar, abis, addresses), `addresses.json`, `external-addresses.json`,
      `scripts/` (`genSessions.ts`, `genVectors.ts`, `export-abis.mjs`), `data/`
@@ -35,14 +35,14 @@ pass alone (the file takes ~150 s). If it flakes for you, find the cause (probab
 
 ## 2. Current state (don't redo)
 
-- Phase 1 is done: `StockWrapper`, `BlocklistHolderAllowlist`, `MarketHours`, `StocklineOracle`,
-  `ReceiptCollateralOracle`, `clUSDG`, Vault V2 deploy scripts, `StocklineRouter`, `StocklineLiquidator`, allocator,
+- Phase 1 is done: `StockWrapper`, `BlocklistHolderAllowlist`, `MarketHours`, `LendoraOracle`,
+  `ReceiptCollateralOracle`, `clUSDG`, Vault V2 deploy scripts, `LendoraRouter`, `LendoraLiquidator`, allocator,
   guard and liquidator keepers, the full lifecycle fork test. See the status table in `11-milestones.md`.
 - `indexer/`, `api/` and `web/` contain only placeholder READMEs. They are already listed in `pnpm-workspace.yaml`.
 - `packages/sdk/addresses.json` has keys `31337` (anvil + mocks, incl. `mocks.registry`) and `fork-4663`. There is no
   testnet (`46630`) key yet and **never** a real `4663` key in this phase.
 - `FeeSplitter` is a placeholder address in the deploy (the contract is Phase 3 with fees). There is no
-  `StocklineRegistry` contract; SI-R21 allows passing the stock list in at deployment.
+  `LendoraRegistry` contract; SI-R21 allows passing the stock list in at deployment.
 - `client/` (untracked) is a separate marketing landing page ("lendora"). **Don't touch it and don't build the app
   there.** The product app goes in `web/`, per the PRD. Don't add `client/` to the workspace.
 - Open questions from Phase 1 (OR-R3 quiet step, OR-R14 event timing, `openShort` gas, extra aggregators, archive RPC)
@@ -58,7 +58,7 @@ pass alone (the file takes ~150 s). If it flakes for you, find the cause (probab
   needed). Any change to a Phase 1 contract needs a reason, a test and a mention in the task summary. Morpho Blue and
   Vault V2 stay unmodified.
 - **One source of truth.** Every address, ABI and every safety number (health factor, liquidation price, buffer, price,
-  APR/APY) comes from `@stockline/sdk`. The indexer, API, web app and alerts service import it; nothing re-implements
+  APR/APY) comes from `@lendora/sdk`. The indexer, API, web app and alerts service import it; nothing re-implements
   the math. If the SDK lacks a function, add it to the SDK (with tests and, where it mirrors Solidity, vectors).
 - **Requirement IDs everywhere:** test names (`SI_R13 includes asOfBlock…`, `test_SI_R20_accruesInterest…`,
   `APP-R4 disables short when guard tripped`), code comments at the implementing site, commit messages.
@@ -95,8 +95,8 @@ pass alone (the file takes ~150 s). If it flakes for you, find the cause (probab
 
 ### Task 1 · Indexer (`indexer/`, SI-R1…R5)
 
-- Ponder config per network (`31337`, `fork-4663`, `46630`) reading addresses and ABIs from `@stockline/sdk`.
-- Index Morpho Blue events filtered to Stockline market ids, Vault V2 events, router events, oracle `GuardChanged`,
+- Ponder config per network (`31337`, `fork-4663`, `46630`) reading addresses and ABIs from `@lendora/sdk`.
+- Index Morpho Blue events filtered to Lendora market ids, Vault V2 events, router events, oracle `GuardChanged`,
   wrapper multiplier changes (SI-R1).
 - Schema: positions (user, market, borrowShares, collateral), per-block market snapshots where state changed, 1m/1h/1d
   rollups, event feed (SI-R2). Compute the §Definitions fields of `07` with SDK math (shares after multiplier, USD at
@@ -114,7 +114,7 @@ pass alone (the file takes ~150 s). If it flakes for you, find the cause (probab
 - Interface exactly as in `07 §3`. Uses `MorphoBalancesLib.expectedMarketBalances` (accrued to `block.timestamp`).
   Stateless, stock list passed at deployment. Include vault idle (unallocated) assets in `suppliedShares` per the
   `supplied` definition; document if the struct can't carry everything.
-- Unit + fork tests; add it to `StocklineDeploy.sol` and `addresses.json`; export the ABI to the SDK.
+- Unit + fork tests; add it to `LendoraDeploy.sol` and `addresses.json`; export the ABI to the SDK.
 
 ### Task 3 · Public API (`api/`, SI-R10…R14)
 
@@ -123,7 +123,7 @@ pass alone (the file takes ~150 s). If it flakes for you, find the cause (probab
   `/status` (oracle freshness, guard state, indexer lag).
 - Rate limits (SI-R10) with Redis; self-serve API keys via Sign-In with Ethereum.
 - OpenAPI 3.1 generated from the route schemas (zod or similar), served at `/openapi.json`; a **typed client generated
-  from it** exported by `@stockline/sdk` (`sdk.api.*`).
+  from it** exported by `@lendora/sdk` (`sdk.api.*`).
 - Tests: contract tests per endpoint; a test that `/markets/{symbol}` equals lens `snapshot()` at the same block
   (07 acceptance). A load-test script (k6 or autocannon) for 200 WS clients + 50 req/s, run locally and results
   recorded (SI-R11).

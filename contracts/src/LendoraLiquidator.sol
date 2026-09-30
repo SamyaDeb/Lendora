@@ -11,14 +11,14 @@ import {IMorphoLiquidateCallback} from "morpho-blue/src/interfaces/IMorphoCallba
 import {IStockWrapper} from "./interfaces/IStockWrapper.sol";
 import {ICollateralToken} from "./interfaces/ICollateralToken.sol";
 
-/// @title StocklineLiquidator
-/// @notice Fallback liquidator for Stockline stock-loan markets (docs/prd/02-architecture.md, 03 LM-R12). One
+/// @title LendoraLiquidator
+/// @notice Fallback liquidator for Lendora stock-loan markets (docs/prd/02-architecture.md, 03 LM-R12). One
 /// transaction through Morpho's liquidation callback: seize `clUSDG` → unwrap to USDG → buy the Stock Token through
 /// an
 /// allowlisted target → wrap → repay. Works for any borrower's position, opened through the router or not.
 /// @dev Holds nothing after a call: leftovers (USDG profit, excess stock) go to the caller's `recipient`, approvals
 /// are exact and reset. Permissionless to call (it holds no funds); the owner only manages the swap-target allowlist.
-contract StocklineLiquidator is IMorphoLiquidateCallback, Ownable, ReentrancyGuardTransient {
+contract LendoraLiquidator is IMorphoLiquidateCallback, Ownable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
     using TransientSlot for *;
 

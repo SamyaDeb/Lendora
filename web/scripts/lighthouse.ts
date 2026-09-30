@@ -3,7 +3,7 @@
  * build against the anvil stack) and runs Lighthouse (default mobile profile with simulated throttling) in
  * Playwright's Chromium. Writes web/lighthouse/results.md (+ the JSON reports, gitignored).
  *
- *   pnpm --filter @stockline/web lighthouse
+ *   pnpm --filter @lendora/web lighthouse
  */
 import {writeFileSync} from "node:fs";
 import lighthouse from "lighthouse";
@@ -36,7 +36,7 @@ try {
 }
 const md = `# Lighthouse (06 acceptance: performance ≥ 85)
 
-Run: \`pnpm --filter @stockline/web lighthouse\` on ${new Date().toISOString()}: production build (\`next build && next start\`) against the local
+Run: \`pnpm --filter @lendora/web lighthouse\` on ${new Date().toISOString()}: production build (\`next build && next start\`) against the local
 stack (anvil seed week → indexer → API), Lighthouse ${"13"} default mobile profile (simulated slow 4G, 4× CPU), Chromium from Playwright.
 
 | Page | Performance | Accessibility | Best practices | FCP | LCP | TBT | CLS |

@@ -9,7 +9,7 @@ import {
   nextEvent,
   readMarket,
   stockMarketState,
-  type ChainDeployment, safeErrorLine} from "@stockline/sdk";
+  type ChainDeployment, safeErrorLine} from "@lendora/sdk";
 import type {Health} from "../common/health.js";
 import type {SettingsStore, StoredSettings} from "./settings.js";
 import type {Alert, Transport} from "./transports.js";
@@ -90,7 +90,7 @@ export class AlertWatcher {
         const a: Alert = {
           ...base,
           kind: "hf_below",
-          title: `Stockline: ${ticker} health factor ${f(hf)} is below your ${sub.settings.hfThreshold} alert`,
+          title: `Lendora: ${ticker} health factor ${f(hf)} is below your ${sub.settings.hfThreshold} alert`,
           body: `Your ${ticker} borrow has a health factor of ${f(hf)}. Liquidation happens at 1.00. Add collateral or repay to reduce the risk.`,
           data: {healthFactor: f(hf), threshold: sub.settings.hfThreshold},
         };
@@ -114,7 +114,7 @@ export class AlertWatcher {
         const a: Alert = {
           ...base,
           kind,
-          title: `Stockline: ${ticker} buffer ramps in ${hours.toFixed(1)}h; your health factor would be ${f(hfFull)}`,
+          title: `Lendora: ${ticker} buffer ramps in ${hours.toFixed(1)}h; your health factor would be ${f(hfFull)}`,
           body: `Ahead of ${w.what}, the ${ticker} oracle buffer ramps in starting ${new Date(Number(w.rampStart) * 1000).toISOString()}. At the full buffer your health factor would be ${f(hfFull)} (liquidation at 1.00). Consider adding collateral or reducing the borrow.`,
           data: {healthFactorAtFullBuffer: f(hfFull), rampStart: Number(w.rampStart)},
         };

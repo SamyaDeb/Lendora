@@ -1,6 +1,6 @@
 import type pg from "pg";
 import type {PublicClient} from "viem";
-import {alertSettingsMessage, canonicalSettings, type AlertSettings, type Address} from "@stockline/sdk";
+import {alertSettingsMessage, canonicalSettings, type AlertSettings, type Address} from "@lendora/sdk";
 
 /**
  * APP-R8 settings, saved from the app's `/alerts` page with an EIP-191 signature over `alertSettingsMessage` (SDK).

@@ -1,6 +1,6 @@
 # Runbook · Direct Morpho borrow (`DIRECT_BORROW`, MON-R10, P1)
 
-**Trigger.** A Morpho `Borrow` on a Stockline market whose `caller` is not the router. Subject `<ticker>:<onBehalf>`;
+**Trigger.** A Morpho `Borrow` on a Lendora market whose `caller` is not the router. Subject `<ticker>:<onBehalf>`;
 auto-resolves after 1h (A30). This is the accepted soft-gate residual (05 §1): Morpho is permissionless, so a borrower
 who was attested once (rescue top-up, RT-R8), a debt-free `clUSDG` holder in Morpho, a liquidator holding seized
 `clUSDG`, or **an address that never signed the terms** but received `clUSDG` collateral from an attested borrower
@@ -36,8 +36,8 @@ per-address cap sized for liquidation depth (D8).
 ```sh
 cast calldata "trip(uint256)" 1                                             # guardian Safe, to = $ORACLE
 cast calldata "decreaseAbsoluteCap(bytes,uint256)" $ADAPTER_ID <newCap>     # sentinel, to = $VAULT
-pnpm --filter @stockline/sdk timelock router.setGlobalCap cap=<raw clUSDG> --network $NET --salt "$(date -u +%F) global cap"
-pnpm --filter @stockline/sdk timelock router.setCapOverride user=<addr> ticker=NVDA capUsdWad=0 --network $NET --salt "<date> cap override reset"
+pnpm --filter @lendora/sdk timelock router.setGlobalCap cap=<raw clUSDG> --network $NET --salt "$(date -u +%F) global cap"
+pnpm --filter @lendora/sdk timelock router.setCapOverride user=<addr> ticker=NVDA capUsdWad=0 --network $NET --salt "<date> cap override reset"
 ```
 
 Rehearsed on anvil: detection (`monitor.test.ts`), global cap through the timelock stops router entries

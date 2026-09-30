@@ -19,7 +19,7 @@ testnet:
 **Getting funds.**
 
 1. Testnet ETH for gas: `faucet.testnet.chain.robinhood.com`, or the QuickNode / Chainlink testnet faucets.
-2. Test Stock Tokens and USDG: the Stockline faucet (`mocks.faucet` in `packages/sdk/addresses.json["46630"]`). Call
+2. Test Stock Tokens and USDG: the Lendora faucet (`mocks.faucet` in `packages/sdk/addresses.json["46630"]`). Call
    `claim(yourAddress)` from the app's faucet button or the explorer: 10 SPY, 10 NVDA, 10 AAPL and 50,000 USDG, once
    per address per 24 hours.
 
@@ -49,7 +49,7 @@ freeze from Friday 20:00 ET to Sunday 20:00 ET, like the real feeds.
 
 **Reporting bugs.** Use the feedback form: `<FEEDBACK_FORM_URL>` (placeholder, owner to create). Include: what you
 did, what you expected, what happened, the transaction hash (from your wallet or the app's step list), your browser
-and wallet, and a screenshot. Never share your seed phrase or private key; nobody from Stockline will ask for it.
+and wallet, and a screenshot. Never share your seed phrase or private key; nobody from Lendora will ask for it.
 
 ## 2. For operators
 
@@ -71,22 +71,22 @@ use a dedicated RPC (Alchemy/QuickNode) for services — the public endpoint is 
 
 ```sh
 cd contracts
-TESTNET_GO=yes STOCKLINE_ATTESTATION_SIGNER=<compliance signer address> \
+TESTNET_GO=yes LENDORA_ATTESTATION_SIGNER=<compliance signer address> \
   forge script script/DeployTestnet.s.sol --rpc-url $ROBINHOOD_TESTNET_RPC_URL --broadcast --slow \
   --gas-estimate-multiplier 200 --private-key $TESTNET_DEPLOYER_KEY
 # then: commit packages/sdk/addresses.json["46630"], verify contracts on the explorer, start the services,
-TESTNET_GO=yes SMOKE_KEY=$TESTNET_DEPLOYER_KEY PROXY_SECRET=$PROXY_SECRET pnpm --filter @stockline/devnet drive smoke \
+TESTNET_GO=yes SMOKE_KEY=$TESTNET_DEPLOYER_KEY PROXY_SECRET=$PROXY_SECRET pnpm --filter @lendora/devnet drive smoke \
   --rpc $ROBINHOOD_TESTNET_RPC_URL --compliance <COMPLIANCE_URL>
 ```
 
 **Deployed 2026-09-29** (owner's "go testnet"): `DeployTestnetFees` (`FeeSplitter` `0xc9ED…3674`, treasury and
-backstop converters) and `DeployTestnetVault` with the owner's testnet cap `STOCKLINE_DN_TESTNET_CAP_USDG=1000000`
+backstop converters) and `DeployTestnetVault` with the owner's testnet cap `LENDORA_DN_TESTNET_CAP_USDG=1000000`
 (A49: 1,000,000 test USDG total and per sleeve; mainnet stays 0, MN-R7): vault `0xcDFa…3118`, strategy `0x2a79…C28c`,
 NAV oracle `0xE189…8863` (signers: the deployer and a testnet-only co-signer `0x8552…89BE`), mock venue `0x6dBF…9898`
 (gated). Deployer ETH 0.00839 → 0.00820. Addresses in `packages/sdk/addresses.json["46630"]`. The venue mirror
 (`keepers/src/venueMirror`, A49) applies **Lighter's real hourly funding** (Robinhood Chain instance, public API) to the
 mock venue, since Lighter has no testnet with stock perps. Services: `scripts/dev.sh --network 46630` with
-`STOCKLINE_SERVICES_RPC_URL=https://rpc.testnet.chain.robinhood.com` (Alchemy's free tier caps `eth_getLogs` at 10
+`LENDORA_SERVICES_RPC_URL=https://rpc.testnet.chain.robinhood.com` (Alchemy's free tier caps `eth_getLogs` at 10
 blocks, which breaks the indexer, the monitor and the DN keepers); reads pinned to past blocks (indexer snapshots, the
 NAV co-signer's checks) fall back to `ROBINHOOD_TESTNET_RPC_URL` through `RPC_URL_ARCHIVE`, since the public endpoint
 keeps no historical state (A24). Smoke from a plain tester wallet: [testnet-smoke.md](testnet-smoke.md).
@@ -111,17 +111,17 @@ TESTNET_GO=yes forge script script/DeployTestnetFees.s.sol --rpc-url $ROBINHOOD_
 TESTNET_GO=yes forge script script/DeployTestnetVault.s.sol --rpc-url $ROBINHOOD_TESTNET_RPC_URL --broadcast --slow \
   --gas-estimate-multiplier 200 --private-key $TESTNET_DEPLOYER_KEY    # DN vault, mock venue, caps 0; writes dnVault
 # fee turn-on (24h curator timelock) and the live drills: run now, re-run after 24h to execute the scheduled halves
-TESTNET_GO=yes TESTNET_DEPLOYER_KEY=… DRILL_RAN_BY="<name>" pnpm --filter @stockline/devnet drive live-drills \
+TESTNET_GO=yes TESTNET_DEPLOYER_KEY=… DRILL_RAN_BY="<name>" pnpm --filter @lendora/devnet drive live-drills \
   --rpc $ROBINHOOD_TESTNET_RPC_URL                                     # evidence: docs/runbooks/live-drills-46630.json
 # then every feature through the hosted stack:
-SMOKE_KEY=… TESTNET_GO=yes pnpm --filter @stockline/web exec tsx scripts/testnetSmoke.ts --web <APP_URL> --api <API_URL> \
+SMOKE_KEY=… TESTNET_GO=yes pnpm --filter @lendora/web exec tsx scripts/testnetSmoke.ts --web <APP_URL> --api <API_URL> \
   --rpc $ROBINHOOD_TESTNET_RPC_URL --monitor <MONITOR_URL> --flows --report ../docs/runbooks/testnet-smoke.md
 ```
 
 Rehearsed without the go (2026-09-29): all of the above on an anvil fork of 46630 ([fork-drills-46630.md](fork-drills-46630.md),
 `packages/devnet/test/liveDrills.test.ts`) and the smoke on the local full stack ([testnet-smoke.md](testnet-smoke.md)).
-The DN vault's NAV signers and operator default to the deployer (A27); set `STOCKLINE_NAV_SIGNER_1/2` and
-`STOCKLINE_DN_OPERATOR` to the keeper keys when deploying, or rotate them through the 24h timelock
+The DN vault's NAV signers and operator default to the deployer (A27); set `LENDORA_NAV_SIGNER_1/2` and
+`LENDORA_DN_OPERATOR` to the keeper keys when deploying, or rotate them through the 24h timelock
 (`navOracle.setSigner`, `timelockCalldata.ts`).
 
 **Compliance secret (CP-R8).** The compliance service refuses to start on 46630 without `PROXY_SECRET` (≥ 32 chars,

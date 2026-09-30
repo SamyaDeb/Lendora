@@ -6,7 +6,7 @@ failing `clUSDG.unwrap` (liquidator bot errors, user reports) — handle it with
 
 **Impact.** Wipe: `clUSDG` is under-backed; the last unwrappers lose. Freeze: nobody can unwrap `clUSDG`, so
 liquidators receive collateral they cannot sell — liquidations stop being profitable, which puts lenders at risk.
-Stockline cannot prevent either (CL-R5, disclosed; `CollateralTokenFreeze.fork.t.sol`).
+Lendora cannot prevent either (CL-R5, disclosed; `CollateralTokenFreeze.fork.t.sol`).
 
 ## First 5 minutes
 
@@ -28,14 +28,14 @@ Stockline cannot prevent either (CL-R5, disclosed; `CollateralTokenFreeze.fork.t
 
 ```sh
 for T in SPY NVDA AAPL; do echo "$T $(addr ".stocks.$T.oracle")"; done   # trip each: cast calldata "trip(uint256)" 1
-pnpm --filter @stockline/sdk timelock router.setGlobalCap cap=0 --network $NET --salt "$(date -u +%F) global cap 0"
+pnpm --filter @lendora/sdk timelock router.setGlobalCap cap=0 --network $NET --salt "$(date -u +%F) global cap 0"
 ```
 
 **Who signs.** Guardian 2-of-4 (trips, caps), owner via timelock (global cap, delist). Legal owns the Paxos contact.
 
 ## Comms
 
-> **Investigating — USDG held by Stockline collateral was <frozen | removed> by the issuer (Paxos)** (<UTC>). New
+> **Investigating — USDG held by Lendora collateral was <frozen | removed> by the issuer (Paxos)** (<UTC>). New
 > borrowing is paused on all markets. Repay keeps working; withdrawing collateral <works | is blocked by the freeze>.
 
 ## Post-mortem

@@ -5,7 +5,7 @@ Canada, UK, Switzerland, UAE, OFAC-sanctioned).
 
 ## Tester recruitment post
 
-> **Help test Stockline on Robinhood Chain testnet (2–3 weeks, test tokens only)**
+> **Help test Lendora on Robinhood Chain testnet (2–3 weeks, test tokens only)**
 > We are building a stock lending layer on Morpho Blue: lend Stock Tokens for yield, or borrow them to short or hedge
 > over weekends, plus USDG Earn, a delta-neutral USDG vault (variable, historical rates only). We are looking for 20
 > testers to lend, borrow, open and close a short, try the vault page, and tell us what breaks.
@@ -34,7 +34,7 @@ confusing / cosmetic). Put its link in place of `<FEEDBACK_FORM_URL>` in testnet
 ## Counsel engagement
 
 > Subject: Engagement request — opinions on onchain lending of tokenized equities (Robinhood Chain)
-> We are building Stockline, a lending layer where holders lend Robinhood Stock Tokens through Morpho Blue and borrowers
+> We are building Lendora, a lending layer where holders lend Robinhood Stock Tokens through Morpho Blue and borrowers
 > post USDG collateral. Before a capped mainnet launch we need opinions on: (A) whether this is securities lending in
 > `<jurisdictions>`; (B) the issuer's terms and powers (blocklist, pause, burn); (C) geo-restrictions and sanctions
 > screening; (D) protocol fees and governance. The full question list and draft terms are attached
@@ -60,6 +60,6 @@ confusing / cosmetic). Put its link in place of `<FEEDBACK_FORM_URL>` in testnet
 > `<link to docs/audit when shared>`.
 
 **Liquidator operators:**
-> Stockline markets on Morpho (chain 4663) use `clUSDG` as collateral: seized `clUSDG` is redeemed 1:1 for USDG with
+> Lendora markets on Morpho (chain 4663) use `clUSDG` as collateral: seized `clUSDG` is redeemed 1:1 for USDG with
 > `clUSDG.unwrap(amount, to)` (permissionless, no fee). Would you add these markets? The loan asset is a wrapped Stock
 > Token (`wrap`/`unwrap` 1:1). Launch caps: $250k–$1M per market. Contract addresses after deployment: `<link>`.

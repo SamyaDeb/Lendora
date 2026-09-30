@@ -1,9 +1,9 @@
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {encodeFunctionData, maxUint256, type Hex} from "viem";
 import {generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount} from "viem/accounts";
-import {attestationDomain, attestationTypes, erc20Abi, morphoAbi, stocklineRouterAbi, vaultV2Abi} from "@stockline/sdk";
-import {envKeyTypedDataSigner} from "@stockline/keepers/signer";
-import {ChainDriver, startAnvil, startPostgres, type Anvil, type Service} from "@stockline/devnet";
+import {attestationDomain, attestationTypes, erc20Abi, morphoAbi, lendoraRouterAbi, vaultV2Abi} from "@lendora/sdk";
+import {envKeyTypedDataSigner} from "@lendora/keepers/signer";
+import {ChainDriver, startAnvil, startPostgres, type Anvil, type Service} from "@lendora/devnet";
 import {assertStartupConfig, startCompliance, type RunningCompliance} from "../src/server.js";
 import type {SanctionsScreen} from "../src/checks.js";
 
@@ -15,7 +15,7 @@ const SECRET = "test-proxy-secret-0123456789abcdef"; // ≥ 32 chars (CP-R8)
 
 describe("CP-R8 startup refuses to trust geo headers without the proxy secret", () => {
   it("CP_R8 testnet (46630) needs PROXY_SECRET >= 32 chars; TRUST_PROXY without it is refused", async () => {
-    await expect(startCompliance({STOCKLINE_NETWORK: "46630", DATABASE_URL: "postgres://unused"})).rejects.toThrow(/PROXY_SECRET/);
+    await expect(startCompliance({LENDORA_NETWORK: "46630", DATABASE_URL: "postgres://unused"})).rejects.toThrow(/PROXY_SECRET/);
     expect(() => assertStartupConfig({PROXY_SECRET: "short"}, "46630")).toThrow(/PROXY_SECRET/);
     expect(() => assertStartupConfig({TRUST_PROXY: "true"}, "46630")).toThrow(/PROXY_SECRET/);
     expect(() => assertStartupConfig({TRUST_PROXY: "true", PROXY_SECRET: SECRET}, "46630")).not.toThrow();
@@ -66,12 +66,12 @@ describe("compliance signer on anvil (CP-R1…R4, RT-R2, APP-R10)", () => {
 
   async function borrow(u: `0x${string}`, att: {expiry: bigint | string; signature: Hex}, amount = 10n * E18, collateral = 5_000n * E6) {
     const deadline = (await drv.now()) + 3600n;
-    return a.send(u, router(), call(stocklineRouterAbi, "borrow", [nvda().stockToken, collateral, amount, u, {expiry: BigInt(att.expiry), signature: att.signature}, deadline]));
+    return a.send(u, router(), call(lendoraRouterAbi, "borrow", [nvda().stockToken, collateral, amount, u, {expiry: BigInt(att.expiry), signature: att.signature}, deadline]));
   }
 
   async function setRouterSigner(addr: `0x${string}`) {
-    const owner = await a.client.readContract({address: router(), abi: stocklineRouterAbi, functionName: "owner"});
-    await a.send(owner, router(), call(stocklineRouterAbi, "setAttestationSigner", [addr]));
+    const owner = await a.client.readContract({address: router(), abi: lendoraRouterAbi, functionName: "owner"});
+    await a.send(owner, router(), call(lendoraRouterAbi, "setAttestationSigner", [addr]));
   }
 
   beforeAll(async () => {
@@ -86,7 +86,7 @@ describe("compliance signer on anvil (CP-R1…R4, RT-R2, APP-R10)", () => {
       {
         DATABASE_URL: pg.url,
         RPC_URL: a.url,
-        STOCKLINE_NETWORK: "31337",
+        LENDORA_NETWORK: "31337",
         TRUST_PROXY: "true",
         PORT: "0",
         HOST: "127.0.0.1",
@@ -158,7 +158,7 @@ describe("compliance signer on anvil (CP-R1…R4, RT-R2, APP-R10)", () => {
 
     const failing: SanctionsScreen = {screen: async () => Promise.reject(new Error("provider down"))};
     const c2 = await startCompliance(
-      {DATABASE_URL: pg.url, RPC_URL: a.url, STOCKLINE_NETWORK: "31337", TRUST_PROXY: "true", PORT: "0", HOST: "127.0.0.1", COMPLIANCE_SIGNER_KEY: signerKey, COMPLIANCE_SCHEMA: `compliance_b_${Date.now()}`},
+      {DATABASE_URL: pg.url, RPC_URL: a.url, LENDORA_NETWORK: "31337", TRUST_PROXY: "true", PORT: "0", HOST: "127.0.0.1", COMPLIANCE_SIGNER_KEY: signerKey, COMPLIANCE_SCHEMA: `compliance_b_${Date.now()}`},
       {sanctions: failing},
     );
     try {
@@ -171,14 +171,14 @@ describe("compliance signer on anvil (CP-R1…R4, RT-R2, APP-R10)", () => {
 
   it("CP_R1 behind a proxy secret, geo headers from anyone else are ignored", async () => {
     const c3 = await startCompliance(
-      {DATABASE_URL: pg.url, RPC_URL: a.url, STOCKLINE_NETWORK: "31337", TRUST_PROXY: "true", PORT: "0", HOST: "127.0.0.1", COMPLIANCE_SIGNER_KEY: signerKey, COMPLIANCE_SCHEMA: `compliance_c_${Date.now()}`, PROXY_SECRET: SECRET},
+      {DATABASE_URL: pg.url, RPC_URL: a.url, LENDORA_NETWORK: "31337", TRUST_PROXY: "true", PORT: "0", HOST: "127.0.0.1", COMPLIANCE_SIGNER_KEY: signerKey, COMPLIANCE_SCHEMA: `compliance_c_${Date.now()}`, PROXY_SECRET: SECRET},
       {},
     );
     try {
       const u = privateKeyToAccount(generatePrivateKey());
       const spoofed = await fetch(`${c3.url}/v1/compliance/attest`, {method: "POST", headers: {"content-type": "application/json", ...ALLOWED}, body: JSON.stringify({address: u.address})});
       expect(((await spoofed.json()) as {code: string}).code).toBe("GEO_UNKNOWN");
-      const viaProxy = await fetch(`${c3.url}/v1/compliance/connection`, {headers: {"x-stockline-proxy": SECRET, "x-vercel-ip-country": "US"}});
+      const viaProxy = await fetch(`${c3.url}/v1/compliance/connection`, {headers: {"x-lendora-proxy": SECRET, "x-vercel-ip-country": "US"}});
       expect(((await viaProxy.json()) as {restricted: boolean}).restricted).toBe(true);
     } finally {
       await c3.close();
@@ -187,7 +187,7 @@ describe("compliance signer on anvil (CP-R1…R4, RT-R2, APP-R10)", () => {
 
   it("CP_R8 /attest is rate-limited per IP and per wallet", async () => {
     const c4 = await startCompliance(
-      {DATABASE_URL: pg.url, RPC_URL: a.url, STOCKLINE_NETWORK: "31337", TRUST_PROXY: "true", PORT: "0", HOST: "127.0.0.1", COMPLIANCE_SIGNER_KEY: signerKey, COMPLIANCE_SCHEMA: `compliance_d_${Date.now()}`, ATTEST_RPM: "2"},
+      {DATABASE_URL: pg.url, RPC_URL: a.url, LENDORA_NETWORK: "31337", TRUST_PROXY: "true", PORT: "0", HOST: "127.0.0.1", COMPLIANCE_SIGNER_KEY: signerKey, COMPLIANCE_SCHEMA: `compliance_d_${Date.now()}`, ATTEST_RPM: "2"},
       {},
     );
     try {
@@ -271,7 +271,7 @@ describe("compliance signer on anvil (CP-R1…R4, RT-R2, APP-R10)", () => {
     await expect(borrow(u.address, {expiry: (await drv.now()) + 100n, signature: "0x"})).rejects.toThrow(/GuardTripped|BadAttestation/);
 
     await drv.repay("NVDA", u.address); // repay all by shares
-    await a.send(u.address, router(), call(stocklineRouterAbi, "withdrawCollateral", [nvda().stockToken, maxUint256, u.address, (await drv.now()) + 3600n]));
+    await a.send(u.address, router(), call(lendoraRouterAbi, "withdrawCollateral", [nvda().stockToken, maxUint256, u.address, (await drv.now()) + 3600n]));
     await drv.closeShort("NVDA", shorter);
     const lender = "0x57000000000000000000000000000000000000c1" as const;
     const shares = await a.client.readContract({address: nvda().vault, abi: vaultV2Abi, functionName: "balanceOf", args: [lender]});

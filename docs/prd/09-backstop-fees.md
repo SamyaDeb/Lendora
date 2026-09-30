@@ -32,7 +32,7 @@ Stakers deposit USDG and absorb bad debt first, before lenders. In return they e
 | ID | Requirement |
 |---|---|
 | BS-R1 | `BackstopPool` is ERC-4626 over USDG. Withdrawals have a 14-day cooldown, so capital can't flee ahead of a known loss. |
-| BS-R2 | When a Morpho `Liquidate` event reports `badDebtAssets > 0` for a Stockline market, a `cover(marketId, amount)` call by the guardian (with a 24h challenge window) uses backstop USDG to buy the stock and supply it back into the `rSTOCK` vault. This restores lender value. |
+| BS-R2 | When a Morpho `Liquidate` event reports `badDebtAssets > 0` for a Lendora market, a `cover(marketId, amount)` call by the guardian (with a 24h challenge window) uses backstop USDG to buy the stock and supply it back into the `rSTOCK` vault. This restores lender value. |
 | BS-R3 | Cover per event is capped at 30% of pool assets. Larger losses are split pro-rata with lenders, and the app says so upfront. |
 | BS-R4 | Target pool size ≥ 5% of total borrowed USD. When below target, the backstop fee share increases to 7.5% (lenders 87.5%) until the target is reached. |
 | BS-R5 | Stakers see APY, cover history and current coverage ratio (`pool assets / borrowed USD`). |

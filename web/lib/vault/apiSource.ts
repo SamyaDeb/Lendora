@@ -1,6 +1,6 @@
 import {formatUnits, maxUint256, parseUnits, type PublicClient, type WalletClient} from "viem";
 import {getPublicClient, getWalletClient} from "wagmi/actions";
-import {deltaNeutralVaultAbi, erc20Abi, type api} from "@stockline/sdk";
+import {deltaNeutralVaultAbi, erc20Abi, type api} from "@lendora/sdk";
 import {browserApi, serverApi} from "@/lib/api";
 import {compliance} from "@/lib/compliance";
 import {deployment} from "@/lib/env";

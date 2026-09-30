@@ -1,4 +1,4 @@
-import {U_MAX_WAD} from "@stockline/sdk";
+import {U_MAX_WAD} from "@lendora/sdk";
 import type {Market} from "./api";
 
 /** U_MAX as a fraction (0.9): the Vault V2 utilization cap the allocator keeps each market under. */

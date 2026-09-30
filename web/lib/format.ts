@@ -1,7 +1,7 @@
 import {formatUnits} from "viem";
-import {HF_AMBER_WAD, HF_GREEN_WAD} from "@stockline/sdk";
+import {HF_AMBER_WAD, HF_GREEN_WAD} from "@lendora/sdk";
 
-/** Display helpers. Numbers are computed by @stockline/sdk; these only format. */
+/** Display helpers. Numbers are computed by @lendora/sdk; these only format. */
 export function num(x: number, digits = 2): string {
   if (!Number.isFinite(x)) return "–";
   return x.toLocaleString("en-US", {minimumFractionDigits: digits, maximumFractionDigits: digits});

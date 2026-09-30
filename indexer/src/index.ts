@@ -1,12 +1,12 @@
 import {ponder, type Context} from "ponder:registry";
 import {dexVolume, eventFeed, feeDay, feeEvent, market, position} from "ponder:schema";
-import {stocklineOracleAbi, vaultV2FullAbi} from "@stockline/sdk";
+import {lendoraOracleAbi, vaultV2FullAbi} from "@lendora/sdk";
 import {addFlow, net, writeHead, writeSnapshot} from "./snapshot.js";
 
 /**
- * Stockline indexer (SI-R1…R3). Morpho market totals and positions are derived from events exactly as Morpho Blue
+ * Lendora indexer (SI-R1…R3). Morpho market totals and positions are derived from events exactly as Morpho Blue
  * updates storage (v1.0.0), so the SI-R5 reconciliation against `market()` is meaningful; everything computed goes
- * through `@stockline/sdk`. Each state change writes a snapshot of that stock at the event's block; the `Tick` block
+ * through `@lendora/sdk`. Each state change writes a snapshot of that stock at the event's block; the `Tick` block
  * source writes heartbeat snapshots so time-driven values (accrual, buffer ramps, staleness) stay current.
  */
 
@@ -115,7 +115,7 @@ ponder.on("Morpho:setup", async ({context}) => {
   }
 });
 
-// ------------------------------------------------------------------ Morpho Blue (filtered to Stockline ids)
+// ------------------------------------------------------------------ Morpho Blue (filtered to Lendora ids)
 
 ponder.on("Morpho:CreateMarket", async ({event, context}) => {
   const t = tickerOfMarket(event.args.id);
@@ -271,7 +271,7 @@ const DAY = 86_400n;
 
 /** Feed price of `ticker`'s stock (8 dp) at `block`: USD per raw Stock Token = per wSTOCK (D1). */
 async function stockAnswerAt(context: Context, ticker: string, blockNumber: bigint): Promise<bigint> {
-  const [answer] = await context.client.readContract({address: net.d.stocks[ticker].oracle, abi: stocklineOracleAbi, functionName: "stockAnswer", blockNumber});
+  const [answer] = await context.client.readContract({address: net.d.stocks[ticker].oracle, abi: lendoraOracleAbi, functionName: "stockAnswer", blockNumber});
   return answer;
 }
 
@@ -326,7 +326,7 @@ ponder.on("FeeSplitter:Paid", async ({event, context}) => {
 ponder.on("FeeConverter:Converted", async ({event, context}) => {
   const {vault, shares, stockIn, usdgOut, destination} = event.args;
   const t = vaultTicker(vault);
-  const [usdgAnswer] = await context.client.readContract({address: net.d.stocks[t!].oracle, abi: stocklineOracleAbi, functionName: "usdgAnswer", blockNumber: event.block.number});
+  const [usdgAnswer] = await context.client.readContract({address: net.d.stocks[t!].oracle, abi: lendoraOracleAbi, functionName: "usdgAnswer", blockNumber: event.block.number});
   const usd = (usdgOut * 10n ** 12n * usdgAnswer) / 10n ** BigInt(net.feedDecimals); // USDG 6 dp → WAD at the USDG/USD feed
   await context.db.insert(feeEvent).values({...feeEventRow(event), kind: "conversion", ticker: t ?? null, token: vault, account: destination, shares, assets: stockIn, usdg: usdgOut, usd}).onConflictDoNothing();
 });

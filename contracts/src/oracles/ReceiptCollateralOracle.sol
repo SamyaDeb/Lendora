@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {OracleMath} from "../libraries/OracleMath.sol";
-import {StocklineOracleBase} from "./StocklineOracleBase.sol";
+import {LendoraOracleBase} from "./LendoraOracleBase.sol";
 
 /// @title ReceiptCollateralOracle
 /// @notice Morpho `IOracle` for a receipt-collateral market: collateral `rSTOCK` (Vault V2 share), loan USDG (G5,
@@ -12,7 +12,7 @@ import {StocklineOracleBase} from "./StocklineOracleBase.sol";
 /// `price() = convertToAssets(1 share) · STOCK/USD · (1 − b(t)) / USDG/USD`, scaled (OR-R1, D1: no multiplier).
 /// @dev Vault V2 share prices rise no faster than the vault's `maxRate` and fall on realized losses, so
 /// `convertToAssets` is not donation-manipulable. Listed only after 30 clean days (CL-R10).
-contract ReceiptCollateralOracle is StocklineOracleBase {
+contract ReceiptCollateralOracle is LendoraOracleBase {
     /// @notice The rSTOCK Vault V2 (collateral).
     address public immutable VAULT;
     /// @notice The loan token of the market (USDG).
@@ -25,7 +25,7 @@ contract ReceiptCollateralOracle is StocklineOracleBase {
 
     error BadDecimals();
 
-    constructor(Deployment memory d, Params memory p, address vault, address loanToken) StocklineOracleBase(d, p) {
+    constructor(Deployment memory d, Params memory p, address vault, address loanToken) LendoraOracleBase(d, p) {
         if (vault == address(0) || loanToken == address(0)) revert ZeroAddress();
         VAULT = vault;
         LOAN_TOKEN = loanToken;

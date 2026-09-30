@@ -8,4 +8,4 @@
 #   scripts/mainnet-launch.sh [--apply] [--services-env infra/mainnet.env]   # the real launch (owner only)
 set -euo pipefail
 cd "$(dirname "$0")/.."
-exec pnpm --silent --filter @stockline/launch exec tsx src/cli.ts "$@"
+exec pnpm --silent --filter @lendora/launch exec tsx src/cli.ts "$@"

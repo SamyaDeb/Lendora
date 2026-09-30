@@ -1,6 +1,6 @@
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
-import {deltaNeutralVaultAbi, erc20Abi} from "@stockline/sdk";
-import {DnDriver, SEED_WED} from "@stockline/devnet";
+import {deltaNeutralVaultAbi, erc20Abi} from "@lendora/sdk";
+import {DnDriver, SEED_WED} from "@lendora/devnet";
 import {startStack, type Stack} from "./harness.js";
 
 const E6 = 10n ** 6n;

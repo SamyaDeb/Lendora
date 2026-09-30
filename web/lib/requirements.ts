@@ -1,4 +1,4 @@
-import {HF_MIN_OPEN_WAD, OPEN_HORIZON_SEC, healthFactorAt, type StockMarketState} from "@stockline/sdk";
+import {HF_MIN_OPEN_WAD, OPEN_HORIZON_SEC, healthFactorAt, type StockMarketState} from "@lendora/sdk";
 import {currentDebt, stockMarketState, type MarketChainState} from "./chain";
 
 /**

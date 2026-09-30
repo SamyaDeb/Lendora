@@ -3,7 +3,7 @@ import {useEffect, useMemo, useRef, useState} from "react";
 import {useQuery} from "@tanstack/react-query";
 import {formatUnits, maxUint256} from "viem";
 import {useSignMessage} from "wagmi";
-import {erc20Abi, morphoAbi, stocklineRouterAbi} from "@stockline/sdk";
+import {erc20Abi, morphoAbi, lendoraRouterAbi} from "@lendora/sdk";
 import {deployment} from "@/lib/env";
 import {deadline, useChainMarket} from "@/lib/hooks";
 import {quoteSwap} from "@/lib/chain";
@@ -101,9 +101,9 @@ export function useBorrowFlow(symbol: string, mode: BorrowMode) {
           if (mode === "short") {
             const q = pv.swap!;
             const swap = buildSwap(d, s.stockToken, d.usdg, borrowAmt, q.minOut);
-            await w.send({address: d.router!, abi: stocklineRouterAbi, functionName: "openShort", args: [s.stockToken, collIn, borrowAmt, swap, compound, w.address, a, dl]});
+            await w.send({address: d.router!, abi: lendoraRouterAbi, functionName: "openShort", args: [s.stockToken, collIn, borrowAmt, swap, compound, w.address, a, dl]});
           } else {
-            await w.send({address: d.router!, abi: stocklineRouterAbi, functionName: "borrow", args: [s.stockToken, collIn, borrowAmt, w.address, a, dl]});
+            await w.send({address: d.router!, abi: lendoraRouterAbi, functionName: "borrow", args: [s.stockToken, collIn, borrowAmt, w.address, a, dl]});
           }
         },
       },

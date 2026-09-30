@@ -1,5 +1,5 @@
 {
-  "name": "@stockline/launch",
+  "name": "@lendora/launch",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,20 +8,20 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "pretypecheck": "pnpm --filter @stockline/sdk build",
+    "pretypecheck": "pnpm --filter @lendora/sdk build",
     "typecheck": "tsc --noEmit",
-    "pretest": "pnpm --filter @stockline/sdk build",
+    "pretest": "pnpm --filter @lendora/sdk build",
     "test": "vitest run",
     "launch": "tsx src/cli.ts",
     "publish-deployment": "tsx src/publishCli.ts",
     "lint": "eslint ."
   },
   "dependencies": {
-    "@stockline/sdk": "workspace:*",
+    "@lendora/sdk": "workspace:*",
     "viem": "^2.56.9"
   },
   "devDependencies": {
-    "@stockline/devnet": "workspace:*",
+    "@lendora/devnet": "workspace:*",
     "@types/node": "^22.20.4",
     "tsx": "^4.21.0",
     "typescript": "~5.9.3",

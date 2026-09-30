@@ -1,13 +1,13 @@
 # 05 · Collateral and router
 
 **Phase 1.** Borrowers post `clUSDG`, a gated wrapper around USDG or a yield-bearing USDG vault share. It is minted only
-through the router, and that gives Stockline one place to enforce caps, geo-rules and the guard. `StocklineRouter` bundles
+through the router, and that gives Lendora one place to enforce caps, geo-rules and the guard. `LendoraRouter` bundles
 every user flow into one transaction.
 
 ## 1. Why gated collateral
 
 Morpho Blue markets are permissionless. Anyone holding the collateral token can borrow directly. If collateral were plain
-USDG, Stockline could not enforce per-user limits or pause new positions. With `clUSDG`:
+USDG, Lendora could not enforce per-user limits or pause new positions. With `clUSDG`:
 
 - New collateral enters only through the router's attested entries (`borrow`, `openShort`), which check guard state,
   caps and attestation. The only other mint path, `addCollateral`, is a rescue top-up for a position that already has
@@ -37,7 +37,7 @@ no path can borrow more than the liquidity the allocator has placed in the marke
 `DIRECT_BORROW` alert, MON-R10 in [10](10-risk-compliance.md)) plus the per-address cap on every router entry. Before the
 remediation of 2026-09-27, `addCollateral` needed no debt, so a never-attested address could mint `clUSDG` without any
 cap and borrow directly (review finding, fixed by RT-R8; regression test
-[`test_RT_R8_unattestedUserCannotCreateCollateral`](../../contracts/test/router/StocklineRouter.t.sol)).
+[`test_RT_R8_unattestedUserCannotCreateCollateral`](../../contracts/test/router/LendoraRouter.t.sol)).
 
 ## 2. CollateralToken (`clUSDG`)
 
@@ -47,7 +47,7 @@ cap and borrow directly (review finding, fixed by RT-R8; regression test
 | CL-R2 | `mint` is callable only by the router. `unwrap(amount, to)` is callable by any holder and returns the backing asset 1:1. |
 | CL-R3 | Transfers are allowed only when `from` or `to` is Morpho Blue, the router or the zero address (mint/burn). Everyone else can only hold and unwrap. This stops secondary trading that would bypass the router. |
 | CL-R4 | `valuePerToken()` returns USD value per token in 1e18: 1.0 for USDG; `vault.convertToAssets(1e18)` for vault shares. The oracle reads it (see [04](04-oracle.md)). |
-| CL-R5 | No pause on `unwrap` and no admin that can seize or freeze balances. The router address is set once at deployment and cannot change. Stockline cannot stop Paxos from freezing or wiping the `clUSDG` address (or Morpho's) on USDG itself (verified Phase 0, [01 §5](../phase0/01-chain-facts.md#5-usdg)); a fork test documents the effect. |
+| CL-R5 | No pause on `unwrap` and no admin that can seize or freeze balances. The router address is set once at deployment and cannot change. Lendora cannot stop Paxos from freezing or wiping the `clUSDG` address (or Morpho's) on USDG itself (verified Phase 0, [01 §5](../phase0/01-chain-facts.md#5-usdg)); a fork test documents the effect. |
 | CL-R6 | Invariant: backing balance of `clUSDG` ≥ `totalSupply` (in backing units), absent an issuer freeze or wipe of the backing. |
 | CL-R7 | A different backing (e.g. an ERC-4626 USDG Vault V2 share, v1.1) is a **new deployment** of a `CollateralToken` variant with its own oracle and Morpho market, never an upgrade of v1. |
 
@@ -70,7 +70,7 @@ Lenders can post `rNVDA` to borrow USDG. This uses a second Morpho market per st
 | collateralToken | `rNVDA` (Vault V2 share, not gated) |
 | oracle | `ReceiptCollateralOracle(NVDA)`: `convertToAssets` × feed price (never × multiplier, D1) with collateral haircut `(1 − b(t))` |
 | LLTV | 62.5% at launch |
-| USDG supply | Stockline-curated Vault V2 USDG vault, or an existing USDG Vault V2 (54 exist on this chain) that opts in [VERIFY] |
+| USDG supply | Lendora-curated Vault V2 USDG vault, or an existing USDG Vault V2 (54 exist on this chain) that opts in [VERIFY] |
 
 | ID | Requirement |
 |---|---|
@@ -84,7 +84,7 @@ anvil and a 4663 fork; CL-R10 is enforced by the script and the SDK on 4663; CL-
 Runbook: [`list-receipt-market.md`](../runbooks/list-receipt-market.md). Indexer/API/web support behind
 `NEXT_PUBLIC_FEATURE_RECEIPT_MARKET`: see the Phase 4 status table in [11](11-milestones.md).
 
-## 4. StocklineRouter
+## 4. LendoraRouter
 
 The router is stateless between transactions (it holds configuration, never user balances). Users grant it Morpho
 authorization (`setAuthorization`) once and approve tokens via EIP-2612 `permit`, batched with the flow through the
@@ -109,12 +109,12 @@ router's `multicall` (USDG, Stock Tokens and `rSTOCK` all support EIP-2612; veri
 | RT-R5 | The router holds no balances after any call. An invariant test asserts the router's token balances are 0 after every fuzzed flow. |
 | RT-R6 | All user-facing functions take a `deadline`. Reentrancy is guarded. Events are emitted for the indexer (`ShortOpened`, `ShortClosed`, `Lent`, `Withdrawn`, `Borrowed`, `Repaid`, `CollateralAdded`, `CollateralWithdrawn`). |
 | RT-R7 | Router upgrades go through the 48h timelock. The Morpho authorization UI tells users that the router can act on their Morpho positions, and how to revoke. |
-| RT-R8 | *(new, remediation 2026-09-27)* `addCollateral` is a rescue top-up for positions with debt: it reverts `NoDebtPosition(onBehalf)` unless `onBehalf` has `borrowShares > 0` in that market. It needs no attestation, guard or cap check (risk-reducing, CP-R4) and anyone may top up anyone's position. All other collateral enters through attested entries (`borrow`, `openShort`); there is no collateral-only entry (`borrow` with `borrowAmount = 0` reverts in Morpho). Tests: `test_RT_R8_*` in [`StocklineRouter.t.sol`](../../contracts/test/router/StocklineRouter.t.sol), upgrade [`StocklineRouterUpgrade.t.sol`](../../contracts/test/router/StocklineRouterUpgrade.t.sol). |
+| RT-R8 | *(new, remediation 2026-09-27)* `addCollateral` is a rescue top-up for positions with debt: it reverts `NoDebtPosition(onBehalf)` unless `onBehalf` has `borrowShares > 0` in that market. It needs no attestation, guard or cap check (risk-reducing, CP-R4) and anyone may top up anyone's position. All other collateral enters through attested entries (`borrow`, `openShort`); there is no collateral-only entry (`borrow` with `borrowAmount = 0` reverts in Morpho). Tests: `test_RT_R8_*` in [`LendoraRouter.t.sol`](../../contracts/test/router/LendoraRouter.t.sol), upgrade [`LendoraRouterUpgrade.t.sol`](../../contracts/test/router/LendoraRouterUpgrade.t.sol). |
 
 ## Acceptance criteria
 
-- [x] Fork tests for every flow in the table, including partial fills and slippage failures ([`Router.fork.t.sol`](../../contracts/test/fork/phase1/Router.fork.t.sol): all flows through the live Morpho, Vault V2 and UniversalRouter, live-pool slippage failure; partial fills and a lying DEX in [`StocklineRouter.t.sol`](../../contracts/test/router/StocklineRouter.t.sol), which has no live counterpart for a partial fill).
-- [x] Invariants CL-R6 and RT-R5 hold under 1M fuzz runs: `FOUNDRY_PROFILE=deep` runs 1,000 × 1,000 = 1M calls of every router flow with a misbehaving DEX ([`StocklineRouter.invariant.t.sol`](../../contracts/test/router/StocklineRouter.invariant.t.sol): RT-R5, CL-R6, LM-R7), plus 1M calls each for the standalone CL-R6 and LM-R7 suites (2026-09-27).
-- [x] A liquidation of a router-opened position succeeds with a standard Morpho liquidator script that knows nothing about Stockline beyond `clUSDG.unwrap` ([`test_RT_routerPositionLiquidatableByStandardLiquidator`](../../contracts/test/router/StocklineRouter.t.sol)).
+- [x] Fork tests for every flow in the table, including partial fills and slippage failures ([`Router.fork.t.sol`](../../contracts/test/fork/phase1/Router.fork.t.sol): all flows through the live Morpho, Vault V2 and UniversalRouter, live-pool slippage failure; partial fills and a lying DEX in [`LendoraRouter.t.sol`](../../contracts/test/router/LendoraRouter.t.sol), which has no live counterpart for a partial fill).
+- [x] Invariants CL-R6 and RT-R5 hold under 1M fuzz runs: `FOUNDRY_PROFILE=deep` runs 1,000 × 1,000 = 1M calls of every router flow with a misbehaving DEX ([`LendoraRouter.invariant.t.sol`](../../contracts/test/router/LendoraRouter.invariant.t.sol): RT-R5, CL-R6, LM-R7), plus 1M calls each for the standalone CL-R6 and LM-R7 suites (2026-09-27).
+- [x] A liquidation of a router-opened position succeeds with a standard Morpho liquidator script that knows nothing about Lendora beyond `clUSDG.unwrap` ([`test_RT_routerPositionLiquidatableByStandardLiquidator`](../../contracts/test/router/LendoraRouter.t.sol)).
 - [x] Gas: `openShort` ≤ 700k and `closeShort` ≤ 650k gas on Robinhood Chain (bound accepted 2026-09-27, Q3; the 600k placeholder is retired). **Measured on a fork (cold storage), 2026-09-27: `openShort` 643,746 (was ≈ 649k before the remediation's single debt read in the RT-R1 checks), `closeShort` 434,331.** The rest of the cost is the RT-R1 guard and t + 24h price reads (feeds, calendar, issuer flags); a combined oracle view would need new oracle deployments and therefore new Morpho markets, so it is not a cheap win.
 - [x] *(Phase 4 session A3, engineering)* G5 receipt market (§3): stage 1 deploys the `rSTOCK`-collateral market, its oracle and the USDG vault with caps 0; the listing is the curator's timelocked step (six calls, CL-R10 window on 4663); borrow, exits under a tripped guard and liquidation paying `rNVDA` tested on the full local deployment ([`ReceiptMarket.t.sol`](../../contracts/test/deploy/ReceiptMarket.t.sol) 11) and on a 4663 fork ([`ReceiptMarket.fork.t.sol`](../../contracts/test/fork/phase3/ReceiptMarket.fork.t.sol)). Listing on mainnet: launch + 30 days, [runbook](../runbooks/list-receipt-market.md).

@@ -1,5 +1,5 @@
 import {encodeAbiParameters, encodeFunctionData, parseAbiItem, type Hex, type PublicClient} from "viem";
-import {erc20Abi, feeConverterAbi, feeSplitterAbi, isUsRegularHours, marketHoursAbi, stocklineOracleAbi, vaultV2FullAbi, type ChainDeployment, safeErrorLine} from "@stockline/sdk";
+import {erc20Abi, feeConverterAbi, feeSplitterAbi, isUsRegularHours, marketHoursAbi, lendoraOracleAbi, vaultV2FullAbi, type ChainDeployment, safeErrorLine} from "@lendora/sdk";
 import type {TxSender} from "../common/signer.js";
 import type {Health} from "../common/health.js";
 
@@ -177,7 +177,7 @@ export class FeeConverterBot {
     // Gates the contract enforces (checked first so nothing is sent that would revert) plus the keeper's own.
     const [open, reasons] = await Promise.all([
       this.client.readContract({address: this.d.marketHours, abi: marketHoursAbi, functionName: "isOpen", args: [now]}),
-      this.client.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "guardReasons"}),
+      this.client.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "guardReasons"}),
     ]);
     if (!open || reasons !== 0n) {
       this.log(`[fee-converter] ${name} ${ticker} due (${reason}) but ${!open ? "feed session closed" : `guard tripped (${reasons})`}; waiting`);

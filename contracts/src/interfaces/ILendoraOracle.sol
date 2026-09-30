@@ -3,8 +3,8 @@ pragma solidity ^0.8.20;
 
 import {IOracle} from "morpho-blue/src/interfaces/IOracle.sol";
 
-/// @title Stockline oracle surface (docs/prd/04-oracle.md). Both oracles implement it.
-interface IStocklineOracle is IOracle {
+/// @title Lendora oracle surface (docs/prd/04-oracle.md). Both oracles implement it.
+interface ILendoraOracle is IOracle {
     /// @notice Buffer and guard parameters (all WAD unless noted). Changed only by the owner (timelock).
     struct Params {
         uint64 zWad; // z-score, e.g. 2.5e18

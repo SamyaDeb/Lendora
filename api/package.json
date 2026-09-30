@@ -1,5 +1,5 @@
 {
-  "name": "@stockline/api",
+  "name": "@lendora/api",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,10 +9,10 @@
     "./server": "./src/server.ts"
   },
   "scripts": {
-    "pretypecheck": "pnpm --filter @stockline/sdk build",
+    "pretypecheck": "pnpm --filter @lendora/sdk build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "pretest": "pnpm --filter @stockline/sdk build",
+    "pretest": "pnpm --filter @lendora/sdk build",
     "test": "vitest run",
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
@@ -22,7 +22,7 @@
   "dependencies": {
     "@hono/node-server": "^2.1.1",
     "@hono/zod-openapi": "^1.6.3",
-    "@stockline/sdk": "workspace:*",
+    "@lendora/sdk": "workspace:*",
     "hono": "^4.13.9",
     "ioredis": "^6.0.0",
     "pg": "^8.16.2",
@@ -31,8 +31,8 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@stockline/devnet": "workspace:*",
-    "@stockline/indexer": "workspace:*",
+    "@lendora/devnet": "workspace:*",
+    "@lendora/indexer": "workspace:*",
     "@types/autocannon": "^7.12.7",
     "@types/node": "^22.20.4",
     "@types/pg": "^8.15.0",

@@ -4,7 +4,7 @@
  * :3002 (or WEB_PORT) with the e2e mock wallet (anvil account #7, funded). `WEB_MODE=start` builds and runs
  * `next start` instead of `next dev` (Next allows one dev server per directory).
  *
- *   pnpm --filter @stockline/web exec tsx scripts/liveStack.ts
+ *   pnpm --filter @lendora/web exec tsx scripts/liveStack.ts
  *
  * Writes the URLs to .live-stack.json next to this file. Ctrl-C stops everything.
  */

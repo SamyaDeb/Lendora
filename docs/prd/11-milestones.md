@@ -22,13 +22,13 @@ Ordered so each task unblocks the next. IDs map to requirements.
 3b. **`StockWrapper` changes (D10 R1–R4).** `backingShortfall()` (LM-R8), `adminBurn` failure-mode test, optional `BlocklistHolderAllowlist` (LM-R6), `IScaledUIAmount` comment.
 3c. **Extend mocks (D10 R5).** `oraclePaused()`, per-token and global `paused()`, blocklist reverting `Blocked(addr)`, `adminBurn`; mock sequencer uptime feed; mock Uniswap v3 pool (`observe`).
 4. **`MarketHours`.** OR-R10…R14 (feed sessions and event windows), plus `packages/sdk/scripts/genSessions.ts` and `packages/sdk/data/events.json`.
-5. **`StocklineOracle` + `ReceiptCollateralOracle`.** OR-R1…R8, OR-R20…R23, OR-R30…R33. SDK `priceAt`, `bufferAt`, `liquidationPriceAt`, `healthFactorAt`, shared test vectors.
+5. **`LendoraOracle` + `ReceiptCollateralOracle`.** OR-R1…R8, OR-R20…R23, OR-R30…R33. SDK `priceAt`, `bufferAt`, `liquidationPriceAt`, `healthFactorAt`, shared test vectors.
 6. **`clUSDG`.** CL-R1…R7, Paxos-freeze fork test.
 7. **Deploy scripts (Vault V2).** `DeployCore` + `DeployStock`: wrapper → oracle → market → Vault V2 + adapter → caps → fee → roles → timelocks (LM-R10, LM-R20, LM-R22, LM-R23); `addresses.json`; Vault V2 code-hash fork test; `docs/runbooks/list-stock.md`.
-8. **`StocklineRouter`.** RT-R1…R7, all flows, fork tests, gas report.
+8. **`LendoraRouter`.** RT-R1…R7, all flows, fork tests, gas report.
 9. **Allocator keeper.** LM-R30…R34 (Vault V2 `allocate`/`deallocate`), pre-earnings pull.
 10. **Guard keeper.** OR-R31, OR-R32, OR-R6 (L2 gaps), issuer flags.
-11. **Fallback liquidator.** `StocklineLiquidator` (Morpho callback, unwraps `clUSDG`) + bot.
+11. **Fallback liquidator.** `LendoraLiquidator` (Morpho callback, unwraps `clUSDG`) + bot.
 12. **Full lifecycle fork test.** Lend → open short → Friday ramp-in → weekend hold → Monday gap → liquidation → lender withdraws whole; plus earnings event, 1e18 feed incident, issuer pause, `adminBurn`.
 
 ### Phase 1 status (2026-09-27)
@@ -47,7 +47,7 @@ except the `openShort` gas placeholder (≈ 650k measured vs 600k; open question
 | 5 · Oracles + SDK math + vectors | Done | `test/oracle` (exact match on 36k vectors) |
 | 6 · `clUSDG` | Done | `test/CollateralToken`, `test/fork/phase1/CollateralTokenFreeze.fork.t.sol` |
 | 7 · Deploy scripts (Vault V2) | Done | `script/`, `test/fork/phase1/{Deploy,VaultV2CodeHash}.fork.t.sol`, `docs/runbooks/list-stock.md` |
-| 8 · `StocklineRouter` | Done (gas placeholder open) | `test/router`, `test/fork/phase1/Router.fork.t.sol` |
+| 8 · `LendoraRouter` | Done (gas placeholder open) | `test/router`, `test/fork/phase1/Router.fork.t.sol` |
 | 9 · Allocator keeper | Done | `keepers/test/allocator.test.ts` |
 | 10 · Guard keeper | Done | `keepers/test/guard.test.ts` |
 | 11 · Fallback liquidator | Done | `test/liquidator`, `keepers/test/liquidator.test.ts` |
@@ -91,12 +91,12 @@ that need people, money or time are listed at the end.
 
 | Task | Status | Evidence |
 |---|---|---|
-| 1 · HIGH unattested collateral via `addCollateral` | Fixed (RT-R8): rescue top-up only, reverts `NoDebtPosition` without debt; residual documented (05 §1) | `test_RT_R8_*`, `StocklineRouterUpgrade.t.sol`; deep invariants 3 × 1M; fork 22/22; e2e 10/10 — `c158b8e` |
+| 1 · HIGH unattested collateral via `addCollateral` | Fixed (RT-R8): rescue top-up only, reverts `NoDebtPosition` without debt; residual documented (05 §1) | `test_RT_R8_*`, `LendoraRouterUpgrade.t.sol`; deep invariants 3 × 1M; fork 22/22; e2e 10/10 — `c158b8e` |
 | 2 · MEDIUM geo headers trusted without the proxy secret | Fixed (CP-R8): startup refuses without `PROXY_SECRET` off anvil; web proxy drops client geo; per-wallet rate limit | `compliance.test.ts` `CP_R8_*`, `web/test/complianceProxy.test.ts` — `62415dc` |
 | 3 · MEDIUM no ops monitoring / paging | Done: `keepers/src/monitor` MON-R1…R14, pagers, weekend log `GET /weekends` | `keepers/test/monitor.test.ts` (18, real chain conditions) — `48ddfb3` |
 | 4 · Runbooks for every P0/P1 | Done: 12 runbooks + mainnet launch; timelock calldata tool; 7 rehearsals on anvil through the real timelock | `docs/runbooks/`, `packages/devnet/test/runbooks.test.ts`, `packages/sdk/test/timelock.test.ts` — `8550ba0` |
 | 5 · Phase 0 gaps | Done for engineering: weekday depth tooling + Sunday snapshot (caps unchanged; weekday run pending the clock); syrupUSDG deferred v1.1; sequencer feed confirmed absent; 12 checklist reconciled | `sim/phase0/dex_depth.py`, WS-C §6, 12 — `609e111` |
-| 6 · Coverage and cleanups | Done: router branches 77% → 91.1%, StockWrapper 94.87% → 100% lines, liquidator branches 87.5% → 93.75% (100% lines with the fork suite); `node_modules.nosync/` ignored | `StocklineRouterBranches.t.sol` — `c938fc9` |
+| 6 · Coverage and cleanups | Done: router branches 77% → 91.1%, StockWrapper 94.87% → 100% lines, liquidator branches 87.5% → 93.75% (100% lines with the fork suite); `node_modules.nosync/` ignored | `LendoraRouterBranches.t.sol` — `c938fc9` |
 | 7 · Open decisions Q1–Q7 | Q1–Q4 applied (openShort 649k → 644k on a fork, ≤ 700k accepted); Q5–Q7 `[OWNER]` | 12 "Decisions (remediation)", `sim/event_timing` — `5a5a574` |
 | 8 · Audit readiness | Done: scope/threat model/known issues, NatSpec on every external/public function (`forge doc` clean), mainnet launch checklist, Phase 3 breakdown | `docs/audit/`, `docs/audit/FREEZE` — `84bfc62` |
 | MetaMorpho v1.1 submodule | **Kept, pending the owner's call** (only the scaffold smoke test uses it; removing it shrinks audit scope) | `contracts/lib/metamorpho-v1.1` |

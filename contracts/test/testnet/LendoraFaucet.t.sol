@@ -2,21 +2,21 @@
 pragma solidity 0.8.26;
 
 import {Test} from "forge-std/Test.sol";
-import {StocklineFaucet} from "../../testnet/StocklineFaucet.sol";
+import {LendoraFaucet} from "../../testnet/LendoraFaucet.sol";
 import {MockStockToken} from "../mocks/MockStockToken.sol";
 import {MockUSDG} from "../mocks/MockUSDG.sol";
 import {MockGate} from "../mocks/MockGate.sol";
 import {MockChainlinkAggregator} from "../mocks/MockChainlinkAggregator.sol";
 
 /// @notice Phase 2 task 7: the testnet faucet and the gated mocks (only operators move prices or mint).
-contract StocklineFaucetTest is Test {
-    StocklineFaucet internal faucet;
+contract LendoraFaucetTest is Test {
+    LendoraFaucet internal faucet;
     MockStockToken internal nvda;
     MockUSDG internal usdg;
     address internal tester = makeAddr("tester");
 
     function setUp() public {
-        faucet = new StocklineFaucet(address(this), 1 days);
+        faucet = new LendoraFaucet(address(this), 1 days);
         nvda = new MockStockToken("NVDA", "NVDA", 18);
         usdg = new MockUSDG(6);
         for (uint256 i; i < 2; i++) {
@@ -32,7 +32,7 @@ contract StocklineFaucetTest is Test {
         faucet.claim(tester);
         assertEq(nvda.balanceOf(tester), 10e18);
         assertEq(usdg.balanceOf(tester), 10_000e6);
-        vm.expectRevert(abi.encodeWithSelector(StocklineFaucet.TooSoon.selector, block.timestamp + 1 days));
+        vm.expectRevert(abi.encodeWithSelector(LendoraFaucet.TooSoon.selector, block.timestamp + 1 days));
         faucet.claim(tester);
         vm.warp(block.timestamp + 1 days);
         faucet.claim(tester);
@@ -48,10 +48,10 @@ contract StocklineFaucetTest is Test {
         faucet.claim(tester);
         assertEq(nvda.balanceOf(tester), 10e18);
         vm.prank(tester);
-        vm.expectRevert(StocklineFaucet.NotOwner.selector);
+        vm.expectRevert(LendoraFaucet.NotOwner.selector);
         faucet.setDrip(address(nvda), 1);
         vm.prank(tester);
-        vm.expectRevert(StocklineFaucet.NotOwner.selector);
+        vm.expectRevert(LendoraFaucet.NotOwner.selector);
         faucet.setCooldown(1);
     }
 

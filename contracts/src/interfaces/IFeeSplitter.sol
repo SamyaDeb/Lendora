@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-/// @title Stockline fee splitter surface (docs/prd/09-backstop-fees.md FE-R2, FE-R3).
+/// @title Lendora fee splitter surface (docs/prd/09-backstop-fees.md FE-R2, FE-R3).
 interface IFeeSplitter {
     struct Recipient {
         address account;

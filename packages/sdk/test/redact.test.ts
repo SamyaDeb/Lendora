@@ -5,7 +5,7 @@ describe("OFF-1 redactSecrets: no secret in logs, errors or /health", () => {
   const env = {
     RPC_URL: "https://robinhood-mainnet.g.alchemy.com/v2/AbCdEf0123456789",
     KEEPER_REMOTE_SIGNER_AUTH: "Bearer s3cr3t-token-value",
-    DATABASE_URL: "postgres://app:hunter2hunter2@db.internal:5432/stockline",
+    DATABASE_URL: "postgres://app:hunter2hunter2@db.internal:5432/lendora",
     PORT: "8080",
     SHORT_KEY: "abc",
   };

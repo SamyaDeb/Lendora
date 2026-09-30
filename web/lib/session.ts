@@ -1,4 +1,4 @@
-import {feedSessions, type Session} from "@stockline/sdk";
+import {feedSessions, type Session} from "@lendora/sdk";
 import type {Market} from "./api";
 
 /**

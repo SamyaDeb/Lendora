@@ -52,7 +52,7 @@ contract DeltaNeutralVault is IDeltaNeutralVault, ERC4626, Ownable, ReentrancyGu
     uint256 internal constant BPS = 10_000;
     uint8 internal constant OFFSET = 12;
 
-    /// @notice Source of compliance attestations (the `StocklineRouter` proxy).
+    /// @notice Source of compliance attestations (the `LendoraRouter` proxy).
     IAttestationSource public immutable ATTESTATION_SOURCE;
     /// @notice Feed-session calendar (`MarketHours`).
     IMarketHours public immutable MARKET_HOURS;

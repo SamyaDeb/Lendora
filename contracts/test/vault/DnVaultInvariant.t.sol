@@ -17,7 +17,7 @@ import {MockPerpVenue} from "../mocks/MockPerpVenue.sol";
 import {MockSwapAggregator} from "../mocks/MockSwapAggregator.sol";
 import {MockChainlinkAggregator} from "../mocks/MockChainlinkAggregator.sol";
 import {MockUSDG} from "../mocks/MockUSDG.sol";
-import {StocklineRouter} from "../../src/StocklineRouter.sol";
+import {LendoraRouter} from "../../src/LendoraRouter.sol";
 import {DnVaultBase} from "./DnVaultBase.sol";
 
 /// @notice Everything the invariant handler needs from the fixture, in one struct.
@@ -28,7 +28,7 @@ struct DnWorld {
     MockPerpVenue venue;
     MockSwapAggregator dex;
     MockUSDG usdg;
-    StocklineRouter router;
+    LendoraRouter router;
     IMarketHours hours_;
     address operator;
     address guardian;

@@ -31,14 +31,14 @@ prevent or reverse it.
 ```sh
 cast calldata "trip(uint256)" 1                                                      # guardian, to = $ORACLE
 cast calldata "decreaseAbsoluteCap(bytes,uint256)" $ADAPTER_ID 0   # sentinel, to = $VAULT
-pnpm --filter @stockline/sdk timelock router.delistMarket ticker=NVDA --network $NET --salt "$(date -u +%F) NVDA shortfall delist"
+pnpm --filter @lendora/sdk timelock router.delistMarket ticker=NVDA --network $NET --salt "$(date -u +%F) NVDA shortfall delist"
 ```
 
 **Who signs.** Guardian 2-of-4 (trip, cap), owner 4-of-7 via timelock (delist). BD/Legal own the issuer contact.
 
 ## Comms
 
-> **Investigating — NVDA: the Stock Token issuer burned <X> NVDA held by the Stockline wrapper** (<UTC>). wNVDA is now
+> **Investigating — NVDA: the Stock Token issuer burned <X> NVDA held by the Lendora wrapper** (<UTC>). wNVDA is now
 > backed <Y>%. New lending and borrowing in NVDA are paused. Repay and close keep working. We are in contact with the
 > issuer. Next update by <time>.
 

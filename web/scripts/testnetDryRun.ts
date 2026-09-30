@@ -7,19 +7,19 @@
  *
  *   anvil --fork-url https://rpc.testnet.chain.robinhood.com --port 18600 &
  *   (DeployTestnet with TESTNET_GO=fork-dry-run)
- *   COMPLIANCE_SIGNER_KEY_FILE=… pnpm --filter @stockline/web exec tsx scripts/testnetDryRun.ts --rpc http://127.0.0.1:18600
+ *   COMPLIANCE_SIGNER_KEY_FILE=… pnpm --filter @lendora/web exec tsx scripts/testnetDryRun.ts --rpc http://127.0.0.1:18600
  */
 import {readFileSync, writeFileSync} from "node:fs";
 import {createPublicClient, http, type PublicClient} from "viem";
 import {generatePrivateKey, privateKeyToAccount} from "viem/accounts";
-import {getDeployment, getExternal, robinhoodChain, shortInterestLensAbi} from "@stockline/sdk";
-import {ChainDriver, connectAnvil, smokeFlows, startPostgres} from "@stockline/devnet";
-import {startIndexer} from "@stockline/indexer/harness";
-import {ConsolePager, reconcile} from "@stockline/indexer/reconcile";
-import {startApi} from "@stockline/api/server";
-import {startCompliance} from "@stockline/compliance/server";
-import {rpcUnlockedSender} from "@stockline/keepers/signer";
-import {FeedMirror, ChainlinkSource} from "@stockline/keepers/feed-mirror";
+import {getDeployment, getExternal, robinhoodChain, shortInterestLensAbi} from "@lendora/sdk";
+import {ChainDriver, connectAnvil, smokeFlows, startPostgres} from "@lendora/devnet";
+import {startIndexer} from "@lendora/indexer/harness";
+import {ConsolePager, reconcile} from "@lendora/indexer/reconcile";
+import {startApi} from "@lendora/api/server";
+import {startCompliance} from "@lendora/compliance/server";
+import {rpcUnlockedSender} from "@lendora/keepers/signer";
+import {FeedMirror, ChainlinkSource} from "@lendora/keepers/feed-mirror";
 import pg from "pg";
 
 const arg = (n: string, d = "") => {
@@ -44,7 +44,7 @@ if (!signerKeyFile) throw new Error("COMPLIANCE_SIGNER_KEY_FILE (the key whose a
 const compliance = await startCompliance({
   DATABASE_URL: pgs.url,
   RPC_URL: rpc,
-  STOCKLINE_NETWORK: "46630",
+  LENDORA_NETWORK: "46630",
   PORT: "0",
   HOST: "127.0.0.1",
   COMPLIANCE_SIGNER_KEY_FILE: signerKeyFile,

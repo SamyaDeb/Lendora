@@ -1,4 +1,4 @@
-import {safeErrorLine} from "@stockline/sdk";
+import {safeErrorLine} from "@lendora/sdk";
 import {Hono} from "hono";
 import type {Health} from "../common/health.js";
 import type {Pager} from "./pager.js";

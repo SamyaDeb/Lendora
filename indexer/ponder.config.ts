@@ -10,23 +10,23 @@ import {
   morphoEventsAbi,
   navOracleAbi,
   scaledUiAmountAbi,
-  stocklineOracleAbi,
-  stocklineRouterAbi,
+  lendoraOracleAbi,
+  lendoraRouterAbi,
   strategyManagerAbi,
   uniswapV3PoolAbi,
   vaultV2FullAbi,
-} from "@stockline/sdk";
+} from "@lendora/sdk";
 import {networkConfig, NO_ADDRESS, NO_ID} from "./lib/network.js";
 
 /**
- * SI-R1: Morpho Blue events filtered to Stockline market ids, the AdaptiveCurveIrm rate updates of those markets,
+ * SI-R1: Morpho Blue events filtered to Lendora market ids, the AdaptiveCurveIrm rate updates of those markets,
  * Vault V2 (`rSTOCK`) events, router events, oracle `GuardChanged`, Stock Token multiplier updates (the wrapper's
  * multiplier passes the token's through, LM-R3) and DEX swaps for daysToCover. Phase 3 (FE-R5): `FeeSplitter` and
- * `FeeConverter` events for protocol revenue. Everything from `@stockline/sdk`.
+ * `FeeConverter` events for protocol revenue. Everything from `@lendora/sdk`.
  */
 const n = networkConfig();
 const ids = n.tickers.map((t) => n.d.stocks[t].marketId);
-const chain = "stockline" as const;
+const chain = "lendora" as const;
 const startBlock = n.startBlock;
 const receiptIds = n.tickers.flatMap((t) => (n.d.stocks[t].receipt ? [n.d.stocks[t].receipt!.marketId] : []));
 const rIds = receiptIds.length ? receiptIds : [NO_ID];
@@ -51,8 +51,8 @@ export default createConfig({
     },
     Irm: {chain, abi: adaptiveCurveIrmAbi, address: n.d.adaptiveCurveIrm, startBlock, filter: {event: "BorrowRateUpdate", args: {id: ids}}},
     Vault: {chain, abi: vaultV2FullAbi, address: n.tickers.map((t) => n.d.stocks[t].vault), startBlock},
-    Router: {chain, abi: stocklineRouterAbi, address: n.d.router!, startBlock},
-    Oracle: {chain, abi: stocklineOracleAbi, address: n.tickers.map((t) => n.d.stocks[t].oracle), startBlock},
+    Router: {chain, abi: lendoraRouterAbi, address: n.d.router!, startBlock},
+    Oracle: {chain, abi: lendoraOracleAbi, address: n.tickers.map((t) => n.d.stocks[t].oracle), startBlock},
     StockToken: {chain, abi: scaledUiAmountAbi, address: n.tickers.map((t) => n.d.stocks[t].stockToken), startBlock},
     // One contract with both swap events: the mock aggregator (anvil, testnet) or Uniswap v3 pools (fork).
     Dex: {

@@ -1,6 +1,6 @@
 # 00 · Overview
 
-Stockline v1 ships borrowable Stock Token markets (SPY, NVDA, AAPL) on Morpho Blue on Robinhood Chain. It adds a
+Lendora v1 ships borrowable Stock Token markets (SPY, NVDA, AAPL) on Morpho Blue on Robinhood Chain. It adds a
 weekend-safe oracle, a web app and a public short-interest API. The delta-neutral vault (Phase 4) and backstop pool
 (Phase 5) come later.
 
@@ -23,7 +23,7 @@ Stock Tokens can be bought, held and borrowed *against*, but they cannot be borr
 | G1 | Holders lend Stock Tokens and earn interest in a Morpho market where the stock is the loan asset. |
 | G2 | Traders borrow Stock Tokens against USDG or yield-bearing USDG collateral, then short, hedge or arbitrage. |
 | G3 | Lenders stay whole through weekends and price gaps: zero bad debt at launch caps. |
-| G4 | Stockline publishes per-stock supply, borrows, utilization and borrow rate in real time, onchain and through an API. |
+| G4 | Lendora publishes per-stock supply, borrows, utilization and borrow rate in real time, onchain and through an API. |
 | G5 | Lenders can post their receipt (`rNVDA`) as collateral to borrow USDG. |
 
 ## Non-goals (v1)

@@ -2,8 +2,8 @@ import {createHash} from "node:crypto";
 import {readFileSync} from "node:fs";
 import pg from "pg";
 import type {PublicClient} from "viem";
-import {ATTESTATION_TTL_SEC, attestationDomain, attestationTypes, isRestricted, termsMessage, type Address, type RestrictedList} from "@stockline/sdk";
-import type {TypedDataSigner} from "@stockline/keepers/signer";
+import {ATTESTATION_TTL_SEC, attestationDomain, attestationTypes, isRestricted, termsMessage, type Address, type RestrictedList} from "@lendora/sdk";
+import type {TypedDataSigner} from "@lendora/keepers/signer";
 import type {Geo, IpReputation, SanctionsScreen} from "./checks.js";
 
 /**

@@ -47,11 +47,11 @@ contract DeployTestnetFees is Script {
         address timelock = vm.parseJsonAddress(j, ".chains.46630.timelock");
         address usdg = vm.parseJsonAddress(j, ".chains.46630.usdg");
         address dex = vm.parseJsonAddress(j, ".chains.46630.mocks.swapAggregator");
-        address treasury = vm.envOr("STOCKLINE_TREASURY", deployer);
+        address treasury = vm.envOr("LENDORA_TREASURY", deployer);
         address backstop = vm.envOr(
-            "STOCKLINE_BACKSTOP_RESERVE", address(uint160(uint256(keccak256("stockline.placeholder.backstopReserve"))))
+            "LENDORA_BACKSTOP_RESERVE", address(uint160(uint256(keccak256("lendora.placeholder.backstopReserve"))))
         );
-        address feeKeeper = vm.envOr("STOCKLINE_FEE_KEEPER", deployer);
+        address feeKeeper = vm.envOr("LENDORA_FEE_KEEPER", deployer);
         string[] memory tickers = vm.parseJsonKeys(j, ".chains.46630.stocks");
 
         vm.startBroadcast(deployer);

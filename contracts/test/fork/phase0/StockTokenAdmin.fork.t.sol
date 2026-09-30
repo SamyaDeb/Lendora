@@ -76,7 +76,7 @@ contract StockTokenAdminForkTest is Phase0ForkBase {
         wrapper.unwrap(1e18, holder); // LM-R6: the token itself reverts with a clear error
     }
 
-    /// Blocklisting Morpho Blue only matters for markets whose loan or collateral is the raw Stock Token. Stockline
+    /// Blocklisting Morpho Blue only matters for markets whose loan or collateral is the raw Stock Token. Lendora
     /// markets hold wrapper units, so they are unaffected; the wrapper is the single choke point.
     function test_phase0_admin_blocklistMorpho_doesNotTouchWrappedMarkets() public {
         _blockAccount(MORPHO);

@@ -1,5 +1,5 @@
 import {createPublicClient, http, type PublicClient} from "viem";
-import {getExternal, robinhoodChain} from "@stockline/sdk";
+import {getExternal, robinhoodChain} from "@lendora/sdk";
 import {loadConfig} from "../common/config.js";
 import {chainFor, publicClient} from "../common/chain.js";
 import {senderFromConfig, type TxSender} from "../common/signer.js";
@@ -7,7 +7,7 @@ import {Health} from "../common/health.js";
 import {runService} from "../common/loop.js";
 import {assertMirrorAllowed, ChainlinkSource, FeedMirror} from "./mirror.js";
 
-/** `pnpm --filter @stockline/keepers feed-mirror` (testnet only). Reads mainnet (MAINNET_RPC_URL) read-only. */
+/** `pnpm --filter @lendora/keepers feed-mirror` (testnet only). Reads mainnet (MAINNET_RPC_URL) read-only. */
 const cfg = loadConfig();
 assertMirrorAllowed(cfg.deploymentKey, cfg.deployment);
 const client = publicClient(cfg.rpcUrl, cfg.deploymentKey, cfg.archiveRpcUrl);

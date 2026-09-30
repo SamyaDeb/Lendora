@@ -17,7 +17,7 @@ interface IPaxosUsdg {
 }
 
 /// @notice Risk finding (CL-R5, CL-R6), in the style of the Phase 0 wrapper admin tests: what a Paxos freeze or wipe of
-/// the `clUSDG` address does, on the real USDG and the real Morpho Blue. Stockline cannot prevent it; the test records
+/// the `clUSDG` address does, on the real USDG and the real Morpho Blue. Lendora cannot prevent it; the test records
 /// the behavior so the risk disclosure and runbook match reality.
 contract CollateralTokenFreezeForkTest is Phase1ForkBase {
     /// @dev `Roles.ASSET_PROTECTION_ROLE` in Paxos' verified USDG source (Sourcify 4663/0x68184C44…6f8F).
@@ -33,7 +33,7 @@ contract CollateralTokenFreezeForkTest is Phase1ForkBase {
 
     function setUp() public override {
         super.setUp();
-        cl = new CollateralToken(USDG, MORPHO, "Stockline Collateral USDG", "clUSDG");
+        cl = new CollateralToken(USDG, MORPHO, "Lendora Collateral USDG", "clUSDG");
         cl.setRouter(router);
         // Stand-in holder of the asset-protection role, granted by the real default admin on the fork.
         vm.prank(usdg.defaultAdmin());

@@ -8,7 +8,7 @@ import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
 import {IMorpho, MarketParams} from "morpho-blue/src/interfaces/IMorpho.sol";
 import {IVaultV2Min} from "../../../src/interfaces/external/IMorphoVaultV2.sol";
 import {IMarketHours} from "../../../src/interfaces/IMarketHours.sol";
-import {IStocklineRouter} from "../../../src/interfaces/IStocklineRouter.sol";
+import {ILendoraRouter} from "../../../src/interfaces/ILendoraRouter.sol";
 import {IDeltaNeutralVault} from "../../../src/interfaces/IDeltaNeutralVault.sol";
 import {INavOracle} from "../../../src/interfaces/INavOracle.sol";
 import {IStrategyManager} from "../../../src/interfaces/IStrategyManager.sol";
@@ -29,7 +29,7 @@ interface AggregatorLikeDn {
 }
 
 /// @notice Phase 4 task 17 (08 acceptance) on a fork of Robinhood Chain (4663) at `latest`: the delta-neutral vault on
-/// the live Morpho Blue, the Stockline `rNVDA` Vault V2 built from the live factory, NVDA, USDG, the Chainlink feed and
+/// the live Morpho Blue, the Lendora `rNVDA` Vault V2 built from the live factory, NVDA, USDG, the Chainlink feed and
 /// the live UniversalRouter for spot trades, with the mock venue for the perp leg (no live venue adapter exists, A39).
 /// Lifecycle: deposit → build → rebalance (price move, DN-R14 hedged NAV) → instant withdraw → queued withdraw
 /// settled
@@ -438,7 +438,7 @@ contract DnVaultForkTest is Phase1ForkBase, ForkConfig {
         (uint256 p,) = nvda.oracle.stockAnswer();
         uint256 collateral = p * (amount / 1e18 + 1) * 3 / 100;
         deal(USDG, borrower, collateral, true);
-        IStocklineRouter.Attestation memory att;
+        ILendoraRouter.Attestation memory att;
         att.expiry = vm.getBlockTimestamp() + 1 days;
         (uint8 v, bytes32 r, bytes32 s) =
             vm.sign(attester.privateKey, core.router.attestationDigest(borrower, att.expiry));

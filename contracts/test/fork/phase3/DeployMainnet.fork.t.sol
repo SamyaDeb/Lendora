@@ -7,7 +7,7 @@ import {IMorpho, MarketParams, Position} from "morpho-blue/src/interfaces/IMorph
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
 import {MainnetConfig} from "../../../script/MainnetConfig.sol";
 import {VerifyRoles} from "../../../script/VerifyRoles.s.sol";
-import {IStocklineRouter} from "../../../src/interfaces/IStocklineRouter.sol";
+import {ILendoraRouter} from "../../../src/interfaces/ILendoraRouter.sol";
 import {IVaultV2Min} from "../../../src/interfaces/external/IMorphoVaultV2.sol";
 import {VaultV2Ids} from "../../../src/libraries/VaultV2Ids.sol";
 import {MockSafe} from "../../mocks/MockSafe.sol";
@@ -102,7 +102,7 @@ contract DeployMainnetForkTest is Phase0ForkBase, MainnetConfig {
         (uint256 p,) = ds[i].oracle.stockAnswer();
         uint256 collateral = p * 10 * 3 / 100; // 3x the value of 10 NVDA, USDG 6 dp
         deal(c.usdg, borrower, collateral, true);
-        IStocklineRouter.Attestation memory att;
+        ILendoraRouter.Attestation memory att;
         att.expiry = block.timestamp + 1 days;
         (uint8 sv, bytes32 r, bytes32 ss) =
             vm.sign(signer.privateKey, core.router.attestationDigest(borrower, att.expiry));

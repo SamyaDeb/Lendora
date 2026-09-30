@@ -1,4 +1,4 @@
-We're building Stockline, a stock lending layer for Robinhood Chain (chain id 4663) built on unmodified Morpho Blue
+We're building Lendora, a stock lending layer for Robinhood Chain (chain id 4663) built on unmodified Morpho Blue
 and Morpho Vault V2. Phase 0 (validation) is complete. This session **finishes Phase 1: the lending core**. That means
 applying the approved Phase 0 decisions to the PRD, then building every remaining Phase 1 contract, script and keeper
 until the Phase 1 exit criteria pass on a fork.
@@ -60,7 +60,7 @@ confirm the baseline. Expected: 44 Foundry tests pass, 7 fork tests skipped with
 - **Quality bar per task:** forge fmt, build, tests green; ≥ 95% line coverage on `src/` (`forge coverage`); no new
   slither findings at medium+ (triage false positives in `slither.config.json` with a comment); `pnpm -r typecheck` and
   `pnpm -r test` green.
-- **Commit after each task** (`feat(contracts): StocklineOracle OR-R1…R7, R20…R23 (Phase 1 task 5)`) with the attribution
+- **Commit after each task** (`feat(contracts): LendoraOracle OR-R1…R7, R20…R23 (Phase 1 task 5)`) with the attribution
   lines your environment requires.
 - **Ask, don't guess** if the PRD (after step 0) is ambiguous, contradicts a verified fact, or Vault V2's actual interface
   doesn't support a requirement as written. Propose the PRD edit and wait. Keep going on other tasks while you wait.
@@ -104,7 +104,7 @@ transfer/approve like the live token, `adminBurn`. Match the live signatures and
   handled in TS, not Solidity. Also a typed earnings-calendar input file (`packages/sdk/data/events.json`) with a
   documented source. Test the generator against the observed 2026 feed pattern from `sim/`.
 
-### Task 5 · `StocklineOracle` + `ReceiptCollateralOracle` (OR-R1…R7, R20…R23, R30…R33 as restated)
+### Task 5 · `LendoraOracle` + `ReceiptCollateralOracle` (OR-R1…R7, R20…R23, R30…R33 as restated)
 
 - Morpho `IOracle` with the D1 formula, `1e36` scaling and real decimals (feeds 8 dp, USDG 6 dp, Stock Tokens 18 dp).
 - Buffer: `b_full = clamp(z·σ·sqrt(closureHours/8760), B_MIN, B_MAX)`, ramp-in over 4h before a closure or event
@@ -127,7 +127,7 @@ for the wrapper). Design so a later ERC-4626 backing (Steakhouse USDG Vault V2) 
 
 ### Task 7 · Deploy scripts (Vault V2)
 
-- `script/DeployStock.s.sol` per stock: `StockWrapper` → `StocklineOracle` → Morpho market (`wSTOCK` / `clUSDG`,
+- `script/DeployStock.s.sol` per stock: `StockWrapper` → `LendoraOracle` → Morpho market (`wSTOCK` / `clUSDG`,
   AdaptiveCurveIRM from `external-addresses.json`, LLTV 77%) → Vault V2 `rSTOCK` from the official factory →
   `MorphoMarketV1AdapterV2` → caps (absolute = launch cap from D8; relative = `U_MAX` design) → fee 10% to a
   `FeeSplitter` placeholder address → roles (owner multisig, curator, allocator keeper, sentinel = guardian) → timelocks
@@ -138,7 +138,7 @@ for the wrapper). Design so a later ERC-4626 backing (Steakhouse USDG Vault V2) 
 - Vault V2 code-hash verification from §4.
 - Document the listing checklist (03 §5) as `docs/runbooks/list-stock.md`.
 
-### Task 8 · `StocklineRouter` (RT-R1…R7)
+### Task 8 · `LendoraRouter` (RT-R1…R7)
 
 - UUPS behind the timelock, stateless between calls, reentrancy-guarded, `deadline` on every entry point.
 - Flows: `lend`, `withdrawLend` (Vault V2 deposit/redeem), `borrow`, `openShort`, `closeShort`, `addCollateral`, `repay`,
@@ -152,7 +152,7 @@ for the wrapper). Design so a later ERC-4626 backing (Steakhouse USDG Vault V2) 
 
 ### Task 9 · Allocator keeper (`keepers/allocator`, LM-R30…R34 restated for Vault V2)
 
-TypeScript + viem, imports all math/ABIs/addresses from `@stockline/sdk`. Every block (or 30s): allocate/deallocate so
+TypeScript + viem, imports all math/ABIs/addresses from `@lendora/sdk`. Every block (or 30s): allocate/deallocate so
 market utilization ≤ `U_MAX`; guard tripped → deallocate all free liquidity within 1 block; pre-earnings pull (D5).
 Idempotent, restart-safe, `/health` endpoint, dry-run default, key from env via a signer abstraction (no raw keys in
 code). Tests against an anvil fork with the task 7 deployment.
@@ -166,7 +166,7 @@ detects L2 block-timestamp gaps. Same keeper standards as task 9.
 ### Task 11 · Fallback liquidator (`keepers/liquidator`)
 
 Watches positions (events + multicall), liquidates via Morpho's callback: seize `clUSDG` → unwrap → swap USDG to
-the Stock Token → `wrap` → repay, all in one tx through a small `StocklineLiquidator` contract (tested; no funds held after
+the Stock Token → `wrap` → repay, all in one tx through a small `LendoraLiquidator` contract (tested; no funds held after
 the call). Profit and slippage guards. It must work for **any** caller's position, including ones not opened via the router.
 
 ### Task 12 · Full lifecycle fork test (Phase 1 exit)

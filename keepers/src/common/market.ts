@@ -1,5 +1,5 @@
 import {encodeAbiParameters, keccak256, type Hex} from "viem";
-import type {ChainDeployment, StockDeployment} from "@stockline/sdk";
+import type {ChainDeployment, StockDeployment} from "@lendora/sdk";
 
 export const marketParamsType = [
   {

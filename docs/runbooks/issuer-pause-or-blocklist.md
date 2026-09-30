@@ -33,7 +33,7 @@ USDG-side exits keep working: `withdrawCollateral` while healthy, `clUSDG.unwrap
 ```sh
 cast send $ORACLE "poke()" --rpc-url $RPC --private-key $OPS_KEY          # after unpause: clear TOKEN_PAUSED
 cast calldata "raiseBufferFloor(uint256)" <wad>                          # guardian Safe, to = $ORACLE
-pnpm --filter @stockline/sdk timelock router.delistMarket ticker=NVDA --network $NET --salt "$(date -u +%F) NVDA blocklist delist"
+pnpm --filter @lendora/sdk timelock router.delistMarket ticker=NVDA --network $NET --salt "$(date -u +%F) NVDA blocklist delist"
 ```
 
 Rehearsed on anvil: issuer pause → guard `TOKEN_PAUSED` → `withdrawCollateral` (USDG side) works → unpause → cleared
@@ -43,7 +43,7 @@ Rehearsed on anvil: issuer pause → guard `TOKEN_PAUSED` → `withdrawCollatera
 
 ## Comms
 
-> **Identified — the NVDA Stock Token issuer has <paused transfers | restricted the Stockline wrapper>** (<UTC>).
+> **Identified — the NVDA Stock Token issuer has <paused transfers | restricted the Lendora wrapper>** (<UTC>).
 > Repaying or closing NVDA positions needs NVDA transfers and waits for the issuer. Withdrawing USDG collateral from
 > healthy positions works. New borrowing is paused.
 

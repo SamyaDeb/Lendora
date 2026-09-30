@@ -6,7 +6,7 @@ monitor :42073, all keepers live).
 
 ---
 
-Test the Stockline / Lendora product end to end on Robinhood Chain testnet (46630) against the local testnet stack, and
+Test the Lendora product end to end on Robinhood Chain testnet (46630) against the local testnet stack, and
 report every result honestly: pass, fail (with the tx hash or the error), or skipped with the reason. Do not deploy,
 change contracts, change roles or caps, touch mainnet (4663), or read any key file; the tester key comes only from my
 environment as `SMOKE_KEY`. Everything here uses test assets.
@@ -19,10 +19,10 @@ environment as `SMOKE_KEY`. Everything here uses test assets.
 
 **2. Automated suite.** Run, and paste the summary table:
 ```sh
-pnpm --filter @stockline/web exec tsx scripts/testnetE2E.ts --web http://127.0.0.1:3000 --api http://127.0.0.1:42070 \
+pnpm --filter @lendora/web exec tsx scripts/testnetE2E.ts --web http://127.0.0.1:3000 --api http://127.0.0.1:42070 \
   --compliance http://127.0.0.1:42071 --monitor http://127.0.0.1:42073 --rpc https://rpc.testnet.chain.robinhood.com \
   --report ../docs/runbooks/testnet-e2e.md                                 # A + B: surface and simulated edge cases
-SMOKE_KEY=$SMOKE_KEY TESTNET_GO=yes pnpm --filter @stockline/web exec tsx scripts/testnetE2E.ts \
+SMOKE_KEY=$SMOKE_KEY TESTNET_GO=yes pnpm --filter @lendora/web exec tsx scripts/testnetE2E.ts \
   --web http://127.0.0.1:3000 --api http://127.0.0.1:42070 --compliance http://127.0.0.1:42071 \
   --monitor http://127.0.0.1:42073 --rpc https://rpc.testnet.chain.robinhood.com --flows \
   --report ../docs/runbooks/testnet-e2e.md                                 # + C: real flows and attested edge cases
@@ -70,7 +70,7 @@ available in your region" while `/portfolio` still lets you exit.
 - Weekend: from Fri 16:00 ET the borrow buffer ramps in, the feed freezes Fri 20:00 ET → Sun 20:00 ET, vault mints and
   instant withdrawals pause (requests still accepted), and `curl localhost:42073/weekends` records each milestone.
 - Live drills pass 2 after 2026-09-30 12:03 UTC: `TESTNET_GO=yes TESTNET_DEPLOYER_KEY=… DRILL_RAN_BY="<name>"
-  pnpm --filter @stockline/devnet drive live-drills --rpc https://rpc.testnet.chain.robinhood.com`.
+  pnpm --filter @lendora/devnet drive live-drills --rpc https://rpc.testnet.chain.robinhood.com`.
 
 **5. Out of scope on testnet** (covered on anvil and forks; say so, don't try to force them): liquidations, guard trips
 from feed deviations or a stale feed, issuer pause/blocklist, a > 2× re-anchor, bad debt, wrapper/USDG shortfall, vault

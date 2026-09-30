@@ -1,7 +1,7 @@
 "use client";
 import {useEffect, useState} from "react";
 import {useAccount, useSignMessage} from "wagmi";
-import {alertSettingsMessage, type AlertSettings} from "@stockline/sdk";
+import {alertSettingsMessage, type AlertSettings} from "@lendora/sdk";
 import {Button, Notice} from "./ui";
 
 /** 06 `/alerts` (APP-R8): HF threshold, channels, weekend warning; saved with a signed message (no gas). */

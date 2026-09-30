@@ -1,4 +1,4 @@
-# Stockline litepaper
+# Lendora litepaper
 
 **The stock lending layer for Robinhood Chain**
 
@@ -10,7 +10,7 @@
 
 Robinhood Chain brought 190+ tokenized US stocks and ETFs onchain. Today they do one thing: sit in wallets. Holders earn nothing, traders can't short, and on weekends nothing ties token prices to the real market.
 
-Stockline is a lending layer for Stock Tokens, built on Morpho Blue. Holders lend their stocks and earn fees. Traders borrow stocks to short, hedge and arbitrage. Stablecoin holders earn price-neutral yield through a delta-neutral vault. And because every borrow is onchain, Stockline publishes the first real-time short-interest data for tokenized equities.
+Lendora is a lending layer for Stock Tokens, built on Morpho Blue. Holders lend their stocks and earn fees. Traders borrow stocks to short, hedge and arbitrage. Stablecoin holders earn price-neutral yield through a delta-neutral vault. And because every borrow is onchain, Lendora publishes the first real-time short-interest data for tokenized equities.
 
 ## 1. The problem
 
@@ -25,7 +25,7 @@ In traditional markets, stock lending is a core part of market plumbing: it pays
 
 ## 2. The solution
 
-Stockline adds four pieces.
+Lendora adds four pieces.
 
 ### 2.1 Stock lending markets
 For each listed stock there's a Morpho market where **the stock is the loan asset**.
@@ -38,14 +38,14 @@ Lenders don't have to choose between yield and liquidity. Their receipt tokens c
 ### 2.3 The delta-neutral vault
 For stablecoin holders who don't want stock risk:
 1. Deposit USDG.
-2. The vault buys Stock Tokens and lends most of them through Stockline.
+2. The vault buys Stock Tokens and lends most of them through Lendora.
 3. It shorts the same amount on perps, so price moves cancel out.
 4. Depositors earn **lending fees plus funding rates**, paid in USDG.
 
-The vault is also Stockline's biggest natural lender, which solves the supply side of the market.
+The vault is also Lendora's biggest natural lender, which solves the supply side of the market.
 
 ### 2.4 Live short interest
-Every borrow is public. Stockline publishes per-stock supply, borrowed amount, utilization and borrow rate in real time, both onchain and through an API. In TradFi, short interest is reported twice a month with a delay. Research such as Boehmer, Jones & Zhang (2008) shows it predicts returns. Traders, perp venues and AI agents can all use it.
+Every borrow is public. Lendora publishes per-stock supply, borrowed amount, utilization and borrow rate in real time, both onchain and through an API. In TradFi, short interest is reported twice a month with a delay. Research such as Boehmer, Jones & Zhang (2008) shows it predicts returns. Traders, perp venues and AI agents can all use it.
 
 ## 3. How it works
 
@@ -83,7 +83,7 @@ Borrowers pay interest set by Morpho's utilization-based rate model: the more of
 | Backstop stakers | ~5% |
 | Protocol treasury | ~5% |
 
-All fees are in USDG. Stockline launches **without a token**. Usage-based points may follow. A governance token, deciding listed stocks and risk parameters and staked as first-loss capital, would come only once the protocol generates real revenue, and subject to legal review.
+All fees are in USDG. Lendora launches **without a token**. Usage-based points may follow. A governance token, deciding listed stocks and risk parameters and staked as first-loss capital, would come only once the protocol generates real revenue, and subject to legal review.
 
 ## 6. Why Robinhood Chain
 
@@ -107,7 +107,7 @@ All fees are in USDG. Stockline launches **without a token**. Usage-based points
 
 ## 8. Risks
 
-Stockline involves smart contract, oracle, liquidation, short-squeeze, perp-venue and regulatory risks. Borrow demand and lender yields are not guaranteed; fees on widely held stocks are typically low. Stock Tokens are not available in the US, Canada, UK, Switzerland or UAE, and Stockline will restrict access accordingly. Nothing here is an offer of securities or investment advice.
+Lendora involves smart contract, oracle, liquidation, short-squeeze, perp-venue and regulatory risks. Borrow demand and lender yields are not guaranteed; fees on widely held stocks are typically low. Stock Tokens are not available in the US, Canada, UK, Switzerland or UAE, and Lendora will restrict access accordingly. Nothing here is an offer of securities or investment advice.
 
 ## References
 

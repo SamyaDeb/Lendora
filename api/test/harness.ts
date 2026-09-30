@@ -1,6 +1,6 @@
-import {ChainDriver, seedWeek, startAnvil, startPostgres, startRedis, type Anvil, type SeedResult, type Service} from "@stockline/devnet";
-import {startIndexer, type IndexerHandle} from "@stockline/indexer/harness";
-import {getDeployment} from "@stockline/sdk";
+import {ChainDriver, seedWeek, startAnvil, startPostgres, startRedis, type Anvil, type SeedResult, type Service} from "@lendora/devnet";
+import {startIndexer, type IndexerHandle} from "@lendora/indexer/harness";
+import {getDeployment} from "@lendora/sdk";
 import type {ApiConfig} from "../src/config.js";
 import {startApi, type RunningApi} from "../src/server.js";
 

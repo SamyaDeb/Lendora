@@ -5,11 +5,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IMorpho, MarketParams, Position, Authorization, Signature} from "morpho-blue/src/interfaces/IMorpho.sol";
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
-import {StocklineRouter} from "../../src/StocklineRouter.sol";
-import {IStocklineRouter} from "../../src/interfaces/IStocklineRouter.sol";
+import {LendoraRouter} from "../../src/LendoraRouter.sol";
+import {ILendoraRouter} from "../../src/interfaces/ILendoraRouter.sol";
 import {IVaultV2Min} from "../../src/interfaces/external/IMorphoVaultV2.sol";
 import {MockSwapAggregator} from "../mocks/MockSwapAggregator.sol";
-import {LocalStockline} from "../utils/LocalStockline.sol";
+import {LocalLendora} from "../utils/LocalLendora.sol";
 
 /// @notice Branch coverage for the router's exits and helpers (remediation task 6): deadline, zero-amount and
 /// not-listed branches of every exit, permit / Morpho-signature failure paths, `repay` by `type(uint256).max`,
@@ -17,7 +17,7 @@ import {LocalStockline} from "../utils/LocalStockline.sol";
 /// suite). Exits never need an attestation (CP-R4), so none is passed here.
 /// forge-config: default.isolate = true
 /// forge-config: ci.isolate = true
-contract StocklineRouterBranchesTest is LocalStockline {
+contract LendoraRouterBranchesTest is LocalLendora {
     using MarketParamsLib for MarketParams;
 
     uint256 internal constant NVDA = 1;
@@ -25,7 +25,7 @@ contract StocklineRouterBranchesTest is LocalStockline {
     address internal alice = makeAddr("alice");
     address internal nvda;
     IMorpho internal morpho;
-    StocklineRouter internal router;
+    LendoraRouter internal router;
     address internal constant UNLISTED = address(0xbeef);
 
     function setUp() public override {
@@ -43,7 +43,7 @@ contract StocklineRouterBranchesTest is LocalStockline {
     }
 
     function _open(address who, uint256 coll, uint256 amount) internal {
-        IStocklineRouter.Attestation memory att = _attest(who);
+        ILendoraRouter.Attestation memory att = _attest(who);
         vm.prank(who);
         router.borrow(nvda, coll, amount, who, att, block.timestamp);
     }
@@ -51,9 +51,9 @@ contract StocklineRouterBranchesTest is LocalStockline {
     function _swap(address tokenIn, address tokenOut, uint256 amountIn, uint256 minOut)
         internal
         view
-        returns (IStocklineRouter.Swap memory)
+        returns (ILendoraRouter.Swap memory)
     {
-        return IStocklineRouter.Swap({
+        return ILendoraRouter.Swap({
             target: address(m.dex),
             data: abi.encodeCall(MockSwapAggregator.swap, (tokenIn, tokenOut, amountIn, 0, address(router))),
             amountIn: amountIn,
@@ -66,23 +66,23 @@ contract StocklineRouterBranchesTest is LocalStockline {
     function test_RT_R6_exitsCheckDeadline() public {
         uint256 past = block.timestamp - 1;
         vm.startPrank(alice);
-        vm.expectRevert(IStocklineRouter.Expired.selector);
+        vm.expectRevert(ILendoraRouter.Expired.selector);
         router.withdrawLend(nvda, 1, 0, alice, past);
-        vm.expectRevert(IStocklineRouter.Expired.selector);
+        vm.expectRevert(ILendoraRouter.Expired.selector);
         router.closeShort(nvda, 1, _swap(address(m.usdg), nvda, 1, 0), alice, past);
-        vm.expectRevert(IStocklineRouter.Expired.selector);
+        vm.expectRevert(ILendoraRouter.Expired.selector);
         router.addCollateral(nvda, 1, alice, past);
-        vm.expectRevert(IStocklineRouter.Expired.selector);
+        vm.expectRevert(ILendoraRouter.Expired.selector);
         router.repay(nvda, 1, 0, alice, past);
-        vm.expectRevert(IStocklineRouter.Expired.selector);
+        vm.expectRevert(ILendoraRouter.Expired.selector);
         router.withdrawCollateral(nvda, 1, alice, past);
         vm.stopPrank();
     }
 
     function test_RT_exitsRejectUnconfiguredMarkets() public {
-        IStocklineRouter.Attestation memory att = _attest(alice);
+        ILendoraRouter.Attestation memory att = _attest(alice);
         vm.startPrank(alice);
-        bytes memory notListed = abi.encodeWithSelector(IStocklineRouter.NotListed.selector, UNLISTED);
+        bytes memory notListed = abi.encodeWithSelector(ILendoraRouter.NotListed.selector, UNLISTED);
         vm.expectRevert(notListed);
         router.withdrawLend(UNLISTED, 1, 0, alice, block.timestamp);
         vm.expectRevert(notListed);
@@ -100,9 +100,9 @@ contract StocklineRouterBranchesTest is LocalStockline {
 
     function test_RT_zeroAmountsOnExits() public {
         vm.startPrank(alice);
-        vm.expectRevert(IStocklineRouter.ZeroAmount.selector);
+        vm.expectRevert(ILendoraRouter.ZeroAmount.selector);
         router.repay(nvda, 0, 0, alice, block.timestamp); // neither assets nor shares
-        vm.expectRevert(IStocklineRouter.ZeroAmount.selector);
+        vm.expectRevert(ILendoraRouter.ZeroAmount.selector);
         router.withdrawCollateral(nvda, 0, alice, block.timestamp);
         vm.stopPrank();
     }
@@ -137,7 +137,7 @@ contract StocklineRouterBranchesTest is LocalStockline {
         uint256 more = router.lend(nvda, 1e18, 0, alice, block.timestamp);
         uint256 assets = IVaultV2Min(ds[NVDA].vault).previewRedeem(more);
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(IStocklineRouter.InsufficientOutput.selector, assets, assets + 1));
+        vm.expectRevert(abi.encodeWithSelector(ILendoraRouter.InsufficientOutput.selector, assets, assets + 1));
         router.withdrawLend(nvda, more, assets + 1, alice, block.timestamp);
     }
 
@@ -159,18 +159,18 @@ contract StocklineRouterBranchesTest is LocalStockline {
     // (openShort/closeShort through the live pools); coverage runs include the fork suites.
 
     function test_RT_R3_revertingSwapTargetBubblesItsError() public {
-        IStocklineRouter.Swap memory s = _swap(nvda, address(m.usdg), 10e18, 0);
+        ILendoraRouter.Swap memory s = _swap(nvda, address(m.usdg), 10e18, 0);
         s.data = abi.encodeWithSignature("doesNotExist()");
-        IStocklineRouter.Attestation memory att = _attest(alice);
+        ILendoraRouter.Attestation memory att = _attest(alice);
         vm.prank(alice);
         vm.expectRevert();
         router.openShort(nvda, 5000e6, 10e18, s, false, alice, att, block.timestamp);
     }
 
     function test_RT_openShortRejectsSwapLargerThanBorrow() public {
-        IStocklineRouter.Attestation memory att = _attest(alice);
+        ILendoraRouter.Attestation memory att = _attest(alice);
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(IStocklineRouter.InsufficientOutput.selector, 10e18, 11e18));
+        vm.expectRevert(abi.encodeWithSelector(ILendoraRouter.InsufficientOutput.selector, 10e18, 11e18));
         router.openShort(
             nvda, 5000e6, 10e18, _swap(nvda, address(m.usdg), 11e18, 0), false, alice, att, block.timestamp
         );
@@ -197,21 +197,21 @@ contract StocklineRouterBranchesTest is LocalStockline {
     // ------------------------------------------------------------------ initialize (RT-R7)
 
     function test_RT_R7_initializeRejectsZeroOwner() public {
-        StocklineRouter impl = new StocklineRouter(m.morpho, address(core.clUSDG));
-        vm.expectRevert(IStocklineRouter.ZeroAddress.selector);
-        new ERC1967Proxy(address(impl), abi.encodeCall(StocklineRouter.initialize, (address(0), signer.addr, 1)));
+        LendoraRouter impl = new LendoraRouter(m.morpho, address(core.clUSDG));
+        vm.expectRevert(ILendoraRouter.ZeroAddress.selector);
+        new ERC1967Proxy(address(impl), abi.encodeCall(LendoraRouter.initialize, (address(0), signer.addr, 1)));
     }
 
     // ------------------------------------------------------------------ admin setters: zero-address guards
 
     function test_RT_setSwapTargetRejectsZeroAndClUsdg() public {
         vm.startPrank(address(core.timelock));
-        vm.expectRevert(IStocklineRouter.ZeroAddress.selector);
-        router.setSwapTarget(address(0), IStocklineRouter.SwapMode.Approve);
-        vm.expectRevert(IStocklineRouter.ZeroAddress.selector);
-        router.setSwapTarget(address(core.clUSDG), IStocklineRouter.SwapMode.Approve);
+        vm.expectRevert(ILendoraRouter.ZeroAddress.selector);
+        router.setSwapTarget(address(0), ILendoraRouter.SwapMode.Approve);
+        vm.expectRevert(ILendoraRouter.ZeroAddress.selector);
+        router.setSwapTarget(address(core.clUSDG), ILendoraRouter.SwapMode.Approve);
         vm.stopPrank();
-        vm.expectRevert(IStocklineRouter.ZeroAddress.selector);
-        new StocklineRouter(m.morpho, address(0));
+        vm.expectRevert(ILendoraRouter.ZeroAddress.selector);
+        new LendoraRouter(m.morpho, address(0));
     }
 }

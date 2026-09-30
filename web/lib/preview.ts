@@ -13,11 +13,11 @@ import {
   nextEvent,
   utilization,
   utilizationPlus,
-} from "@stockline/sdk";
+} from "@lendora/sdk";
 import {currentDebt, stockMarketState, type MarketChainState} from "./chain";
 
 /**
- * The Borrow/Short preview panel (06 §Preview panel), computed only with @stockline/sdk from chain state, so it
+ * The Borrow/Short preview panel (06 §Preview panel), computed only with @lendora/sdk from chain state, so it
  * matches the contracts (the e2e test compares it with the onchain result, 06 acceptance).
  */
 export interface PreviewInput {

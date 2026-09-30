@@ -3,7 +3,7 @@
  *
  *   scripts/mainnet-launch.sh [--dry-run] [--apply] [--services-env FILE] [--skip-suite] [--skip-fork-suites]
  *
- * Real launch: I_HAVE_THE_OWNERS_GO=1 (set by the operator after the owner's written go), every STOCKLINE_* role,
+ * Real launch: I_HAVE_THE_OWNERS_GO=1 (set by the operator after the owner's written go), every LENDORA_* role,
  * LAUNCH_DEPLOYER, LAUNCH_SIGNER=ledger|trezor|aws|gcp, ROBINHOOD_RPC_URL (the real endpoint). Dry run: the same env
  * against a local anvil fork of 4663, no go, publishes into a temp copy of the address book.
  */

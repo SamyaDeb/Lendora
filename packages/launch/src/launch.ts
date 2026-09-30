@@ -1,7 +1,7 @@
 import {existsSync, mkdirSync, readFileSync, writeFileSync} from "node:fs";
 import {join} from "node:path";
 import {createPublicClient, erc20Abi, formatEther, http, type PublicClient} from "viem";
-import {getExternal} from "@stockline/sdk";
+import {getExternal} from "@lendora/sdk";
 import {checkBuild, checkChain, checkDisk, checkGates, checkRoles, checkSafes, checkSigner, checkTools, checkTree, Refusal, type Run, type SignerMode} from "./checks.js";
 import {publishDeployment} from "./publish.js";
 import {applyPlan, describePlan, parseServiceEnv, planProblems} from "./services.js";
@@ -121,7 +121,7 @@ export async function launch(o: LaunchOptions): Promise<State> {
     const summary = [
       `Chain 4663 (Robinhood Chain mainnet)${o.dryRun ? " — DRY RUN on a local anvil fork" : ""}`,
       `Deployer ${deployer} (signer: ${signer.mode})`,
-      ...Object.entries(roles).map(([r, a]) => `  STOCKLINE_${r.padEnd(19)} ${a}`),
+      ...Object.entries(roles).map(([r, a]) => `  LENDORA_${r.padEnd(19)} ${a}`),
       "Caps: 25% of the D8 targets (SPY $250k, NVDA $250k, AAPL $62.5k), global clUSDG cap $4M, DN vault caps 0 (MN-R3, MN-R7)",
       `Type "${expected}" to broadcast.`,
     ].join("\n");
@@ -145,7 +145,7 @@ export async function launch(o: LaunchOptions): Promise<State> {
 
   // ---- 5. verify: VerifyRoles (every row PASS), explorer
   if (!state.steps.verify) {
-    const v = o.run("forge", ["script", "script/VerifyRoles.s.sol", "--rpc-url", rpcUrl!], {cwd: contracts, env: {...o.env, STOCKLINE_DEPLOYMENT_JSON: `deployments/${out}.json`, STOCKLINE_DEPLOYER: deployer!}});
+    const v = o.run("forge", ["script", "script/VerifyRoles.s.sol", "--rpc-url", rpcUrl!], {cwd: contracts, env: {...o.env, LENDORA_DEPLOYMENT_JSON: `deployments/${out}.json`, LENDORA_DEPLOYER: deployer!}});
     const table = v.stdout.split("\n").map((l) => l.trim()).filter((l) => l.startsWith("|") || /^VerifyRoles: \d+\/\d+ pass/.test(l));
     writeFileSync(join(contracts, "deployments", `${out}.verify-roles.md`), `${table.join("\n")}\n`);
     if (v.status !== 0 || table.some((l) => l.includes("**FAIL**"))) throw new Refusal("verify", [`VerifyRoles failed: ${table.filter((l) => l.includes("FAIL")).slice(0, 5).join(" ")} (table in deployments/${out}.verify-roles.md)`]);
@@ -163,7 +163,7 @@ export async function launch(o: LaunchOptions): Promise<State> {
   if (pub.problems.length) throw new Refusal("publish", pub.problems);
   o.log(`[publish] ${pub.changed ? "wrote" : "unchanged:"} ${book} chains["4663"]`);
   if (!o.dryRun && !state.steps.publish) {
-    for (const [cmd, args, cwd] of [["node", ["packages/sdk/scripts/export-abis.mjs"], o.root], ["pnpm", ["--filter", "@stockline/sdk", "build"], o.root], ["pnpm", ["--filter", "@stockline/api", "openapi"], o.root]] as const) {
+    for (const [cmd, args, cwd] of [["node", ["packages/sdk/scripts/export-abis.mjs"], o.root], ["pnpm", ["--filter", "@lendora/sdk", "build"], o.root], ["pnpm", ["--filter", "@lendora/api", "openapi"], o.root]] as const) {
       const r = o.run(cmd, [...args], {cwd});
       if (r.status !== 0) throw new Refusal("publish", [`${cmd} ${args.join(" ")} failed`]);
     }

@@ -31,8 +31,8 @@ liquidators are not active for this market, cannot unwrap `clUSDG`, or the trade
 ## Commands
 
 ```sh
-# Manual liquidation through the fallback liquidator (StocklineLiquidator; Morpho callback unwraps clUSDG)
-DRY_RUN=false KEEPER_SIGNER=env-key pnpm --filter @stockline/keepers liquidator   # one bot tick liquidates all HF < 1
+# Manual liquidation through the fallback liquidator (LendoraLiquidator; Morpho callback unwraps clUSDG)
+DRY_RUN=false KEEPER_SIGNER=env-key pnpm --filter @lendora/keepers liquidator   # one bot tick liquidates all HF < 1
 # Or directly as any address holding the stock: wrap, then Morpho liquidate by shares, then unwrap the seized clUSDG
 cast send $WRAPPER "wrap(uint256,address)" <raw> <you>
 cast send $MORPHO "liquidate((address,address,address,address,uint256),address,uint256,uint256,bytes)" "$MP" <borrower> 0 <shares> 0x

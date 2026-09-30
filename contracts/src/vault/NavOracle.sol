@@ -9,7 +9,7 @@ import {INavOracle} from "../interfaces/INavOracle.sol";
 import {IDeltaNeutralVault} from "../interfaces/IDeltaNeutralVault.sol";
 import {IStrategyManager} from "../interfaces/IStrategyManager.sol";
 import {IPerpAdapter} from "../interfaces/IPerpAdapter.sol";
-import {IStocklineOracle} from "../interfaces/IStocklineOracle.sol";
+import {ILendoraOracle} from "../interfaces/ILendoraOracle.sol";
 
 /// @title NavOracle
 /// @notice The delta-neutral vault's NAV (DN-R4, DN-R14) and its freshness (DN-R5). See `INavOracle`.
@@ -174,7 +174,7 @@ contract NavOracle is INavOracle, EIP712, Ownable {
             IStrategyManager.Sleeve memory s = STRATEGY.sleeve(i);
             // A tripped stock oracle guard (stale or insane feed, issuer pause, …) means the spot mark can't be
             // trusted.
-            if (IStocklineOracle(s.oracle).guardReasons() != 0 && STRATEGY.spotUnits(i) > 0) return false;
+            if (ILendoraOracle(s.oracle).guardReasons() != 0 && STRATEGY.spotUnits(i) > 0) return false;
         }
         return true;
     }

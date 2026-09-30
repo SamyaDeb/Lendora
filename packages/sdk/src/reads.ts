@@ -1,5 +1,5 @@
 import type {PublicClient} from "viem";
-import {adaptiveCurveIrmAbi, erc20Abi, marketAdapterAbi, mockSwapAggregatorAbi, morphoAbi, stocklineOracleAbi, stocklineRouterAbi, stockWrapperAbi, vaultV2Abi} from "./abis.js";
+import {adaptiveCurveIrmAbi, erc20Abi, marketAdapterAbi, mockSwapAggregatorAbi, morphoAbi, lendoraOracleAbi, lendoraRouterAbi, stockWrapperAbi, vaultV2Abi} from "./abis.js";
 import type {ChainDeployment} from "./addresses.js";
 import {bufferConfigFor} from "./calendar/schedule.js";
 import {expectedMarketBalances, toAssetsUp} from "./math/morpho.js";
@@ -60,18 +60,18 @@ export async function readMarket(client: PublicClient, d: ChainDeployment, ticke
     client.readContract({address, abi: abi as never, functionName: functionName as never, args: args as never}) as Promise<unknown>;
   const [block, stockAns, usdgAns, params, floor, buffer, reasons, multiplier, market, rat, idle, adapterAssets, cap] = await Promise.all([
     client.getBlock(),
-    r(s.oracle, stocklineOracleAbi, "stockAnswer"),
-    r(s.oracle, stocklineOracleAbi, "usdgAnswer"),
-    r(s.oracle, stocklineOracleAbi, "params"),
-    r(s.oracle, stocklineOracleAbi, "bufferFloor"),
-    r(s.oracle, stocklineOracleAbi, "buffer"),
-    r(s.oracle, stocklineOracleAbi, "guardReasons"),
+    r(s.oracle, lendoraOracleAbi, "stockAnswer"),
+    r(s.oracle, lendoraOracleAbi, "usdgAnswer"),
+    r(s.oracle, lendoraOracleAbi, "params"),
+    r(s.oracle, lendoraOracleAbi, "bufferFloor"),
+    r(s.oracle, lendoraOracleAbi, "buffer"),
+    r(s.oracle, lendoraOracleAbi, "guardReasons"),
     r(s.wrapper, stockWrapperAbi, "multiplier"),
     r(d.morpho, morphoAbi, "market", [s.marketId]),
     r(d.adaptiveCurveIrm, adaptiveCurveIrmAbi, "rateAtTarget", [s.marketId]),
     r(s.wrapper, erc20Abi, "balanceOf", [s.vault]),
     r(s.adapter, marketAdapterAbi, "expectedSupplyAssets", [s.marketId]),
-    user ? r(d.router!, stocklineRouterAbi, "capOf", [user, s.stockToken]) : Promise.resolve(BigInt(s.perAddressCapUsd) * 10n ** 18n),
+    user ? r(d.router!, lendoraRouterAbi, "capOf", [user, s.stockToken]) : Promise.resolve(BigInt(s.perAddressCapUsd) * 10n ** 18n),
   ]);
   const p = params as {zWad: bigint; sigmaWad: bigint; bMinWad: bigint; bMaxWad: bigint; rampIn: number};
   const out: MarketChainState = {

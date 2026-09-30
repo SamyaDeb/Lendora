@@ -1,9 +1,9 @@
 # Runbook · Governance change (`TIMELOCK_SCHEDULED` MON-R16 P1, `TIMELOCK_EXECUTED` MON-R17 P1 / `_UNTRACKED` P0, `ROLE_CHANGED` MON-R18 P0)
 
 **Trigger.**
-- `TIMELOCK_SCHEDULED`: a `CallScheduled` on the Stockline `TimelockController`, a `Cancelled`, or a Vault V2 curator
+- `TIMELOCK_SCHEDULED`: a `CallScheduled` on the Lendora `TimelockController`, a `Cancelled`, or a Vault V2 curator
   `Submit` / `Revoke` (each vault's own timelock). The page title is the call decoded by the SDK
-  (`decodeStocklineCall`), e.g. `router.setSwapTarget(0x…, 2)` or `vault:NVDA.setPerformanceFeeRecipient(0x…)`.
+  (`decodeLendoraCall`), e.g. `router.setSwapTarget(0x…, 2)` or `vault:NVDA.setPerformanceFeeRecipient(0x…)`.
   Auto-resolves after 72h.
 - `TIMELOCK_EXECUTED`: the matching `CallExecuted` / vault `Accept`. **P0 `TIMELOCK_EXECUTED_UNTRACKED`** when the
   monitor never saw (and paged) the schedule: nobody had the 48h to react. Auto-resolves after 24h.
@@ -21,7 +21,7 @@ mistake, or an undocumented change.
 ## First 5 minutes
 
 1. Is it in the change log? Every planned owner action has a ticket with its `scheduleCalldata` and salt
-   (`pnpm --filter @stockline/sdk timelock …`). Compare the page's decoded call and `id` with the ticket.
+   (`pnpm --filter @lendora/sdk timelock …`). Compare the page's decoded call and `id` with the ticket.
 2. Expected → acknowledge; note the execution time (`executableAt` / scheduled + delay) in the ticket.
 3. **Not expected** → treat as P0: page the owner signers and the guardian, and freeze the change (below).
 4. `ROLE_CHANGED` without a matching executed timelock operation in the last 48h → P0: something bypassed the path

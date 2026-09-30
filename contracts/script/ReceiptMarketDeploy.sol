@@ -6,7 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IMorpho, MarketParams, Id} from "morpho-blue/src/interfaces/IMorpho.sol";
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
 import {ReceiptCollateralOracle} from "../src/oracles/ReceiptCollateralOracle.sol";
-import {StocklineOracleBase} from "../src/oracles/StocklineOracleBase.sol";
+import {LendoraOracleBase} from "../src/oracles/LendoraOracleBase.sol";
 import {VaultV2Ids} from "../src/libraries/VaultV2Ids.sol";
 import {
     IVaultV2Min,
@@ -14,7 +14,7 @@ import {
     IMorphoMarketV1AdapterV2Min,
     IMorphoMarketV1AdapterV2FactoryMin
 } from "../src/interfaces/external/IMorphoVaultV2.sol";
-import {StocklineDeploy} from "./StocklineDeploy.sol";
+import {LendoraDeploy} from "./LendoraDeploy.sol";
 
 /// @notice The Vault V2 allocator call the receipt USDG vault needs (not in the frozen `IVaultV2Min`).
 interface IVaultV2Liquidity {
@@ -28,7 +28,7 @@ interface IVaultV2Liquidity {
 
 /// @title ReceiptMarketDeploy
 /// @notice G5 receipt market (docs/prd/05-collateral-router.md §3; A3 of the Phase 4 session): lenders post `rSTOCK`
-/// (a Stockline Vault V2 share) to borrow USDG. Two stages with different trust:
+/// (a Lendora Vault V2 share) to borrow USDG. Two stages with different trust:
 ///
 /// 1. **Deploy (anyone, keeps no power):** `ReceiptCollateralOracle` owned by the timelock from construction → the
 ///    Morpho market (USDG loan, `rSTOCK` collateral, AdaptiveCurveIrm, **LLTV 62.5%**; `createMarket` is
@@ -39,7 +39,7 @@ interface IVaultV2Liquidity {
 /// 2. **List (curator multisig, through the vault's own 48h timelock):** the three cap ids raised (absolute to the
 ///    listing cap, relative to 100%): six `submit`s encoded by the SDK tool (`receipt.list`), executable after 48h.
 ///    CL-R10: on 4663 the listing is only encoded once the stock market has run 30 days since launch.
-abstract contract ReceiptMarketDeploy is StocklineDeploy {
+abstract contract ReceiptMarketDeploy is LendoraDeploy {
     using MarketParamsLib for MarketParams;
 
     Vm private constant VM_R = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
@@ -98,7 +98,7 @@ abstract contract ReceiptMarketDeploy is StocklineDeploy {
         require(IMorpho(r.morpho).isLltvEnabled(RECEIPT_LLTV), "receipt: LLTV 62.5% not enabled on Morpho");
         require(IERC20(r.usdg).balanceOf(deployer) >= 2 * USDG_SEED, "deployer needs 2 * USDG_SEED raw USDG");
         d.oracle = new ReceiptCollateralOracle(
-            StocklineOracleBase.Deployment({
+            LendoraOracleBase.Deployment({
                 stockFeed: r.feed,
                 usdgFeed: r.usdgFeed,
                 stockToken: r.stockToken,
@@ -129,7 +129,7 @@ abstract contract ReceiptMarketDeploy is StocklineDeploy {
 
     function _configureReceiptVault(address deployer, ReceiptConfig memory r, ReceiptDeployment memory d) internal {
         IVaultV2Min v = IVaultV2Min(d.usdgVault);
-        v.setName(string.concat("Stockline USDG (r", r.ticker, " loans)"));
+        v.setName(string.concat("Lendora USDG (r", r.ticker, " loans)"));
         v.setSymbol(string.concat("sUSDG-r", r.ticker));
         v.setCurator(deployer); // temporary; all timelocks are still 0
         _curate(v, abi.encodeCall(IVaultV2Min.setIsAllocator, (r.allocator, true)));

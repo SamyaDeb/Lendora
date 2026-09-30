@@ -3,7 +3,7 @@ import {mulDivDown, WAD} from "./wad.js";
 
 /**
  * Oracle, buffer and health-factor math (docs/prd/04-oracle.md). Mirrors `contracts/src/libraries/OracleMath.sol` and
- * `StocklineOracleBase.bufferAt` operation for operation (floor at each step), so results match exactly (OR-R1, OR-R22).
+ * `LendoraOracleBase.bufferAt` operation for operation (floor at each step), so results match exactly (OR-R1, OR-R22).
  * All amounts are bigint in raw units; timestamps are bigint UTC seconds.
  */
 
@@ -115,7 +115,7 @@ function closureWindow(p: BufferParams, close: bigint, reopen: bigint, t: bigint
 
 const max = (a: bigint, b: bigint) => (a > b ? a : b);
 
-/** StocklineOracleBase.bufferAt(t, lastGoodUpdatedAt). */
+/** LendoraOracleBase.bufferAt(t, lastGoodUpdatedAt). */
 export function bufferAt(cfg: BufferConfig, t: bigint, lastGoodUpdatedAt: bigint): bigint {
   const p = cfg.params;
   const [prevClose, prevReopen, nextClose, nextReopen] = closureWindows(cfg.sessions, t);
@@ -150,7 +150,7 @@ export interface Position {
   borrowed: bigint;
 }
 
-/** Morpho price with the buffer at `t` and no new feed rounds (StocklineOracle.priceAt). */
+/** Morpho price with the buffer at `t` and no new feed rounds (LendoraOracle.priceAt). */
 export function priceAt(s: StockMarketState, t: bigint): bigint {
   return stockLoanPrice(s.valuePerToken, s.usdgAnswer, s.stockAnswer, bufferAt(s.buffer, t, s.stockUpdatedAt), s.scaleExp);
 }

@@ -4,18 +4,18 @@ pragma solidity 0.8.26;
 import {Script} from "forge-std/Script.sol";
 import {MainnetConfig} from "./MainnetConfig.sol";
 
-/// @notice Stockline on Robinhood Chain **mainnet (4663)** (Phase 3 task 7, mainnet-launch §3). No mocks: the live
+/// @notice Lendora on Robinhood Chain **mainnet (4663)** (Phase 3 task 7, mainnet-launch §3). No mocks: the live
 /// Morpho Blue, Vault V2 factories, Stock Tokens, USDG, Chainlink feeds and UniversalRouter; every role from
-/// `STOCKLINE_*` env with no default; checks MN-R1…MN-R3 before the first transaction.
+/// `LENDORA_*` env with no default; checks MN-R1…MN-R3 before the first transaction.
 ///
 /// **It refuses to run on chain 4663 at all (even a simulation) unless `I_HAVE_THE_OWNERS_GO=1`**, which is set only
 /// after the owner's written go is in the launch log (mainnet-launch §0 gates all ✅). Rehearsals use the fork test
 /// (`test/fork/phase3/DeployMainnet.fork.t.sol`) or the anvil test (`test/deploy/DeployMainnet.t.sol`) instead.
 ///
-///   export STOCKLINE_OWNER=… STOCKLINE_CURATOR=… STOCKLINE_GUARDIAN=… STOCKLINE_ALLOCATOR=…
-///   export STOCKLINE_GUARD_KEEPER=… STOCKLINE_TREASURY=… STOCKLINE_BACKSTOP_RESERVE=…
-///   export STOCKLINE_FEE_KEEPER=… STOCKLINE_ATTESTATION_SIGNER=…
-///   export STOCKLINE_DN_OPERATOR=… STOCKLINE_NAV_SIGNER_1=… STOCKLINE_NAV_SIGNER_2=…   (Phase 4, caps 0,
+///   export LENDORA_OWNER=… LENDORA_CURATOR=… LENDORA_GUARDIAN=… LENDORA_ALLOCATOR=…
+///   export LENDORA_GUARD_KEEPER=… LENDORA_TREASURY=… LENDORA_BACKSTOP_RESERVE=…
+///   export LENDORA_FEE_KEEPER=… LENDORA_ATTESTATION_SIGNER=…
+///   export LENDORA_DN_OPERATOR=… LENDORA_NAV_SIGNER_1=… LENDORA_NAV_SIGNER_2=…   (Phase 4, caps 0,
 /// MN-R7/R8)
 ///   I_HAVE_THE_OWNERS_GO=1 forge script script/DeployMainnet.s.sol --rpc-url $ROBINHOOD_RPC_URL \
 ///     --broadcast --slow --verify --sender <fresh deployer> <hardware-wallet or remote-signer flags>

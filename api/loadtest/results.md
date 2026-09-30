@@ -1,6 +1,6 @@
 # API load test (SI-R11)
 
-Run: `pnpm --filter @stockline/api loadtest --seconds 60 --clients 200 --rps 50` on 2026-09-27T16:16:57.909Z
+Run: `pnpm --filter @lendora/api loadtest --seconds 60 --clients 200 --rps 50` on 2026-09-27T16:16:57.909Z
 (local stack: anvil seed week → Ponder → Postgres → API with Redis fan-out; one machine generates all traffic).
 
 | Metric | Result | Target (SI-R11) |

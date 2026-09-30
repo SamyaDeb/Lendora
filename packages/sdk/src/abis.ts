@@ -1763,14 +1763,14 @@ export const marketHoursAbi = [
   }
 ] as const;
 
-export const stocklineOracleAbi = [
+export const lendoraOracleAbi = [
   {
     "type": "constructor",
     "inputs": [
       {
         "name": "d",
         "type": "tuple",
-        "internalType": "struct StocklineOracleBase.Deployment",
+        "internalType": "struct LendoraOracleBase.Deployment",
         "components": [
           {
             "name": "stockFeed",
@@ -1827,7 +1827,7 @@ export const stocklineOracleAbi = [
       {
         "name": "p",
         "type": "tuple",
-        "internalType": "struct IStocklineOracle.Params",
+        "internalType": "struct ILendoraOracle.Params",
         "components": [
           {
             "name": "zWad",
@@ -2510,7 +2510,7 @@ export const stocklineOracleAbi = [
       {
         "name": "",
         "type": "tuple",
-        "internalType": "struct IStocklineOracle.Params",
+        "internalType": "struct ILendoraOracle.Params",
         "components": [
           {
             "name": "zWad",
@@ -2728,7 +2728,7 @@ export const stocklineOracleAbi = [
       {
         "name": "p",
         "type": "tuple",
-        "internalType": "struct IStocklineOracle.Params",
+        "internalType": "struct ILendoraOracle.Params",
         "components": [
           {
             "name": "zWad",
@@ -2968,7 +2968,7 @@ export const stocklineOracleAbi = [
         "name": "params",
         "type": "tuple",
         "indexed": false,
-        "internalType": "struct IStocklineOracle.Params",
+        "internalType": "struct ILendoraOracle.Params",
         "components": [
           {
             "name": "zWad",
@@ -3162,7 +3162,7 @@ export const stocklineOracleAbi = [
   }
 ] as const;
 
-export const stocklineRouterAbi = [
+export const lendoraRouterAbi = [
   {
     "type": "constructor",
     "inputs": [
@@ -3362,7 +3362,7 @@ export const stocklineRouterAbi = [
       {
         "name": "att",
         "type": "tuple",
-        "internalType": "struct IStocklineRouter.Attestation",
+        "internalType": "struct ILendoraRouter.Attestation",
         "components": [
           {
             "name": "expiry",
@@ -3426,7 +3426,7 @@ export const stocklineRouterAbi = [
       {
         "name": "swap",
         "type": "tuple",
-        "internalType": "struct IStocklineRouter.Swap",
+        "internalType": "struct ILendoraRouter.Swap",
         "components": [
           {
             "name": "target",
@@ -3642,7 +3642,7 @@ export const stocklineRouterAbi = [
       {
         "name": "m",
         "type": "tuple",
-        "internalType": "struct IStocklineRouter.Market",
+        "internalType": "struct ILendoraRouter.Market",
         "components": [
           {
             "name": "wrapper",
@@ -3721,7 +3721,7 @@ export const stocklineRouterAbi = [
       {
         "name": "",
         "type": "tuple",
-        "internalType": "struct IStocklineRouter.Market",
+        "internalType": "struct ILendoraRouter.Market",
         "components": [
           {
             "name": "wrapper",
@@ -3888,7 +3888,7 @@ export const stocklineRouterAbi = [
       {
         "name": "swap",
         "type": "tuple",
-        "internalType": "struct IStocklineRouter.Swap",
+        "internalType": "struct ILendoraRouter.Swap",
         "components": [
           {
             "name": "target",
@@ -3925,7 +3925,7 @@ export const stocklineRouterAbi = [
       {
         "name": "att",
         "type": "tuple",
-        "internalType": "struct IStocklineRouter.Attestation",
+        "internalType": "struct ILendoraRouter.Attestation",
         "components": [
           {
             "name": "expiry",
@@ -4118,7 +4118,7 @@ export const stocklineRouterAbi = [
       {
         "name": "mode",
         "type": "uint8",
-        "internalType": "enum IStocklineRouter.SwapMode"
+        "internalType": "enum ILendoraRouter.SwapMode"
       }
     ],
     "outputs": [],
@@ -4138,7 +4138,7 @@ export const stocklineRouterAbi = [
       {
         "name": "",
         "type": "uint8",
-        "internalType": "enum IStocklineRouter.SwapMode"
+        "internalType": "enum ILendoraRouter.SwapMode"
       }
     ],
     "stateMutability": "view"
@@ -4468,7 +4468,7 @@ export const stocklineRouterAbi = [
         "name": "market",
         "type": "tuple",
         "indexed": false,
-        "internalType": "struct IStocklineRouter.Market",
+        "internalType": "struct ILendoraRouter.Market",
         "components": [
           {
             "name": "wrapper",
@@ -4682,7 +4682,7 @@ export const stocklineRouterAbi = [
         "name": "mode",
         "type": "uint8",
         "indexed": false,
-        "internalType": "enum IStocklineRouter.SwapMode"
+        "internalType": "enum ILendoraRouter.SwapMode"
       }
     ],
     "anonymous": false
@@ -4962,7 +4962,7 @@ export const stocklineRouterAbi = [
   }
 ] as const;
 
-export const stocklineLiquidatorAbi = [
+export const lendoraLiquidatorAbi = [
   {
     "type": "constructor",
     "inputs": [
@@ -5030,7 +5030,7 @@ export const stocklineLiquidatorAbi = [
       {
         "name": "l",
         "type": "tuple",
-        "internalType": "struct StocklineLiquidator.Liquidation",
+        "internalType": "struct LendoraLiquidator.Liquidation",
         "components": [
           {
             "name": "market",
@@ -5082,7 +5082,7 @@ export const stocklineLiquidatorAbi = [
           {
             "name": "swap",
             "type": "tuple",
-            "internalType": "struct StocklineLiquidator.Swap",
+            "internalType": "struct LendoraLiquidator.Swap",
             "components": [
               {
                 "name": "target",
@@ -5193,7 +5193,7 @@ export const stocklineLiquidatorAbi = [
       {
         "name": "mode",
         "type": "uint8",
-        "internalType": "enum StocklineLiquidator.SwapMode"
+        "internalType": "enum LendoraLiquidator.SwapMode"
       }
     ],
     "outputs": [],
@@ -5213,7 +5213,7 @@ export const stocklineLiquidatorAbi = [
       {
         "name": "",
         "type": "uint8",
-        "internalType": "enum StocklineLiquidator.SwapMode"
+        "internalType": "enum LendoraLiquidator.SwapMode"
       }
     ],
     "stateMutability": "view"
@@ -5307,7 +5307,7 @@ export const stocklineLiquidatorAbi = [
         "name": "mode",
         "type": "uint8",
         "indexed": false,
-        "internalType": "enum StocklineLiquidator.SwapMode"
+        "internalType": "enum LendoraLiquidator.SwapMode"
       }
     ],
     "anonymous": false
@@ -9890,7 +9890,7 @@ export const shortInterestLensAbi = [
       {
         "name": "",
         "type": "address",
-        "internalType": "contract IStocklineRouterMarkets"
+        "internalType": "contract ILendoraRouterMarkets"
       }
     ],
     "stateMutability": "view"

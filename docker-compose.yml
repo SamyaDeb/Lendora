@@ -1,25 +1,25 @@
-# Local Stockline stack, fully offline (Phase 2 task 0): Postgres (indexer + API), Redis (rate limits, WS fan-out) and
+# Local Lendora stack, fully offline (Phase 2 task 0): Postgres (indexer + API), Redis (rate limits, WS fan-out) and
 # anvil loaded with the DeployLocal state (packages/devnet/fixtures/anvil-state.hex = addresses.json["31337"]).
 #
 #   docker compose up -d                  # infra only
 #   scripts/dev.sh                        # infra + anvil + deploy + services (see the script)
 #
 # Local development only: no secrets here. Postgres trusts connections on the published port; never expose it.
-name: stockline
+name: lendora
 
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: stockline
-      POSTGRES_DB: stockline
+      POSTGRES_USER: lendora
+      POSTGRES_DB: lendora
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
-      - "127.0.0.1:${STOCKLINE_PG_PORT:-55432}:5432"
+      - "127.0.0.1:${LENDORA_PG_PORT:-55432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U stockline"]
+      test: ["CMD-SHELL", "pg_isready -U lendora"]
       interval: 2s
       timeout: 3s
       retries: 30
@@ -27,7 +27,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "127.0.0.1:${STOCKLINE_REDIS_PORT:-56379}:6379"
+      - "127.0.0.1:${LENDORA_REDIS_PORT:-56379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 2s
@@ -54,7 +54,7 @@ services:
     entrypoint: ["anvil"]
     command: ["--host", "0.0.0.0", "--chain-id", "31337", "--load-state", "/state/state.json"]
     ports:
-      - "127.0.0.1:${STOCKLINE_ANVIL_PORT:-8545}:8545"
+      - "127.0.0.1:${LENDORA_ANVIL_PORT:-8545}:8545"
     volumes:
       - anvilstate:/state:ro
     depends_on:

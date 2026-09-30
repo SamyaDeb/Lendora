@@ -4,8 +4,8 @@ pragma solidity 0.8.26;
 import {Script} from "forge-std/Script.sol";
 import {VmSafe} from "forge-std/Vm.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
-import {IStocklineOracle} from "../src/interfaces/IStocklineOracle.sol";
-import {StocklineOracleBase} from "../src/oracles/StocklineOracleBase.sol";
+import {ILendoraOracle} from "../src/interfaces/ILendoraOracle.sol";
+import {LendoraOracleBase} from "../src/oracles/LendoraOracleBase.sol";
 import {ReceiptMarketDeploy} from "./ReceiptMarketDeploy.sol";
 
 /// @notice G5 receipt market for one listed stock (A3; docs/runbooks/list-receipt-market.md). **Stage 1 only**: deploys
@@ -15,11 +15,11 @@ import {ReceiptMarketDeploy} from "./ReceiptMarketDeploy.sol";
 ///
 ///   (in packages/sdk) pnpm timelock receipt.list ticker=NVDA capUsdg=250000 --network <key>
 ///
-/// Inputs come from the address book (`packages/sdk/addresses.json`, key `STOCKLINE_NETWORK`): the stock's wrapper,
+/// Inputs come from the address book (`packages/sdk/addresses.json`, key `LENDORA_NETWORK`): the stock's wrapper,
 /// `rSTOCK` vault and feed; the oracle's guardian, keeper, sequencer feed, blocklist and parameters are copied from the
 /// live stock oracle so both markets share one risk configuration.
 ///
-///   Local / fork:   STOCKLINE_NETWORK=31337 TICKER=NVDA forge script script/ListReceiptMarket.s.sol \
+///   Local / fork:   LENDORA_NETWORK=31337 TICKER=NVDA forge script script/ListReceiptMarket.s.sol \
 ///                     --rpc-url http://127.0.0.1:8545 --broadcast --unlocked --sender <deployer>
 ///   Testnet:        + TESTNET_GO=yes (only after the owner's go)
 ///   Mainnet (4663): + I_HAVE_THE_OWNERS_GO=1 and STOCK_LAUNCH_TS=<launch unix ts>; refused before launch + 30 days
@@ -29,7 +29,7 @@ contract ListReceiptMarket is Script, ReceiptMarketDeploy {
     string internal constant BOOK = "../packages/sdk/addresses.json";
 
     function run() external returns (ReceiptDeployment memory d) {
-        string memory key = vm.envString("STOCKLINE_NETWORK");
+        string memory key = vm.envString("LENDORA_NETWORK");
         string memory ticker = vm.envString("TICKER");
         _checkNetwork(key, block.chainid);
         _assertListingWindow(block.chainid, vm.envOr("STOCK_LAUNCH_TS", uint256(0)), block.timestamp);
@@ -59,8 +59,8 @@ contract ListReceiptMarket is Script, ReceiptMarketDeploy {
     {
         string memory c = string.concat(".chains.", key, ".");
         string memory s = string.concat(c, "stocks.", ticker, ".");
-        StocklineOracleBase stockOracle = StocklineOracleBase(vm.parseJsonAddress(j, string.concat(s, "oracle")));
-        IStocklineOracle.Params memory p = stockOracle.params();
+        LendoraOracleBase stockOracle = LendoraOracleBase(vm.parseJsonAddress(j, string.concat(s, "oracle")));
+        ILendoraOracle.Params memory p = stockOracle.params();
         address timelock = vm.parseJsonAddress(j, string.concat(c, "timelock"));
         r = ReceiptConfig({
             ticker: ticker,
@@ -109,7 +109,7 @@ contract ListReceiptMarket is Script, ReceiptMarketDeploy {
     function _checkNetwork(string memory key, uint256 chainId) internal pure {
         bytes32 k = keccak256(bytes(key));
         uint256 expected = k == keccak256("fork-4663") ? 4663 : _parseUint(key);
-        require(expected == chainId, "STOCKLINE_NETWORK does not match the chain");
+        require(expected == chainId, "LENDORA_NETWORK does not match the chain");
     }
 
     function _checkGo(uint256 chainId) internal view {
@@ -126,9 +126,9 @@ contract ListReceiptMarket is Script, ReceiptMarketDeploy {
 
     function _parseUint(string memory s) internal pure returns (uint256 n) {
         bytes memory b = bytes(s);
-        require(b.length > 0 && b.length < 78, "bad STOCKLINE_NETWORK");
+        require(b.length > 0 && b.length < 78, "bad LENDORA_NETWORK");
         for (uint256 i; i < b.length; i++) {
-            require(b[i] >= "0" && b[i] <= "9", "bad STOCKLINE_NETWORK");
+            require(b[i] >= "0" && b[i] <= "9", "bad LENDORA_NETWORK");
             n = n * 10 + (uint8(b[i]) - 48);
         }
     }

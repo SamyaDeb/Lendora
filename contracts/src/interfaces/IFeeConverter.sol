@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-/// @title Stockline fee converter surface (docs/prd/09-backstop-fees.md FE-R4).
+/// @title Lendora fee converter surface (docs/prd/09-backstop-fees.md FE-R4).
 interface IFeeConverter {
     enum SwapMode {
         None,
@@ -46,7 +46,7 @@ interface IFeeConverter {
     function destination() external view returns (address);
     /// @notice The only account that may call `convert`.
     function keeper() external view returns (address);
-    /// @notice The `StocklineOracle` used to price and gate `vault`'s stock (zero = not convertible).
+    /// @notice The `LendoraOracle` used to price and gate `vault`'s stock (zero = not convertible).
     function oracleOf(address vault) external view returns (address);
     /// @notice How an allowlisted swap target is paid; `None` = not allowed.
     function swapModes(address target) external view returns (SwapMode);

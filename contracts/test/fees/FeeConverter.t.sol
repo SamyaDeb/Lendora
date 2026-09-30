@@ -7,7 +7,7 @@ import {FeeConverter} from "../../src/fees/FeeConverter.sol";
 import {IFeeConverter} from "../../src/interfaces/IFeeConverter.sol";
 import {MockSwapAggregator} from "../mocks/MockSwapAggregator.sol";
 import {MockUSDG} from "../mocks/MockUSDG.sol";
-import {LocalStockline} from "../utils/LocalStockline.sol";
+import {LocalLendora} from "../utils/LocalLendora.sol";
 import {IVaultV2Min} from "../../src/interfaces/external/IMorphoVaultV2.sol";
 
 /// @notice UniversalRouter-style target (`SwapMode.Transfer`): the input is transferred first, then `sell` pays USDG
@@ -35,7 +35,7 @@ contract TransferTarget {
 /// Vault V2 keeps `firstTotalAssets` in transient storage; `isolate` runs every top-level call as its own transaction.
 /// forge-config: default.isolate = true
 /// forge-config: ci.isolate = true
-contract FeeConverterTest is LocalStockline {
+contract FeeConverterTest is LocalLendora {
     uint256 internal constant NVDA = 1;
     uint256 internal constant SAT_0919_16Z = 1_789_833_600; // Sat 2026-09-19 12:00 ET: feed closed
 

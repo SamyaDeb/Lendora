@@ -2,7 +2,7 @@
 
 **Phase 4, gated on simulation.** Users deposit USDG. The vault buys Stock Tokens, lends most of them through `rSTOCK`,
 and shorts the same notional on a perp venue. Depositors earn lending fees plus funding, paid in USDG, with near-zero stock
-price exposure. It is also Stockline's biggest natural lender.
+price exposure. It is also Lendora's biggest natural lender.
 
 ## Scope
 

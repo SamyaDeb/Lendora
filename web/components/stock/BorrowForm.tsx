@@ -1,7 +1,7 @@
 "use client";
 import {useMemo, useRef, useState} from "react";
 import {formatUnits} from "viem";
-import {WAD} from "@stockline/sdk";
+import {WAD} from "@lendora/sdk";
 import type {BorrowFlow} from "@/lib/flows/useBorrowFlow";
 import {preview, type Preview} from "@/lib/preview";
 import {et, num, pct, until, wad} from "@/lib/format";
@@ -128,7 +128,7 @@ export function BorrowForm({f, price, available}: {f: BorrowFlow; price?: number
   );
 }
 
-/** 06 §Preview panel, computed by @stockline/sdk. Test ids and data-wad values are read by the e2e suite. */
+/** 06 §Preview panel, computed by @lendora/sdk. Test ids and data-wad values are read by the e2e suite. */
 function PreviewDetails({p, symbol, now, mode}: {p: Preview; symbol: string; now: number; mode: "short" | "borrow"}) {
   return (
     <section aria-labelledby="pv" data-testid="preview" className="space-y-2">

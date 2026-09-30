@@ -1,4 +1,4 @@
-import {resolveDeployment, type ChainDeployment, type DeploymentKey} from "@stockline/sdk";
+import {resolveDeployment, type ChainDeployment, type DeploymentKey} from "@lendora/sdk";
 
 /**
  * MN-R6: what the app may show on the network it serves. Pure functions of the chain id and the published deployment,
@@ -11,7 +11,7 @@ export function webDeployment(chainId: number, lookup?: (k: DeploymentKey) => Ch
 
 export type FaucetKind = "testnet" | "local" | null;
 
-/** The testnet StocklineFaucet (contracts/testnet): `claim(to)`, once per address per cooldown (`TooSoon`). */
+/** The testnet LendoraFaucet (contracts/testnet): `claim(to)`, once per address per cooldown (`TooSoon`). */
 export const faucetAbi = [
   {type: "function", name: "claim", stateMutability: "nonpayable", inputs: [{name: "to", type: "address"}], outputs: []},
   {type: "error", name: "TooSoon", inputs: [{name: "nextClaimAt", type: "uint256"}]},

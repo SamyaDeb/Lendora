@@ -1,6 +1,6 @@
 import {encodeFunctionData, maxUint256, type Hex} from "viem";
 import {privateKeyToAccount} from "viem/accounts";
-import {deltaNeutralVaultAbi, erc20Abi, navOracleAbi, type ChainDeployment} from "@stockline/sdk";
+import {deltaNeutralVaultAbi, erc20Abi, navOracleAbi, type ChainDeployment} from "@lendora/sdk";
 import type {Anvil} from "./anvil.js";
 
 export type Attest = (user: `0x${string}`) => Promise<{expiry: bigint; signature: Hex}>;

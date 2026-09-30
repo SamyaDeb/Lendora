@@ -3,13 +3,13 @@ import {createServer} from "node:net";
 import {fileURLToPath} from "node:url";
 import {encodeFunctionData} from "viem";
 import {generatePrivateKey, privateKeyToAccount} from "viem/accounts";
-import {stocklineRouterAbi} from "@stockline/sdk";
-import {startStack, type Stack} from "@stockline/api/harness";
-import {startCompliance, type RunningCompliance} from "@stockline/compliance/server";
+import {lendoraRouterAbi} from "@lendora/sdk";
+import {startStack, type Stack} from "@lendora/api/harness";
+import {startCompliance, type RunningCompliance} from "@lendora/compliance/server";
 import {serve} from "@hono/node-server";
 import pg from "pg";
-import {alertsApp, SettingsStore} from "@stockline/keepers/alerts";
-import {Health} from "@stockline/keepers/health";
+import {alertsApp, SettingsStore} from "@lendora/keepers/alerts";
+import {Health} from "@lendora/keepers/health";
 
 /**
  * The full local product for Playwright and Lighthouse: anvil (DeployLocal) + the devnet seed week + Ponder + Postgres
@@ -50,7 +50,7 @@ export async function startWebStack(o: {build?: boolean; log?: (m: string) => vo
     {
       DATABASE_URL: stack.pg.url,
       RPC_URL: stack.anvil.url,
-      STOCKLINE_NETWORK: "31337",
+      LENDORA_NETWORK: "31337",
       PORT: "0",
       HOST: "127.0.0.1",
       COMPLIANCE_SIGNER_KEY: signerKey,
@@ -61,8 +61,8 @@ export async function startWebStack(o: {build?: boolean; log?: (m: string) => vo
     } as unknown as NodeJS.ProcessEnv,
     {},
   );
-  const owner = await stack.anvil.client.readContract({address: stack.config.d.router!, abi: stocklineRouterAbi, functionName: "owner"});
-  await stack.anvil.send(owner, stack.config.d.router!, encodeFunctionData({abi: stocklineRouterAbi, functionName: "setAttestationSigner", args: [privateKeyToAccount(signerKey).address]}));
+  const owner = await stack.anvil.client.readContract({address: stack.config.d.router!, abi: lendoraRouterAbi, functionName: "owner"});
+  await stack.anvil.send(owner, stack.config.d.router!, encodeFunctionData({abi: lendoraRouterAbi, functionName: "setAttestationSigner", args: [privateKeyToAccount(signerKey).address]}));
 
   // Fund the e2e wallet with Stock Tokens and USDG (mocks), ETH for gas.
   for (const t of ["SPY", "NVDA", "AAPL"]) await stack.drv.mintStock(t, E2E_ACCOUNT, 500n * 10n ** 18n);

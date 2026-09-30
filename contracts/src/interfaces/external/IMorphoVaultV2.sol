@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 /// @notice The subset of Morpho Vault V2 (`morpho-org/vault-v2` @ 2025-12-04, 425f6b1, the commit matching the
-/// onchain factory) that Stockline calls. Signatures copied from `src/interfaces/IVaultV2.sol`; kept local so our code
+/// onchain factory) that Lendora calls. Signatures copied from `src/interfaces/IVaultV2.sol`; kept local so our code
 /// never compiles Vault V2 sources (they build with their own via-IR profile, see foundry.toml).
 interface IVaultV2Min {
     /// @notice Vault asset (wSTOCK).

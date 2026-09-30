@@ -11,11 +11,11 @@ import {
     IMorphoMarketV1AdapterV2Min
 } from "../../../src/interfaces/external/IMorphoVaultV2.sol";
 import {Vm} from "forge-std/Vm.sol";
-import {IStocklineRouter} from "../../../src/interfaces/IStocklineRouter.sol";
+import {ILendoraRouter} from "../../../src/interfaces/ILendoraRouter.sol";
 import {ForkConfig} from "../../../script/ForkConfig.sol";
 import {Phase1ForkBase} from "./Phase1ForkBase.sol";
 
-/// @notice Task 7 on a fork: the deploy logic the scripts run (script/StocklineDeploy.sol), against the live Morpho
+/// @notice Task 7 on a fork: the deploy logic the scripts run (script/LendoraDeploy.sol), against the live Morpho
 /// Blue, Vault V2 factories, Stock Tokens, feeds and USDG; then supply → allocate → borrow → repay → withdraw
 /// through
 /// the deployed vault and market (LM-R10, LM-R20, LM-R22, LM-R23, LM-R30…R32 mechanics).
@@ -61,7 +61,7 @@ contract DeployForkTest is Phase1ForkBase, ForkConfig {
         );
     }
 
-    function _attest(address user) internal view returns (IStocklineRouter.Attestation memory a) {
+    function _attest(address user) internal view returns (ILendoraRouter.Attestation memory a) {
         a.expiry = block.timestamp + 1 days;
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(attester.privateKey, core.router.attestationDigest(user, a.expiry));
         a.signature = abi.encodePacked(r, s, v);
@@ -171,7 +171,7 @@ contract DeployForkTest is Phase1ForkBase, ForkConfig {
         (uint256 p,) = sd.oracle.stockAnswer();
         uint256 collateral = p * 10 * 2 / 100; // 2x the debt value, USDG 6 dp
         _fundUsdg(borrower, collateral);
-        IStocklineRouter.Attestation memory att = _attest(borrower);
+        ILendoraRouter.Attestation memory att = _attest(borrower);
         // Earlier markets' flows warp 7 days, so the live feeds look stale to the RT-R1 guard; re-serve their latest
         // rounds as fresh for the one attested entry (the guard itself is covered in test/router and Lifecycle).
         _freshRound(c.usdgFeed);

@@ -1,5 +1,5 @@
 import {encodeFunctionData, type PublicClient} from "viem";
-import {aggregatorV3Abi, mockAggregatorAbi, mockSwapAggregatorAbi, mockUniswapV3PoolAbi, tickForAnswer, type ChainDeployment, type DeploymentKey, type ExternalChain} from "@stockline/sdk";
+import {aggregatorV3Abi, mockAggregatorAbi, mockSwapAggregatorAbi, mockUniswapV3PoolAbi, tickForAnswer, type ChainDeployment, type DeploymentKey, type ExternalChain} from "@lendora/sdk";
 import type {TxSender} from "../common/signer.js";
 import type {Health} from "../common/health.js";
 

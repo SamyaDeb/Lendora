@@ -7,8 +7,8 @@ import {
   expectedMarketBalances,
   marketHoursAbi,
   shortInterestFields,
-  stocklineOracleAbi,
-  stockWrapperAbi, safeErrorLine} from "@stockline/sdk";
+  lendoraOracleAbi,
+  stockWrapperAbi, safeErrorLine} from "@lendora/sdk";
 import {networkConfig} from "../lib/network.js";
 
 export const net = networkConfig();
@@ -52,10 +52,10 @@ async function reads(context: Context, ticker: string, block: Block) {
   try {
     if (!(await hasState(blockNumber))) throw new Error("state not available at this block");
     const [answer, usdg, buffer, reasons, open, supply, multiplier] = await Promise.all([
-      c.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "stockAnswer", blockNumber}),
-      c.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "usdgAnswer", blockNumber}),
-      c.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "buffer", blockNumber}),
-      c.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "guardReasons", blockNumber}),
+      c.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "stockAnswer", blockNumber}),
+      c.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "usdgAnswer", blockNumber}),
+      c.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "buffer", blockNumber}),
+      c.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "guardReasons", blockNumber}),
       c.readContract({address: net.d.marketHours, abi: marketHoursAbi, functionName: "isOpen", args: [block.timestamp], blockNumber}),
       c.readContract({address: s.stockToken, abi: erc20Abi, functionName: "totalSupply", blockNumber}),
       c.readContract({address: s.wrapper, abi: stockWrapperAbi, functionName: "multiplier", blockNumber}),

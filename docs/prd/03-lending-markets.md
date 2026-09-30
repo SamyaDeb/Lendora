@@ -59,7 +59,7 @@ worth more stock. Borrowers owe the same wrapped units, so they economically pay
 |---|---|---|
 | `loanToken` | `wNVDA` | |
 | `collateralToken` | `clUSDG` | Gated wrapper, see [05](05-collateral-router.md) |
-| `oracle` | `StocklineOracle(NVDA)` | Returns price of 1 `clUSDG` in `wNVDA`, see [04](04-oracle.md) |
+| `oracle` | `LendoraOracle(NVDA)` | Returns price of 1 `clUSDG` in `wNVDA`, see [04](04-oracle.md) |
 | `irm` | AdaptiveCurveIRM | Only IRMs enabled by Morpho governance are allowed. AdaptiveCurveIRM `0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1` and `irm = address(0)` are enabled (verified Phase 0, 2026-09-26) |
 | `lltv` | 77% (0.77e18) | Must be a Morpho-enabled LLTV. Enabled: 0, 38.5%, 62.5%, 77%, 86%, 91.5%, 94.5%, 96.5%, 98% (verified Phase 0, 2026-09-26). Liquidation incentive 7.41% at 77% (LIF = 1/(1 − 0.3·0.23) = 1.07411) |
 
@@ -80,7 +80,7 @@ Robinhood Chain; the Vault V2 factory is live with 70 vaults (verified Phase 0, 
 |---|---|
 | Vault | `VaultV2` from the official `VaultV2Factory` `0x0FBad98595b0186dA120E41f77C102beb49f803c` |
 | Asset | `wNVDA` |
-| Name / symbol | `Stockline NVDA` / `rNVDA` |
+| Name / symbol | `Lendora NVDA` / `rNVDA` |
 | Adapter | One `MorphoMarketV1AdapterV2` from the official factory `0x79370Ed003CE325C088E530d5e8655c99c2993e1`, used only for the NVDA stock-loan market (the adapter requires the AdaptiveCurveIRM) |
 | Idle reserve | The vault's own unallocated balance. **No idle market** (LM-R21 retired) |
 | Liquidity adapter | None. Deposits stay idle until the allocator allocates, so a deposit during a guard trip adds no borrowable liquidity; withdrawals are served from idle, or via `forceDeallocate` (LM-R22) |
@@ -94,7 +94,7 @@ Robinhood Chain; the Vault V2 factory is live with 70 vaults (verified Phase 0, 
 | Gates | None at launch; a receive-shares gate can enforce geo-attestation later if counsel requires it (06 C1) |
 
 The router's `lend` flow wraps the stock and deposits into the vault in one transaction. Direct supply to the Morpho market is
-possible (it is permissionless). The app won't offer it, and such supply gets no Stockline fee share or rewards.
+possible (it is permissionless). The app won't offer it, and such supply gets no Lendora fee share or rewards.
 
 | ID | Requirement |
 |---|---|
@@ -105,7 +105,7 @@ possible (it is permissionless). The app won't offer it, and such supply gets no
 
 ## 4. Allocator keeper (utilization cap and borrow pause)
 
-Morpho Blue has no borrow cap and no pause. Stockline gets both by controlling how much lender liquidity sits in the market,
+Morpho Blue has no borrow cap and no pause. Lendora gets both by controlling how much lender liquidity sits in the market,
 using Vault V2's `allocate` / `deallocate` (D6).
 
 Target rule, per stock, every block or every 30s:
@@ -144,6 +144,6 @@ Operational version: [`docs/runbooks/list-stock.md`](../runbooks/list-stock.md).
 
 ## Acceptance criteria
 
-- [x] Forge tests: wrapper invariants (LM-R7) and `backingShortfall` (LM-R8) ([invariant](../../contracts/test/StockWrapper/StockWrapper.invariant.t.sol), [unit](../../contracts/test/StockWrapper/StockWrapper.t.sol), [fork adminBurn](../../contracts/test/fork/phase1/Lifecycle.fork.t.sol)); full lifecycle per market (LM-R11) on a fork for SPY, NVDA and AAPL ([`test_LM_R11_R22_R30_lifecycleEveryMarket`](../../contracts/test/fork/phase1/Deploy.fork.t.sol)) and the weekend lifecycle ([`test_phase1_exit_lifecycle`](../../contracts/test/fork/phase1/Lifecycle.fork.t.sol)); liquidation with unwrap in one transaction via the callback (LM-R12, [`StocklineLiquidator.t.sol`](../../contracts/test/liquidator/StocklineLiquidator.t.sol)); allocator math fuzz (LM-R34, [`allocator.test.ts`](../../packages/sdk/test/allocator.test.ts), 20k cases); Vault V2 code-hash check (LM-R20, [`VaultV2CodeHash.fork.t.sol`](../../contracts/test/fork/phase1/VaultV2CodeHash.fork.t.sol)). *Phase 1, 2026-09-27.*
+- [x] Forge tests: wrapper invariants (LM-R7) and `backingShortfall` (LM-R8) ([invariant](../../contracts/test/StockWrapper/StockWrapper.invariant.t.sol), [unit](../../contracts/test/StockWrapper/StockWrapper.t.sol), [fork adminBurn](../../contracts/test/fork/phase1/Lifecycle.fork.t.sol)); full lifecycle per market (LM-R11) on a fork for SPY, NVDA and AAPL ([`test_LM_R11_R22_R30_lifecycleEveryMarket`](../../contracts/test/fork/phase1/Deploy.fork.t.sol)) and the weekend lifecycle ([`test_phase1_exit_lifecycle`](../../contracts/test/fork/phase1/Lifecycle.fork.t.sol)); liquidation with unwrap in one transaction via the callback (LM-R12, [`LendoraLiquidator.t.sol`](../../contracts/test/liquidator/LendoraLiquidator.t.sol)); allocator math fuzz (LM-R34, [`allocator.test.ts`](../../packages/sdk/test/allocator.test.ts), 20k cases); Vault V2 code-hash check (LM-R20, [`VaultV2CodeHash.fork.t.sol`](../../contracts/test/fork/phase1/VaultV2CodeHash.fork.t.sol)). *Phase 1, 2026-09-27.*
 - [ ] Testnet: 3 markets live; 20 external testers supply, borrow, repay, withdraw; allocator runs 7 days without a miss.
 - [ ] Guard trip drill on testnet: liquidity pulled within 1 block; repay and liquidate still succeed. *(Rehearsed on anvil and a fork in Phase 1: [`allocator.test.ts`](../../keepers/test/allocator.test.ts), [`test_phase1_exit_staleFeedPullsLiquidityButLiquidationWorks`](../../contracts/test/fork/phase1/Lifecycle.fork.t.sol). Testnet is Phase 2.)*

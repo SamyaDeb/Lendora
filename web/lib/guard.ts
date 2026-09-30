@@ -1,4 +1,4 @@
-/** Oracle guard reasons (StocklineOracleBase bitmask) in plain language (APP-R4, OR-R33). */
+/** Oracle guard reasons (LendoraOracleBase bitmask) in plain language (APP-R4, OR-R33). */
 const REASONS: [bigint, string][] = [
   [1n, "manual pause by the guardian"],
   [2n, "DEX price deviates from the oracle"],

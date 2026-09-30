@@ -1,5 +1,5 @@
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
-import {morphoAbi} from "@stockline/sdk";
+import {morphoAbi} from "@lendora/sdk";
 import {startAnvil, type Anvil} from "../src/anvil.js";
 import {ChainDriver} from "../src/driver.js";
 import {smokeFlows} from "../src/smoke.js";

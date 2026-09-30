@@ -1,6 +1,6 @@
 "use client";
 import {useId, useState} from "react";
-import {feedSessions} from "@stockline/sdk";
+import {feedSessions} from "@lendora/sdk";
 
 /**
  * SVG line chart (no chart library: keeps the bundle small for Lighthouse). Feed closures (weekends, holidays) are

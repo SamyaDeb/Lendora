@@ -3,7 +3,7 @@ pragma solidity 0.8.26;
 
 import {Vm} from "forge-std/Vm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {LocalStockline} from "../utils/LocalStockline.sol";
+import {LocalLendora} from "../utils/LocalLendora.sol";
 import {DnVaultDeploy} from "../../script/DnVaultDeploy.sol";
 import {DeltaNeutralVault} from "../../src/vault/DeltaNeutralVault.sol";
 import {StrategyManager} from "../../src/vault/StrategyManager.sol";
@@ -14,9 +14,9 @@ import {IStrategyManager} from "../../src/interfaces/IStrategyManager.sol";
 import {MockPerpVenue} from "../mocks/MockPerpVenue.sol";
 import {MockSwapAggregator} from "../mocks/MockSwapAggregator.sol";
 
-/// @notice Phase 4 fixture: the full local Stockline (real wrappers, oracles, `rSTOCK` Vault V2s, router, mock DEX)
+/// @notice Phase 4 fixture: the full local Lendora (real wrappers, oracles, `rSTOCK` Vault V2s, router, mock DEX)
 /// plus the delta-neutral vault stack from `DnVaultDeploy` on the mock venue. The test contract is the timelock.
-abstract contract DnVaultBase is LocalStockline, DnVaultDeploy {
+abstract contract DnVaultBase is LocalLendora, DnVaultDeploy {
     uint256 internal constant SAT_0919_16Z = WED_0916_16Z + 3 days; // Sat 12:00 ET: feed closed
     uint256 internal constant CAP = 10_000_000e6;
 

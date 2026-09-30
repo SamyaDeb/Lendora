@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {HF_MIN_OPEN_WAD, bufferConfigFor, healthFactorAt} from "@stockline/sdk";
+import {HF_MIN_OPEN_WAD, bufferConfigFor, healthFactorAt} from "@lendora/sdk";
 import {maxBorrowFor, preview, stockMarketState} from "@/lib/preview";
 import type {MarketChainState} from "@/lib/chain";
 
@@ -26,7 +26,7 @@ const state: MarketChainState = {
   user: {address: "0x0000000000000000000000000000000000000001", collateral: 0n, borrowShares: 0n, stockBalance: 0n, usdgBalance: 10n ** 12n, vaultShares: 0n, vaultAssets: 0n, stockAllowance: 0n, usdgAllowance: 0n, vaultAllowance: 0n, authorized: false},
 };
 
-describe("06 preview panel math (all via @stockline/sdk)", () => {
+describe("06 preview panel math (all via @lendora/sdk)", () => {
   it("HF now, at the next close and at +10% equal the SDK; the close is worse than now", () => {
     const p = preview(state, {collateralIn: 20_000n * 10n ** 6n, borrowAmount: 10n * E18});
     const s = stockMarketState(state);

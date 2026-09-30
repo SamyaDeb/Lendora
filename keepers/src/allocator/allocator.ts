@@ -5,12 +5,12 @@ import {
   marketHoursAbi,
   morphoAbi,
   planAllocation,
-  stocklineOracleAbi,
+  lendoraOracleAbi,
   vaultV2Abi,
   type AllocatorAction,
   type AllocatorParams,
   type AllocatorState,
-  type ChainDeployment, safeErrorLine} from "@stockline/sdk";
+  type ChainDeployment, safeErrorLine} from "@lendora/sdk";
 import type {TxSender} from "../common/signer.js";
 import type {Health} from "../common/health.js";
 import {capIds, encodeMarketParams, marketParams} from "../common/market.js";
@@ -47,8 +47,8 @@ export class Allocator {
       c.readContract({address: s.wrapper, abi: erc20Abi, functionName: "balanceOf", args: [s.vault]}),
       c.readContract({address: s.adapter, abi: marketAdapterAbi, functionName: "expectedSupplyAssets", args: [s.marketId]}),
       c.readContract({address: this.d.morpho, abi: morphoAbi, functionName: "market", args: [s.marketId]}),
-      c.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "guardTripped"}),
-      c.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "stockAnswer"}),
+      c.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "guardTripped"}),
+      c.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "stockAnswer"}),
       c.readContract({
         address: this.d.marketHours,
         abi: marketHoursAbi,

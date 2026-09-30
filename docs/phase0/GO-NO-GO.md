@@ -1,6 +1,6 @@
 # Phase 0 · Go / no-go memo
 
-*2026-09-27. Scope: Stockline v1 (SPY, NVDA, AAPL stock-loan markets on Morpho Blue, Robinhood Chain).*
+*2026-09-27. Scope: Lendora v1 (SPY, NVDA, AAPL stock-loan markets on Morpho Blue, Robinhood Chain).*
 
 ## Recommendation: **Go with changes** (technical). Market validation and legal are **pending**.
 

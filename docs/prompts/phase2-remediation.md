@@ -1,4 +1,4 @@
-We're building Stockline, a stock lending layer for Robinhood Chain (chain id 4663, testnet 46630) built on unmodified
+We're building Lendora, a stock lending layer for Robinhood Chain (chain id 4663, testnet 46630) built on unmodified
 Morpho Blue and Morpho Vault V2. Phase 0 (validation), Phase 1 (lending core) and Phase 2 (indexer, API, web app,
 alerts, compliance, testnet readiness) are committed. A senior review on 2026-09-27 found one high-severity contract
 bug, several gaps and open decisions. This session **fixes every Phase 0–2 finding and gap that engineering can close,
@@ -11,9 +11,9 @@ and leaves the repo audit-ready for Phase 3** (audits, guarded mainnet, fees). I
 2. `docs/prd/05-collateral-router.md` (§1 "Why gated collateral", CL-R*, RT-R1…R7), `docs/prd/10-risk-compliance.md`
    (monitoring and paging table, CP-R1…R7), `docs/prd/03-lending-markets.md` (LM-R8, §4 allocator),
    `docs/prd/04-oracle.md` (guards)
-3. Code: `contracts/src/StocklineRouter.sol`, `contracts/src/interfaces/IStocklineRouter.sol`,
-   `contracts/src/CollateralToken.sol`, `contracts/test/router/StocklineRouter.t.sol`,
-   `contracts/test/router/StocklineRouter.invariant.t.sol`, `contracts/test/utils/LocalStockline.sol`,
+3. Code: `contracts/src/LendoraRouter.sol`, `contracts/src/interfaces/ILendoraRouter.sol`,
+   `contracts/src/CollateralToken.sol`, `contracts/test/router/LendoraRouter.t.sol`,
+   `contracts/test/router/LendoraRouter.invariant.t.sol`, `contracts/test/utils/LocalLendora.sol`,
    `compliance/src/{server,app,service,checks}.ts`, `keepers/src/common/*`, `keepers/src/alerts/*`,
    `infra/README.md`, `infra/railway/*.json`, `docs/runbooks/*`
 4. Every caller of the router ABI: `grep -rn "addCollateral" --exclude-dir=node_modules --exclude-dir=out --exclude-dir=cache .`
@@ -28,7 +28,7 @@ cd .. && pnpm -r typecheck && pnpm -r lint && pnpm -r test
 
 Expected (2026-09-27, without `ROBINHOOD_RPC_URL`, fork suites skipped): **187 non-fork Foundry tests pass**; TS:
 sdk 67, devnet 8, indexer 10, api 13, keepers 28, compliance 8, web 11 (**145**), all passing. Contract line
-coverage per `src/` file is 95–100% except `StockWrapper.sol` 94.87%; `StocklineRouter.sol` branch coverage 77%.
+coverage per `src/` file is 95–100% except `StockWrapper.sol` 94.87%; `LendoraRouter.sol` branch coverage 77%.
 If anything differs, stop and report before changing code.
 
 ## 2. Hard rules (unchanged from Phase 2, plus remediation rules)
@@ -38,7 +38,7 @@ If anything differs, stop and report before changing code.
 - **Morpho Blue and Vault V2 stay unmodified.** Contract changes are allowed only where a task below says so, each with
   a reason, a failing-first test (write the test that reproduces the bug, see it fail, then fix) and a note in the
   task summary. Keep storage layout of the UUPS router compatible (ERC-7201 namespace; append only).
-- **One source of truth:** addresses, ABIs and safety math come from `@stockline/sdk`. After any contract ABI change,
+- **One source of truth:** addresses, ABIs and safety math come from `@lendora/sdk`. After any contract ABI change,
   re-export ABIs to the SDK (`packages/sdk/scripts/export-abis.mjs`), regenerate `api/openapi.json` /
   `packages/sdk/src/api/schema.ts` if touched, and update every caller.
 - **Exits are never blocked** (CP-R4, APP-R2, APP-R4): repay, close, withdraw, unwrap and rescue collateral top-ups must
@@ -65,12 +65,12 @@ If anything differs, stop and report before changing code.
 | Q3 | `openShort` gas | Accept ≤ 700k; update the 05 acceptance criterion. Do the cheap wins from task 7 anyway |
 | Q4 | Aggregators beyond Uniswap UniversalRouter | UniversalRouter only at launch |
 | Q5 | Sanctions provider (CP-R3) | `[OWNER]` Chainalysis or TRM. Until chosen: deny-list adapter; mainnet start refuses to run without a real provider |
-| Q6 | Brand name (Stockline vs Lendora) | `[OWNER]`. Don't rename anything in code this session |
+| Q6 | Brand name | `[OWNER]`. Don't rename anything in code this session |
 | Q7 | Archive RPC for pinned fork runs / weekday depth | `[OWNER]` provides `ROBINHOOD_RPC_URL`; without it, fork tasks are marked "pending RPC" |
 
 ## 4. Tasks (in order)
 
-### Task 1 · HIGH: close the unattested-collateral bypass (`StocklineRouter.addCollateral`)
+### Task 1 · HIGH: close the unattested-collateral bypass (`LendoraRouter.addCollateral`)
 
 **Bug (verified with a PoC on 2026-09-27).** `addCollateral(stock, amount, onBehalf, deadline)` mints `clUSDG` and
 supplies it to Morpho with no attestation (RT-R2), no guard check and no global-cap check (RT-R1). Because Morpho Blue
@@ -113,7 +113,7 @@ guard state, caps and attestation"), CP-R3 and D8.
 - `test_RT_R8_residualDirectBorrowDocumented`: attested borrower, rescue top-up, direct `morpho.borrow` succeeds
   (documents the accepted residual; the assertion message references 05 §1).
 - Update `test_RT_addCollateralForAnother` (it currently adds collateral for an address without debt) and the
-  invariant handler `addCollateral` in `StocklineRouter.invariant.t.sol` (only call it for users with debt; keep
+  invariant handler `addCollateral` in `LendoraRouter.invariant.t.sol` (only call it for users with debt; keep
   RT-R5/CL-R6/LM-R7 invariants passing at the default profile and at `FOUNDRY_PROFILE=deep`).
 - Upgrade test: deploy the old implementation behind the proxy, upgrade through the timelock to the new one, storage
   intact (owner, signer, markets, caps, swap modes).
@@ -130,11 +130,11 @@ Playwright flows updated and passing; router gas report refreshed.
 - `startCompliance` throws at startup unless `PROXY_SECRET` is set (≥ 32 chars) for every network except `31337`.
   Same for `TRUST_PROXY=true` without a secret. `devDefaultCountry` stays 31337-only (already).
 - The web proxy route (`web/app/api/compliance/[...path]/route.ts`) must strip any client-sent geo, `x-forwarded-for`
-  and `x-stockline-proxy` headers before setting its own; verify and test.
+  and `x-lendora-proxy` headers before setting its own; verify and test.
 - Mainnet-mode guard: if the network is 4663 (future), refuse to start with the deny-list sanctions adapter (Q5).
 - Rate-limit `/attest` per IP and per wallet (check `attestRpm` covers both).
 - Tests (`compliance/test/compliance.test.ts`): startup fails without secret on 46630; with secret, spoofed geo headers
-  without `x-stockline-proxy` → `GEO_UNKNOWN`; through the web proxy route a spoofed `cf-ipcountry` from the client is
+  without `x-lendora-proxy` → `GEO_UNKNOWN`; through the web proxy route a spoofed `cf-ipcountry` from the client is
   ignored. New requirement **CP-R8** in `10-risk-compliance.md`.
 - Update `infra/README.md`, `infra/railway/compliance.json` and `web.json` env docs, `docs/runbooks/testnet.md`.
 
@@ -151,7 +151,7 @@ added to `10-risk-compliance.md`:
 
 | Rule | Condition | Sev |
 |---|---|---|
-| `BAD_DEBT` | Morpho `Liquidate` with `badDebtAssets > 0` on a Stockline market | P0 |
+| `BAD_DEBT` | Morpho `Liquidate` with `badDebtAssets > 0` on a Lendora market | P0 |
 | `MISSED_LIQUIDATION` | Any position HF < 1.0 for > 2 blocks (SDK `healthFactorAt`, positions from indexer) | P0 |
 | `BACKING_SHORTFALL` | `backingShortfall() > 0` on any `StockWrapper` (LM-R8), checked every block | P0 |
 | `CLUSDG_BACKING` | USDG balance of `clUSDG` < `totalSupply` (CL-R6; Paxos freeze/wipe) | P0 |
@@ -160,7 +160,7 @@ added to `10-risk-compliance.md`:
 | `GUARD_TRIPPED` | Any `GuardChanged(tripped=true)`; resolve on clear | P1 |
 | `L2_GAP` | Consecutive block timestamps > N min apart (share the guard keeper's detector) | P1 |
 | `KEEPER_DOWN` | Allocator/guard/liquidator/alerts `/health` failing or no allocator run for 5 min | P1 |
-| `DIRECT_BORROW` | Morpho `Borrow` on a Stockline market whose `caller` is not the router (task 1 residual) | P1 |
+| `DIRECT_BORROW` | Morpho `Borrow` on a Lendora market whose `caller` is not the router (task 1 residual) | P1 |
 | `PULL_NOT_EFFECTIVE` | Guard tripped and vault free market liquidity > 0 after 2 blocks (LM-R31) | P1 |
 | `UTILIZATION_HIGH` | > 95% for 1h | P2 |
 | `CALENDAR_RUNWAY` | < 7 days of sessions stored, or an earnings date within 30 days not pushed | P2 |
@@ -201,10 +201,10 @@ calldata for the timelock actions the runbooks reference, with tests. Record whi
 
 - `StockWrapper.sol` line coverage ≥ 95% (currently 94.87%); find the two uncovered lines with
   `forge coverage --report lcov` and test them.
-- Raise `StocklineRouter.sol` branch coverage from 77% toward ≥ 90%: deadline/zero-amount/not-listed branches of each
+- Raise `LendoraRouter.sol` branch coverage from 77% toward ≥ 90%: deadline/zero-amount/not-listed branches of each
   exit, `selfPermit` and `morphoAuthorizeWithSig` failure branches, `repay` by `type(uint256).max`, `withdrawLend`
   with idle ≥ needed, swap `Transfer` mode, `closeShort` with no debt.
-- `StocklineLiquidator.sol` branches (87.5%): cover the remaining two.
+- `LendoraLiquidator.sol` branches (87.5%): cover the remaining two.
 - `.gitignore`: add `node_modules.nosync/` (the untracked `client/` has a 349 MB one that `node_modules/` doesn't
   match). Nothing else in `client/`.
 - Remove stale wording: README "Phase 2 (not deployed)" rows stay accurate; the MetaMorpho submodule is kept only for

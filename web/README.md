@@ -1,7 +1,7 @@
 # web
 
-Lendora app (package and SDK still named Stockline, open question Q6) (docs/prd/06): Next.js 16 App Router, wagmi 3 + viem, TanStack Query, Tailwind 4. Every safety number
-(health factor, liquidation price, buffer, rates) comes from `@stockline/sdk`; lists and charts from the public API,
+Lendora app (package and SDK still named Lendora, open question Q6) (docs/prd/06): Next.js 16 App Router, wagmi 3 + viem, TanStack Query, Tailwind 4. Every safety number
+(health factor, liquidation price, buffer, rates) comes from `@lendora/sdk`; lists and charts from the public API,
 positions and previews straight from the chain.
 
 | Route | |
@@ -42,9 +42,9 @@ and step lists the old panels used, unchanged), views take props so they render 
 
 ```sh
 scripts/dev.sh                                   # whole stack; web on :3000
-pnpm --filter @stockline/web test                # component and unit tests
-pnpm --filter @stockline/web e2e                 # Playwright on anvil: every router flow, preview vs onchain ≤ 0.1%
-pnpm --filter @stockline/web lighthouse          # writes lighthouse/results.md
+pnpm --filter @lendora/web test                # component and unit tests
+pnpm --filter @lendora/web e2e                 # Playwright on anvil: every router flow, preview vs onchain ≤ 0.1%
+pnpm --filter @lendora/web lighthouse          # writes lighthouse/results.md
 ```
 
 E2E uses wagmi's mock connector bound to anvil's unlocked default account #7 (`NEXT_PUBLIC_E2E=1`, anvil only): no key

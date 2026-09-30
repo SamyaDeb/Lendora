@@ -68,7 +68,7 @@ export class MemoryLimiter implements Limiter {
 export class RedisLimiter implements Limiter {
   constructor(
     private readonly redis: Redis,
-    private readonly prefix = "stockline:rl:",
+    private readonly prefix = "lendora:rl:",
   ) {}
 
   async hit(key: string, limit: number, windowSec = 60): Promise<HitResult> {

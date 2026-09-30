@@ -3,8 +3,8 @@ pragma solidity ^0.8.20;
 
 import {MarketParams} from "morpho-blue/src/interfaces/IMorpho.sol";
 
-/// @title Stockline router (docs/prd/05-collateral-router.md §4, RT-R1…R7).
-interface IStocklineRouter {
+/// @title Lendora router (docs/prd/05-collateral-router.md §4, RT-R1…R7).
+interface ILendoraRouter {
     /// @notice How the router hands `amountIn` to an allowlisted swap target (RT-R3).
     enum SwapMode {
         None, // not allowlisted

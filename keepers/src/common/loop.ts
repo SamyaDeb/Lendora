@@ -1,4 +1,4 @@
-import {safeErrorLine} from "@stockline/sdk";
+import {safeErrorLine} from "@lendora/sdk";
 
 /** Run `tick` every `intervalMs` until `signal` aborts; errors are reported and the loop continues (restart-safe:
  * every tick recomputes from chain state, nothing is kept between ticks). */

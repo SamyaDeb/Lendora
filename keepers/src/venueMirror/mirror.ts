@@ -1,5 +1,5 @@
 import {encodeFunctionData, keccak256, parseAbiItem, toBytes, type Hex, type PublicClient} from "viem";
-import {mockPerpVenueAbi, type ChainDeployment, type DeploymentKey} from "@stockline/sdk";
+import {mockPerpVenueAbi, type ChainDeployment, type DeploymentKey} from "@lendora/sdk";
 import type {TxSender} from "../common/signer.js";
 import type {Health} from "../common/health.js";
 

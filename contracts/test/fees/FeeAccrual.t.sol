@@ -8,8 +8,8 @@ import {IFeeSplitter} from "../../src/interfaces/IFeeSplitter.sol";
 import {IFeeConverter} from "../../src/interfaces/IFeeConverter.sol";
 import {FeeConverter} from "../../src/fees/FeeConverter.sol";
 import {MockSwapAggregator} from "../mocks/MockSwapAggregator.sol";
-import {LocalStockline} from "../utils/LocalStockline.sol";
-import {IStocklineRouter} from "../../src/interfaces/IStocklineRouter.sol";
+import {LocalLendora} from "../utils/LocalLendora.sol";
+import {ILendoraRouter} from "../../src/interfaces/ILendoraRouter.sol";
 
 /// @dev Vault V2 functions outside the frozen `IVaultV2Min` (src/interfaces/external is audit-frozen).
 interface IVaultV2Extra {
@@ -25,7 +25,7 @@ interface IVaultV2Extra {
 /// as its own transaction, as on a real chain (same as test/router).
 /// forge-config: default.isolate = true
 /// forge-config: ci.isolate = true
-contract FeeAccrualTest is LocalStockline {
+contract FeeAccrualTest is LocalLendora {
     bytes32 internal constant ACCRUE_SIG = keccak256("AccrueInterest(uint256,uint256,uint256,uint256)");
     uint256 internal constant NVDA = 1;
 
@@ -168,7 +168,7 @@ contract FeeAccrualTest is LocalStockline {
 
     function _openBorrow() internal {
         _onboard(borrower, 0, 400_000e6);
-        IStocklineRouter.Attestation memory att = _attest(borrower); // before the prank (it is an external call)
+        ILendoraRouter.Attestation memory att = _attest(borrower); // before the prank (it is an external call)
         vm.prank(borrower);
         core.router.borrow(address(_tok(NVDA)), 300_000e6, 500e18, borrower, att, block.timestamp);
     }

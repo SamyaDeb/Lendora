@@ -6,7 +6,7 @@ import {Health} from "../common/health.js";
 import {runService} from "../common/loop.js";
 import {assertVenueMirrorAllowed, LighterFundingFeed, VenueMirror} from "./mirror.js";
 
-/** `pnpm --filter @stockline/keepers venue-mirror` (testnet only): Lighter's real hourly funding → the mock venue.
+/** `pnpm --filter @lendora/keepers venue-mirror` (testnet only): Lighter's real hourly funding → the mock venue.
  * Reads Lighter's public API (`LIGHTER_API_URL`, no account, no key); signs with the mock-venue operator. */
 const cfg = loadConfig();
 assertVenueMirrorAllowed(cfg.deploymentKey, cfg.deployment);

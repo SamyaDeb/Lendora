@@ -1,6 +1,6 @@
 import {startCompliance} from "./server.js";
 
-/** `pnpm --filter @stockline/compliance start` (env: .env.example). */
+/** `pnpm --filter @lendora/compliance start` (env: .env.example). */
 const c = await startCompliance();
 console.log(`[compliance] on ${c.url} · signer ${c.svc.signerAddress}`);
 const stop = async () => {

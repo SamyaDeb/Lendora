@@ -30,7 +30,7 @@ the trip for 1h so nobody borrows against a stale view.
 cast block latest --field timestamp --rpc-url $RPC
 cast calldata "trip(uint256)" 1       # guardian Safe, to = $ORACLE, hold the pause
 cast calldata "clear(uint256)" 4      # guardian Safe: clear L2_GAP early if the keeper is down
-pnpm --filter @stockline/sdk timelock oracle.setSequencerFeed ticker=NVDA feed=<feed> --network $NET --salt "<date> seq feed"
+pnpm --filter @lendora/sdk timelock oracle.setSequencerFeed ticker=NVDA feed=<feed> --network $NET --salt "<date> seq feed"
 ```
 
 **Who signs.** Guard keeper (automatic), guardian 2-of-4 (manual hold / clear), owner via timelock (sequencer feed).

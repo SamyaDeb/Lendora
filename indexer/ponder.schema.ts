@@ -1,7 +1,7 @@
 import {index, onchainTable, primaryKey, type PgColumnsBuilders} from "ponder";
 
 /**
- * Stockline indexer schema (SI-R2). Amounts are raw onchain integers (numeric); "shares" fields are shares of stock
+ * Lendora indexer schema (SI-R2). Amounts are raw onchain integers (numeric); "shares" fields are shares of stock
  * after the ERC-8056 multiplier (1e18). The API reads these tables through the `--views-schema` views.
  */
 
@@ -52,7 +52,7 @@ const snapshotColumns = (t: PgColumnsBuilders) => ({
   ticker: t.text().notNull(),
   blockNumber: t.bigint().notNull(),
   timestamp: t.bigint().notNull(),
-  // 07 §Definitions (computed by @stockline/sdk shortInterestFields)
+  // 07 §Definitions (computed by @lendora/sdk shortInterestFields)
   suppliedShares: t.bigint().notNull(),
   borrowedShares: t.bigint().notNull(),
   borrowedUsd: t.bigint().notNull(),

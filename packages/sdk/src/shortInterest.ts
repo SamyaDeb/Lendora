@@ -8,7 +8,7 @@ import {apy, aprWad, marketSupplyRate, vaultSupplyRate} from "./math/rates.js";
  * API and the dashboard all call this; `ShortInterestLens.snapshot()` computes the overlapping fields the same way
  * (SI-R20), which the API test checks at the same block.
  *
- * Scope: Stockline markets only (the stock-loan Morpho market and its `rSTOCK` Vault V2).
+ * Scope: Lendora markets only (the stock-loan Morpho market and its `rSTOCK` Vault V2).
  */
 export type MarketStatus = "open" | "closed" | "ramping" | "guard_tripped";
 

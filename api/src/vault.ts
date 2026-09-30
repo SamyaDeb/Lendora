@@ -1,7 +1,7 @@
 import {createRoute, z, type OpenAPIHono} from "@hono/zod-openapi";
 import type {Context} from "hono";
 import {formatUnits, type PublicClient} from "viem";
-import {deltaNeutralVaultAbi, erc20Abi, marketHoursAbi, mockPerpVenueAbi, navOracleAbi, perpAdapterAbi, strategyManagerAbi, stocklineOracleAbi, type ChainDeployment} from "@stockline/sdk";
+import {deltaNeutralVaultAbi, erc20Abi, marketHoursAbi, mockPerpVenueAbi, navOracleAbi, perpAdapterAbi, strategyManagerAbi, lendoraOracleAbi, type ChainDeployment} from "@lendora/sdk";
 import type {IndexerDb, Row} from "./db.js";
 import {envelope, iso, type Envelope} from "./model.js";
 import {HttpError} from "./errors.js";
@@ -308,7 +308,7 @@ export function registerVaultRoutes(app: OpenAPIHono<never>, db: IndexerDb, clie
               functionName: "absoluteCap",
               args: [s.receipt!.adapterMarketCapId],
             }).catch(() => 0n);
-            const [answer] = await (client.readContract as (p: unknown) => Promise<readonly [bigint, bigint]>)({address: s.oracle, abi: stocklineOracleAbi, functionName: "stockAnswer"});
+            const [answer] = await (client.readContract as (p: unknown) => Promise<readonly [bigint, bigint]>)({address: s.oracle, abi: lendoraOracleAbi, functionName: "stockAnswer"});
             return {
               symbol: t,
               marketId: s.receipt!.marketId,

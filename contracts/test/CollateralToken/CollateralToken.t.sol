@@ -20,7 +20,7 @@ contract CollateralTokenTest is Test {
 
     function setUp() public {
         usdg = new MockUSDG(6);
-        cl = new CollateralToken(address(usdg), morpho, "Stockline Collateral USDG", "clUSDG");
+        cl = new CollateralToken(address(usdg), morpho, "Lendora Collateral USDG", "clUSDG");
         cl.setRouter(router);
         usdg.mint(router, 1_000_000e6);
         vm.prank(router);

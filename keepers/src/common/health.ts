@@ -1,5 +1,5 @@
 import {createServer, type Server} from "node:http";
-import {safeErrorLine} from "@stockline/sdk";
+import {safeErrorLine} from "@lendora/sdk";
 
 /** Per-market liveness for `/health` (LM-R33): last run time and block, last error. */
 export class Health {

@@ -7,13 +7,13 @@ import {TimelockController} from "@openzeppelin/contracts/governance/TimelockCon
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {MarketParams} from "morpho-blue/src/interfaces/IMorpho.sol";
 import {MainnetConfig} from "./MainnetConfig.sol";
-import {IStocklineRouter} from "../src/interfaces/IStocklineRouter.sol";
-import {StocklineRouter} from "../src/StocklineRouter.sol";
+import {ILendoraRouter} from "../src/interfaces/ILendoraRouter.sol";
+import {LendoraRouter} from "../src/LendoraRouter.sol";
 import {IFeeSplitter} from "../src/interfaces/IFeeSplitter.sol";
 import {IFeeConverter} from "../src/interfaces/IFeeConverter.sol";
 import {ICollateralToken} from "../src/interfaces/ICollateralToken.sol";
-import {StocklineOracleBase} from "../src/oracles/StocklineOracleBase.sol";
-import {StocklineLiquidator} from "../src/StocklineLiquidator.sol";
+import {LendoraOracleBase} from "../src/oracles/LendoraOracleBase.sol";
+import {LendoraLiquidator} from "../src/LendoraLiquidator.sol";
 import {FeeConverter} from "../src/fees/FeeConverter.sol";
 import {DeltaNeutralVault} from "../src/vault/DeltaNeutralVault.sol";
 import {StrategyManager} from "../src/vault/StrategyManager.sol";
@@ -27,11 +27,11 @@ import {
     IMorphoMarketV1AdapterV2FactoryMin
 } from "../src/interfaces/external/IMorphoVaultV2.sol";
 
-/// @notice Read-only role and configuration check of a Stockline deployment (mainnet-launch §3.4 and §3.5, MN-R5).
+/// @notice Read-only role and configuration check of a Lendora deployment (mainnet-launch §3.4 and §3.5, MN-R5).
 /// Prints a pass/fail table the launch log can paste and reverts if any check fails. Sends nothing.
 ///
-///   STOCKLINE_DEPLOYMENT_JSON=deployments/4663.json STOCKLINE_DEPLOYER=<deployer> STOCKLINE_OWNER=… (all nine
-///   STOCKLINE_* roles, as for DeployMainnet) forge script script/VerifyRoles.s.sol --rpc-url $ROBINHOOD_RPC_URL
+///   LENDORA_DEPLOYMENT_JSON=deployments/4663.json LENDORA_DEPLOYER=<deployer> LENDORA_OWNER=… (all nine
+///   LENDORA_* roles, as for DeployMainnet) forge script script/VerifyRoles.s.sol --rpc-url $ROBINHOOD_RPC_URL
 ///
 /// Checks: every role distinct, non-zero, not the deployer; Safe thresholds (owner 4-of-7, guardian 2-of-4, other
 /// multisigs ≥ 2); timelock 48h with the owner Safe as its only proposer/executor/canceller and no admin besides
@@ -98,12 +98,12 @@ contract VerifyRoles is Script, MainnetConfig {
 
     /// @notice Script entry: load the deployment and the expected roles from env, print the table, revert on failure.
     function run() external view {
-        Deployment memory d = loadDeployment(vm.envOr("STOCKLINE_DEPLOYMENT_JSON", string("deployments/4663.json")));
+        Deployment memory d = loadDeployment(vm.envOr("LENDORA_DEPLOYMENT_JSON", string("deployments/4663.json")));
         Expected memory e = Expected({
             roles: mainnetRolesFromEnv(),
-            deployer: vm.envAddress("STOCKLINE_DEPLOYER"),
-            swapTarget: vm.envOr("STOCKLINE_SWAP_TARGET", _ext("uniswap.universalRouter")),
-            timelockDelay: vm.envOr("STOCKLINE_TIMELOCK_DELAY", MAINNET_TIMELOCK),
+            deployer: vm.envAddress("LENDORA_DEPLOYER"),
+            swapTarget: vm.envOr("LENDORA_SWAP_TARGET", _ext("uniswap.universalRouter")),
+            timelockDelay: vm.envOr("LENDORA_TIMELOCK_DELAY", MAINNET_TIMELOCK),
             dn: d.dn.vault == address(0) ? DnRoles(address(0), address(0), address(0)) : dnRolesFromEnv()
         });
         Check[] memory cs = verify(d, e);
@@ -263,7 +263,7 @@ contract VerifyRoles is Script, MainnetConfig {
     }
 
     function _core(Out memory o, Deployment memory d, Expected memory e) internal view {
-        StocklineRouter r = StocklineRouter(d.router);
+        LendoraRouter r = LendoraRouter(d.router);
         _eq(o, "router: owner == timelock", r.owner(), d.timelock);
         _eq(o, "router: attestationSigner", r.attestationSigner(), e.roles.attestationSigner);
         _eq(
@@ -276,7 +276,7 @@ contract VerifyRoles is Script, MainnetConfig {
         _add(
             o,
             "router: swap target in Transfer mode (Q4)",
-            r.swapMode(e.swapTarget) == IStocklineRouter.SwapMode.Transfer,
+            r.swapMode(e.swapTarget) == ILendoraRouter.SwapMode.Transfer,
             vm.toString(e.swapTarget)
         );
         _eq(o, "clUSDG: router", ICollateralToken(d.clUSDG).router(), d.router);
@@ -285,7 +285,7 @@ contract VerifyRoles is Script, MainnetConfig {
         _add(
             o,
             "liquidator: swap target in Transfer mode",
-            StocklineLiquidator(d.liquidator).swapModes(e.swapTarget) == StocklineLiquidator.SwapMode.Transfer,
+            LendoraLiquidator(d.liquidator).swapModes(e.swapTarget) == LendoraLiquidator.SwapMode.Transfer,
             ""
         );
     }
@@ -326,7 +326,7 @@ contract VerifyRoles is Script, MainnetConfig {
 
     function _stock(Out memory o, Deployment memory d, Expected memory e, StockAddrs memory s) internal view {
         string memory t = string.concat(s.ticker, " ");
-        StocklineOracleBase orc = StocklineOracleBase(s.oracle);
+        LendoraOracleBase orc = LendoraOracleBase(s.oracle);
         _eq(o, string.concat(t, "oracle: owner == timelock"), orc.owner(), d.timelock);
         _eq(o, string.concat(t, "oracle: guardian"), orc.guardian(), e.roles.guardian);
         _eq(o, string.concat(t, "oracle: keeper == guardKeeper"), orc.keeper(), e.roles.guardKeeper);
@@ -350,7 +350,7 @@ contract VerifyRoles is Script, MainnetConfig {
         _add(o, string.concat(t, "vault: performance fee 10%"), v.performanceFee() == PERFORMANCE_FEE, "");
         _eq(o, string.concat(t, "vault: fee recipient == FeeSplitter"), v.performanceFeeRecipient(), d.feeSplitter);
         _add(o, string.concat(t, "vault: forceDeallocatePenalty 0 (A12)"), v.forceDeallocatePenalty(s.adapter) == 0, "");
-        MarketParams memory mp = StocklineRouter(d.router).market(s.token).params;
+        MarketParams memory mp = LendoraRouter(d.router).market(s.token).params;
         _add(
             o,
             string.concat(t, "vault: relative cap U_MAX 90%"),
@@ -371,7 +371,7 @@ contract VerifyRoles is Script, MainnetConfig {
             s.adapter
         );
 
-        IStocklineRouter.Market memory m = StocklineRouter(d.router).market(s.token);
+        ILendoraRouter.Market memory m = LendoraRouter(d.router).market(s.token);
         _add(
             o,
             string.concat(t, "router: listed with this wrapper, vault, adapter, oracle"),

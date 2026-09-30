@@ -1,8 +1,8 @@
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {encodeFunctionData, parseAbi} from "viem";
 import {anvil as anvilChain} from "viem/chains";
-import {erc20Abi, mockUsdgAbi, vaultV2FullAbi} from "@stockline/sdk";
-import {ChainDriver} from "@stockline/devnet";
+import {erc20Abi, mockUsdgAbi, vaultV2FullAbi} from "@lendora/sdk";
+import {ChainDriver} from "@lendora/devnet";
 import {startAnvil, type Anvil} from "./anvil.js";
 import {allocation, DEPLOYER, freshRounds, lend, WED} from "./helpers.js";
 import {Allocator} from "../src/allocator/allocator.js";

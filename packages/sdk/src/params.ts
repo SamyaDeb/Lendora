@@ -3,9 +3,9 @@
  * means a contract or deployment change first; the SDK only mirrors.
  */
 
-/** `StocklineRouter.HF_MIN_OPEN` (RT-R1). */
+/** `LendoraRouter.HF_MIN_OPEN` (RT-R1). */
 export const HF_MIN_OPEN_WAD = 11n * 10n ** 17n;
-/** `StocklineRouter.HORIZON`: the RT-R1 health check looks 24h ahead. */
+/** `LendoraRouter.HORIZON`: the RT-R1 health check looks 24h ahead. */
 export const OPEN_HORIZON_SEC = 24n * 3600n;
 /** Utilization cap `U_MAX` (Vault V2 relative cap, allocator, LM-R23 / LM-R30). */
 export const U_MAX_WAD = 9n * 10n ** 17n;

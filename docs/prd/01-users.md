@@ -12,7 +12,7 @@ Lenders and borrowers are the launch-critical pair. Without both there is no mar
 | Data consumer | Traders, perp venues, AI agents, researchers | Read live short interest and borrow rates | 2 |
 | Vault depositor | USDG holder who doesn't want stock risk | Price-neutral USDG yield | 4 |
 | Backstop staker | Risk-tolerant capital provider | Fee share for first-loss cover | 5 |
-| Operator (internal) | Stockline risk team / multisig | Set caps, list markets, respond to incidents | 1 |
+| Operator (internal) | Lendora risk team / multisig | Set caps, list markets, respond to incidents | 1 |
 
 ## User stories
 
@@ -38,7 +38,7 @@ Each story has an ID that feature PRDs reference.
 
 ### Liquidator
 
-- **US-Q1**: As a liquidator, I liquidate Stockline markets with standard Morpho tooling. I can unwrap seized collateral to
+- **US-Q1**: As a liquidator, I liquidate Lendora markets with standard Morpho tooling. I can unwrap seized collateral to
   USDG and the wrapped stock to the underlying token permissionlessly.
 
 ### Data consumer

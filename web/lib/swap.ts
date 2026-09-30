@@ -1,4 +1,4 @@
-import {mockAggregatorSwap, type ChainDeployment, type RouterSwap} from "@stockline/sdk";
+import {mockAggregatorSwap, type ChainDeployment, type RouterSwap} from "@lendora/sdk";
 
 /** RT-R3: the swap the router runs for openShort / closeShort. Anvil and testnet use the allowlisted mock aggregator;
  * the Uniswap UniversalRouter path (fork/mainnet) is built by the router tests and is not offered by this app yet. */

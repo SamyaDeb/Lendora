@@ -22,5 +22,5 @@ export function canonicalSettings(s: AlertSettings): string {
 }
 
 export function alertSettingsMessage(address: Address, s: AlertSettings, issuedAt: string): string {
-  return ["Stockline alert settings", "", `Wallet: ${address.toLowerCase()}`, `Issued at: ${issuedAt}`, `Settings: ${canonicalSettings(s)}`].join("\n");
+  return ["Lendora alert settings", "", `Wallet: ${address.toLowerCase()}`, `Issued at: ${issuedAt}`, `Settings: ${canonicalSettings(s)}`].join("\n");
 }

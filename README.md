@@ -1,4 +1,4 @@
-# Stockline
+# Lendora
 
 Stock lending layer for Robinhood Chain, built on unmodified Morpho Blue and Morpho Vault V2.
 Start with [`docs/LITEPAPER.md`](docs/LITEPAPER.md) and the PRD in [`docs/prd/`](docs/prd/README.md).
@@ -46,7 +46,7 @@ license headers and formatting. MetaMorpho keeps its own nested OpenZeppelin, th
 
 Vault V2 is compiled with Morpho's own settings (solc 0.8.28, via-IR, 100k runs, cancun) through a
 `compilation_restrictions` profile in `foundry.toml`, and keeps its own nested `morpho-blue` and `morpho-blue-irm`, so the
-bytecode equals the deployed one. Stockline code talks to it only through `src/interfaces/external/IMorphoVaultV2.sol`.
+bytecode equals the deployed one. Lendora code talks to it only through `src/interfaces/external/IMorphoVaultV2.sol`.
 
 ## Local stack (Phase 2)
 
@@ -60,8 +60,8 @@ Testnet: `docs/runbooks/testnet.md` (deployment waits for the owner's go).
 ## Keepers
 
 ```sh
-pnpm --filter @stockline/keepers test        # needs anvil (Foundry) on PATH
-DEPLOYMENT_KEY=fork-4663 RPC_URL=<rpc> pnpm --filter @stockline/keepers allocator   # dry run
+pnpm --filter @lendora/keepers test        # needs anvil (Foundry) on PATH
+DEPLOYMENT_KEY=fork-4663 RPC_URL=<rpc> pnpm --filter @lendora/keepers allocator   # dry run
 ```
 
 ## SDK

@@ -11,7 +11,7 @@ import {StockWrapper} from "../../../src/StockWrapper.sol";
 import {AggregatorV3Interface} from "../../../src/interfaces/external/AggregatorV3Interface.sol";
 import {Phase0ForkBase} from "./Phase0ForkBase.sol";
 
-/// @dev Minimal settable Morpho oracle for the fork run (not StocklineOracle). Price of 1 USDG in wNVDA, scaled by
+/// @dev Minimal settable Morpho oracle for the fork run (not LendoraOracle). Price of 1 USDG in wNVDA, scaled by
 /// 1e36 * 10^18 / 10^6.
 contract TestOracle is IOracle {
     uint256 public price;
@@ -123,7 +123,7 @@ contract MorphoMarketForkTest is Phase0ForkBase {
     function test_phase0_morpho_idleMarketAndMetaMorphoV11() public {
         address curator = makeAddr("curator");
         MetaMorphoV1_1Factory factory = new MetaMorphoV1_1Factory(MORPHO);
-        IMetaMorphoV1_1 vault = factory.createMetaMorpho(curator, 1 days, address(wNVDA), "Stockline NVDA", "rNVDA", 0);
+        IMetaMorphoV1_1 vault = factory.createMetaMorpho(curator, 1 days, address(wNVDA), "Lendora NVDA", "rNVDA", 0);
 
         vm.startPrank(curator);
         vault.submitCap(market, 1000e18);

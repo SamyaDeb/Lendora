@@ -2,11 +2,11 @@ import createFetchClient from "openapi-fetch";
 import type {components, paths} from "./schema.js";
 
 /**
- * Typed client for the Stockline public API (docs/prd/07 §2), generated from `api/openapi.json` (OpenAPI 3.1):
- * `schema.ts` is produced by `pnpm --filter @stockline/api openapi` and only wrapped here.
+ * Typed client for the Lendora public API (docs/prd/07 §2), generated from `api/openapi.json` (OpenAPI 3.1):
+ * `schema.ts` is produced by `pnpm --filter @lendora/api openapi` and only wrapped here.
  *
- *   import {api} from "@stockline/sdk";
- *   const sl = api.createClient("https://api.stockline.xyz", {apiKey});
+ *   import {api} from "@lendora/sdk";
+ *   const sl = api.createClient("https://api.lendora.xyz", {apiKey});
  *   const {data} = await sl.markets();
  */
 export type {paths, components};
@@ -85,4 +85,4 @@ export function createClient(baseUrl: string, opts: ClientOptions = {}) {
   };
 }
 
-export type StocklineApiClient = ReturnType<typeof createClient>;
+export type LendoraApiClient = ReturnType<typeof createClient>;

@@ -6,14 +6,14 @@ import {IMorpho, MarketParams, Market} from "morpho-blue/src/interfaces/IMorpho.
 import {IIrm} from "morpho-blue/src/interfaces/IIrm.sol";
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
 import {MorphoBalancesLib} from "morpho-blue/src/libraries/periphery/MorphoBalancesLib.sol";
-import {LocalStockline} from "../utils/LocalStockline.sol";
+import {LocalLendora} from "../utils/LocalLendora.sol";
 import {ShortInterestLens} from "../../src/ShortInterestLens.sol";
 import {IShortInterestLens} from "../../src/interfaces/IShortInterestLens.sol";
-import {IStocklineRouter} from "../../src/interfaces/IStocklineRouter.sol";
+import {ILendoraRouter} from "../../src/interfaces/ILendoraRouter.sol";
 
 /// @notice SI-R20 (values accrued to block.timestamp) and SI-R21 (stateless, list fixed at deployment) on the full
-/// local deployment (script/StocklineDeploy.sol with mocks).
-contract ShortInterestLensTest is LocalStockline {
+/// local deployment (script/LendoraDeploy.sol with mocks).
+contract ShortInterestLensTest is LocalLendora {
     using MarketParamsLib for MarketParams;
     using MorphoBalancesLib for IMorpho;
 
@@ -47,7 +47,7 @@ contract ShortInterestLensTest is LocalStockline {
     }
 
     function _borrowNvda(uint256 amount) internal {
-        IStocklineRouter.Attestation memory att = _attest(borrower); // before the prank: _attest makes a view call
+        ILendoraRouter.Attestation memory att = _attest(borrower); // before the prank: _attest makes a view call
         vm.prank(borrower);
         core.router.borrow(address(m.tokens[NVDA]), 100_000e6, amount, borrower, att, block.timestamp);
     }

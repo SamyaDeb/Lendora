@@ -1,17 +1,17 @@
 import {existsSync, readFileSync, writeFileSync} from "node:fs";
 import {encodeFunctionData, getAddress, type Hex, type TransactionReceipt} from "viem";
 import {
-  decodeStocklineCall,
+  decodeLendoraCall,
   deltaNeutralVaultAbi,
   saltOf,
-  stocklineOracleAbi,
-  stocklineRouterAbi,
+  lendoraOracleAbi,
+  lendoraRouterAbi,
   timelockAbi,
   timelockOperation,
   vaultCuratorOperation,
   vaultV2FullAbi,
   type ChainDeployment,
-} from "@stockline/sdk";
+} from "@lendora/sdk";
 import type {Anvil} from "./anvil.js";
 
 /**
@@ -70,10 +70,10 @@ export const LIVE_DRILLS: Drill[] = [
     async run(c, prev) {
       if (prev?.status === "done") return prev;
       const oracle = c.d.stocks.NVDA.oracle;
-      const t = await c.send(oracle, call(stocklineOracleAbi, "trip", [MANUAL]));
-      const tripped = await c.a.client.readContract({address: oracle, abi: stocklineOracleAbi, functionName: "guardReasons"});
+      const t = await c.send(oracle, call(lendoraOracleAbi, "trip", [MANUAL]));
+      const tripped = await c.a.client.readContract({address: oracle, abi: lendoraOracleAbi, functionName: "guardReasons"});
       if ((tripped & MANUAL) !== MANUAL) throw new Error("guard did not latch MANUAL");
-      const k = await c.send(oracle, call(stocklineOracleAbi, "clear", [MANUAL]));
+      const k = await c.send(oracle, call(lendoraOracleAbi, "clear", [MANUAL]));
       return {status: "done", txs: hashes([t, k]), note: "MANUAL latched and cleared by the guardian"};
     },
   },
@@ -83,11 +83,11 @@ export const LIVE_DRILLS: Drill[] = [
     title: "An unexpected schedule is decoded (what the monitor pages) and cancelled by the owner",
     async run(c, prev) {
       if (prev?.status === "done") return prev;
-      const cap = await c.a.client.readContract({address: c.d.router!, abi: stocklineRouterAbi, functionName: "globalCap"});
+      const cap = await c.a.client.readContract({address: c.d.router!, abi: lendoraRouterAbi, functionName: "globalCap"});
       const delay = await c.a.client.readContract({address: c.d.timelock, abi: timelockAbi, functionName: "getMinDelay"});
       const o = timelockOperation(c.d, {kind: "router.setGlobalCap", cap}, {delay, salt: saltOf(`${c.round} governance-change`)});
       const s = await c.send(c.d.timelock, o.scheduleCalldata);
-      const decoded = decodeStocklineCall(c.d, o.target, o.data).summary;
+      const decoded = decodeLendoraCall(c.d, o.target, o.data).summary;
       const x = await c.send(c.d.timelock, o.cancelCalldata);
       return {status: "done", txs: hashes([s, x]), note: `scheduled and decoded as \`${decoded}\`, then cancelled`};
     },
@@ -99,7 +99,7 @@ export const LIVE_DRILLS: Drill[] = [
     async run(c, prev) {
       if (prev?.status === "done") return prev;
       const delay = await c.a.client.readContract({address: c.d.timelock, abi: timelockAbi, functionName: "getMinDelay"});
-      const cap = await c.a.client.readContract({address: c.d.router!, abi: stocklineRouterAbi, functionName: "globalCap"});
+      const cap = await c.a.client.readContract({address: c.d.router!, abi: lendoraRouterAbi, functionName: "globalCap"});
       const salt = saltOf(`${c.round} timelock-two-step`);
       if (prev?.status !== "scheduled") {
         const o = timelockOperation(c.d, {kind: "router.setGlobalCap", cap}, {delay, salt});

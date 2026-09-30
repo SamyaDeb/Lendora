@@ -68,19 +68,19 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: stockline
-          POSTGRES_DB: stockline
+          POSTGRES_USER: lendora
+          POSTGRES_DB: lendora
           POSTGRES_HOST_AUTH_METHOD: trust
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U stockline" --health-interval 2s --health-timeout 3s --health-retries 30
+          --health-cmd "pg_isready -U lendora" --health-interval 2s --health-timeout 3s --health-retries 30
       redis:
         image: redis:7-alpine
         ports: ["6379:6379"]
         options: >-
           --health-cmd "redis-cli ping" --health-interval 2s --health-timeout 3s --health-retries 30
     env:
-      DATABASE_URL: postgres://stockline@127.0.0.1:5432/stockline
+      DATABASE_URL: postgres://lendora@127.0.0.1:5432/lendora
       REDIS_URL: redis://127.0.0.1:6379
     steps:
       - uses: actions/checkout@v4
@@ -99,7 +99,7 @@ jobs:
       - run: pnpm -r typecheck
       - run: pnpm -r lint
       - name: OpenAPI and the SDK's generated client are up to date
-        run: pnpm --filter @stockline/sdk build && pnpm --filter @stockline/api openapi && git diff --exit-code api/openapi.json packages/sdk/src/api/schema.ts
+        run: pnpm --filter @lendora/sdk build && pnpm --filter @lendora/api openapi && git diff --exit-code api/openapi.json packages/sdk/src/api/schema.ts
       - run: pnpm -r test
 
   web-e2e:
@@ -110,14 +110,14 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: stockline
-          POSTGRES_DB: stockline
+          POSTGRES_USER: lendora
+          POSTGRES_DB: lendora
           POSTGRES_HOST_AUTH_METHOD: trust
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U stockline" --health-interval 2s --health-timeout 3s --health-retries 30
+          --health-cmd "pg_isready -U lendora" --health-interval 2s --health-timeout 3s --health-retries 30
     env:
-      DATABASE_URL: postgres://stockline@127.0.0.1:5432/stockline
+      DATABASE_URL: postgres://lendora@127.0.0.1:5432/lendora
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -129,10 +129,10 @@ jobs:
         with:
           version: v1.5.1 # pinned: anvil's state-dump format must match packages/devnet/fixtures/anvil-state.hex
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @stockline/sdk build
-      - run: pnpm --filter @stockline/web exec playwright install --with-deps chromium
-      - run: pnpm --filter @stockline/web e2e
-      - run: pnpm --filter @stockline/web lighthouse
+      - run: pnpm --filter @lendora/sdk build
+      - run: pnpm --filter @lendora/web exec playwright install --with-deps chromium
+      - run: pnpm --filter @lendora/web e2e
+      - run: pnpm --filter @lendora/web lighthouse
       - uses: actions/upload-artifact@v4
         if: always()
         with:

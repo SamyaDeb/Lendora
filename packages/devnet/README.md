@@ -1,6 +1,6 @@
-# @stockline/devnet
+# @lendora/devnet
 
-Local chain for Stockline (Phase 2 task 0). Anvil only: every command checks the chain id is 31337.
+Local chain for Lendora (Phase 2 task 0). Anvil only: every command checks the chain id is 31337.
 
 | Piece | What |
 |---|---|
@@ -11,10 +11,10 @@ Local chain for Stockline (Phase 2 task 0). Anvil only: every command checks the
 | `startPostgres()` / `startRedis()` | `DATABASE_URL` / `REDIS_URL` if set, else throwaway local instances |
 
 ```sh
-pnpm --filter @stockline/devnet drive serve            # anvil + fixture on :8545
-pnpm --filter @stockline/devnet drive seed             # seed week against $RPC_URL (default :8545)
-pnpm --filter @stockline/devnet drive live             # fresh rounds + allocator every 15 s while the feed is open
-pnpm --filter @stockline/devnet state:dump             # regenerate the fixture from a running node
+pnpm --filter @lendora/devnet drive serve            # anvil + fixture on :8545
+pnpm --filter @lendora/devnet drive seed             # seed week against $RPC_URL (default :8545)
+pnpm --filter @lendora/devnet drive live             # fresh rounds + allocator every 15 s while the feed is open
+pnpm --filter @lendora/devnet state:dump             # regenerate the fixture from a running node
 ```
 
 **Foundry version.** The fixture is an `anvil_dumpState` from Foundry **1.5.1**; newer anvils may not decode it

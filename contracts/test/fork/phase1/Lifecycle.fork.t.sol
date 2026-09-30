@@ -5,10 +5,10 @@ import {Vm} from "forge-std/Vm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IMorpho, MarketParams, Market, Position} from "morpho-blue/src/interfaces/IMorpho.sol";
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
-import {IStocklineRouter} from "../../../src/interfaces/IStocklineRouter.sol";
+import {ILendoraRouter} from "../../../src/interfaces/ILendoraRouter.sol";
 import {IMarketHours} from "../../../src/interfaces/IMarketHours.sol";
 import {IVaultV2Min} from "../../../src/interfaces/external/IMorphoVaultV2.sol";
-import {StocklineLiquidator} from "../../../src/StocklineLiquidator.sol";
+import {LendoraLiquidator} from "../../../src/LendoraLiquidator.sol";
 import {ForkConfig} from "../../../script/ForkConfig.sol";
 import {MockChainlinkAggregator} from "../../mocks/MockChainlinkAggregator.sol";
 import {IRobinhoodStock} from "../phase0/Phase0ForkBase.sol";
@@ -108,7 +108,7 @@ contract LifecycleForkTest is Phase1ForkBase, ForkConfig {
         usdgFeed.setAnswer(1e8);
     }
 
-    function _attest(address user) internal view returns (IStocklineRouter.Attestation memory a) {
+    function _attest(address user) internal view returns (ILendoraRouter.Attestation memory a) {
         a.expiry = block.timestamp + 1 days;
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer.privateKey, core.router.attestationDigest(user, a.expiry));
         a.signature = abi.encodePacked(r, s, v);
@@ -129,13 +129,13 @@ contract LifecycleForkTest is Phase1ForkBase, ForkConfig {
     /// @dev Short `amount` NVDA with collateral = `collMult`/100 × the debt value at p0.
     function _openShort(uint256 amount, uint256 collMult) internal {
         uint256 value = uint256(p0) * amount / 1e20; // USDG 6 dp
-        IStocklineRouter.Swap memory s = IStocklineRouter.Swap({
+        ILendoraRouter.Swap memory s = ILendoraRouter.Swap({
             target: c.swapTarget,
             data: _urInput(NVDA, USDG, amount, address(core.router)),
             amountIn: amount,
             minOut: value * 95 / 100
         });
-        IStocklineRouter.Attestation memory att = _attest(trader);
+        ILendoraRouter.Attestation memory att = _attest(trader);
         vm.prank(trader);
         core.router.openShort(NVDA, value * collMult / 100, amount, s, false, trader, att, block.timestamp);
     }
@@ -152,12 +152,12 @@ contract LifecycleForkTest is Phase1ForkBase, ForkConfig {
         uint256 dexRefPrice = uint256(p0); // the live pool trades near the pre-gap price
         uint256 usdgIn = debt * dexRefPrice * 105 / 100 / 1e20;
         address liq = address(core.liquidator);
-        StocklineLiquidator.Liquidation memory l = StocklineLiquidator.Liquidation({
+        LendoraLiquidator.Liquidation memory l = LendoraLiquidator.Liquidation({
             market: d.market,
             borrower: borrower,
             seizedAssets: 0,
             repaidShares: pos.borrowShares,
-            swap: StocklineLiquidator.Swap({
+            swap: LendoraLiquidator.Swap({
                 target: c.swapTarget, data: _urInput(USDG, NVDA, usdgIn, liq), amountIn: usdgIn, minOut: debt
             }),
             minProfit: 0,
@@ -166,7 +166,7 @@ contract LifecycleForkTest is Phase1ForkBase, ForkConfig {
         });
         uint256 before = IERC20(USDG).balanceOf(liqBot);
         vm.prank(liqBot);
-        liq.call(abi.encodeCall(StocklineLiquidator.liquidate, (l)));
+        liq.call(abi.encodeCall(LendoraLiquidator.liquidate, (l)));
         profit = IERC20(USDG).balanceOf(liqBot) - before;
         assertEq(IERC20(address(core.clUSDG)).balanceOf(liq), 0, "liquidator keeps nothing");
         assertEq(IERC20(USDG).balanceOf(liq), 0);
@@ -245,7 +245,7 @@ contract LifecycleForkTest is Phase1ForkBase, ForkConfig {
         _openShort(10e18, 155);
         uint256 supplyBefore = _supplyAssets();
         _round(THU_PRINT - 5 hours, p0);
-        IStocklineRouter.Attestation memory att = _attest(trader);
+        ILendoraRouter.Attestation memory att = _attest(trader);
         vm.prank(trader);
         vm.expectRevert(); // RT-R1: the 10% event buffer within 24h makes a new near-limit position fail
         core.router.borrow(NVDA, 0, 1e18, trader, att, block.timestamp);
@@ -276,7 +276,7 @@ contract LifecycleForkTest is Phase1ForkBase, ForkConfig {
         assertEq(d.oracle.price(), price, "price() does not move");
         assertApproxEqRel(_hf(trader), hf, 1e12, "nobody becomes liquidatable (only 10 min of interest)");
         assertTrue(d.oracle.guardReasons() & d.oracle.SANITY() != 0);
-        IStocklineRouter.Attestation memory att = _attest(trader);
+        ILendoraRouter.Attestation memory att = _attest(trader);
         vm.prank(trader);
         vm.expectRevert(); // GuardTripped
         core.router.borrow(NVDA, 1000e6, 1e18, trader, att, block.timestamp);
@@ -383,7 +383,7 @@ contract LifecycleForkTest is Phase1ForkBase, ForkConfig {
         // `other` opens a position while the market is healthy (RT-R8: collateral only enters with a debt position).
         address other = makeAddr("other");
         _fundUsdg(other, 11_000e6);
-        IStocklineRouter.Attestation memory att = _attest(other);
+        ILendoraRouter.Attestation memory att = _attest(other);
         vm.startPrank(other);
         IERC20(USDG).approve(address(core.router), type(uint256).max);
         IMorpho(MORPHO).setAuthorization(address(core.router), true);

@@ -1,5 +1,5 @@
 import type {Chain} from "viem";
-import {chainFor, type ChainDeployment} from "@stockline/sdk";
+import {chainFor, type ChainDeployment} from "@lendora/sdk";
 import {webDeployment} from "./network";
 
 /** Public configuration (NEXT_PUBLIC_*, inlined at build time). The app serves exactly one deployment. */

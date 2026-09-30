@@ -88,10 +88,10 @@ export function checkTree(r: Run, cwd: string): {problems: string[]; commit?: st
 export function checkBuild(r: Run, contractsDir: string): string[] {
   const b = r("forge", ["build", "--sizes"], {cwd: contractsDir});
   if (b.status !== 0) return [`forge build failed: ${b.stderr.slice(-300)}`];
-  const row = b.stdout.split("\n").find((l) => /\|\s*StocklineRouter\s*\|/.test(l));
-  if (!row) return ["StocklineRouter missing from forge build --sizes"];
+  const row = b.stdout.split("\n").find((l) => /\|\s*LendoraRouter\s*\|/.test(l));
+  if (!row) return ["LendoraRouter missing from forge build --sizes"];
   const size = Number(row.split("|")[2].replace(/[^\d]/g, ""));
-  return size > EIP170 ? [`StocklineRouter runtime ${size} B > EIP-170 ${EIP170} B`] : [];
+  return size > EIP170 ? [`LendoraRouter runtime ${size} B > EIP-170 ${EIP170} B`] : [];
 }
 
 // ------------------------------------------------------------------ 2. env
@@ -113,15 +113,15 @@ export interface Roles {
   [role: string]: `0x${string}`;
 }
 
-/** Every `STOCKLINE_*` role present, an address, non-zero, distinct from each other and from the deployer (MN-R1, MN-R8). */
+/** Every `LENDORA_*` role present, an address, non-zero, distinct from each other and from the deployer (MN-R1, MN-R8). */
 export function checkRoles(env: NodeJS.ProcessEnv): {problems: string[]; roles: Roles; deployer?: `0x${string}`} {
   const problems: string[] = [];
   const roles: Roles = {};
   for (const r of [...CORE_ROLES, ...DN_ROLES]) {
-    const v = env[`STOCKLINE_${r}`];
-    if (!v) problems.push(`STOCKLINE_${r} is not set`);
-    else if (!isAddress(v, {strict: false})) problems.push(`STOCKLINE_${r} is not an address`);
-    else if (/^0x0{40}$/i.test(v)) problems.push(`STOCKLINE_${r} is address(0)`);
+    const v = env[`LENDORA_${r}`];
+    if (!v) problems.push(`LENDORA_${r} is not set`);
+    else if (!isAddress(v, {strict: false})) problems.push(`LENDORA_${r} is not an address`);
+    else if (/^0x0{40}$/i.test(v)) problems.push(`LENDORA_${r} is address(0)`);
     else roles[r] = getAddress(v);
   }
   const d = env.LAUNCH_DEPLOYER;
@@ -130,9 +130,9 @@ export function checkRoles(env: NodeJS.ProcessEnv): {problems: string[]; roles: 
   else deployer = getAddress(d);
   const seen = new Map<string, string>();
   for (const [r, a] of Object.entries(roles)) {
-    if (seen.has(a)) problems.push(`STOCKLINE_${r} equals STOCKLINE_${seen.get(a)} (every role distinct, MN-R1)`);
+    if (seen.has(a)) problems.push(`LENDORA_${r} equals LENDORA_${seen.get(a)} (every role distinct, MN-R1)`);
     else seen.set(a, r);
-    if (deployer && a === deployer) problems.push(`STOCKLINE_${r} is the deployer (MN-R1)`);
+    if (deployer && a === deployer) problems.push(`LENDORA_${r} is the deployer (MN-R1)`);
   }
   return {problems, roles, deployer};
 }
@@ -173,16 +173,16 @@ export async function checkSafes(client: PublicClient, roles: Roles): Promise<st
     if (!a) continue;
     const code = await client.getCode({address: a});
     if (!code || code === "0x") {
-      out.push(`STOCKLINE_${role} ${a} is an EOA: it must be a deployed multisig (MN-R2)`);
+      out.push(`LENDORA_${role} ${a} is an EOA: it must be a deployed multisig (MN-R2)`);
       continue;
     }
     try {
       const t = await client.readContract({address: a, abi: safeAbi, functionName: "getThreshold"});
       const n = (await client.readContract({address: a, abi: safeAbi, functionName: "getOwners"})).length;
-      if (t < BigInt(minT) || t > BigInt(n)) out.push(`STOCKLINE_${role} threshold ${t} of ${n} (need ≥ ${minT})`);
-      if (n < minN) out.push(`STOCKLINE_${role} has ${n} signers (need ≥ ${minN})`);
+      if (t < BigInt(minT) || t > BigInt(n)) out.push(`LENDORA_${role} threshold ${t} of ${n} (need ≥ ${minT})`);
+      if (n < minN) out.push(`LENDORA_${role} has ${n} signers (need ≥ ${minN})`);
     } catch {
-      out.push(`STOCKLINE_${role} ${a} does not answer getThreshold/getOwners (not a Safe)`);
+      out.push(`LENDORA_${role} ${a} does not answer getThreshold/getOwners (not a Safe)`);
     }
   }
   return out;

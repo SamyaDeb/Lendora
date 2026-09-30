@@ -53,7 +53,7 @@ export async function startIndexer(o: StartIndexerOptions): Promise<IndexerHandl
     ["ponder", "start", "--schema", schema, "--views-schema", viewsSchema, "-p", String(port), "--log-format", "json"],
     {
       cwd: INDEXER_DIR,
-      env: {...process.env, DATABASE_URL: o.databaseUrl, RPC_URL: o.rpcUrl, STOCKLINE_NETWORK: o.network ?? "31337", ...o.env},
+      env: {...process.env, DATABASE_URL: o.databaseUrl, RPC_URL: o.rpcUrl, LENDORA_NETWORK: o.network ?? "31337", ...o.env},
       stdio: ["ignore", "pipe", "pipe"],
       // Own process group: `npx` runs Ponder as a child, so stop() must signal the whole group or Ponder outlives
       // the wrapper and keeps its schema lock (a resumed indexer then fails: "Schema is locked by a different app").
@@ -94,7 +94,7 @@ export async function startIndexer(o: StartIndexerOptions): Promise<IndexerHandl
   const indexedBlock = async () => {
     const r = await fetch(`http://127.0.0.1:${port}/status`);
     const j = (await r.json()) as Record<string, {block?: {number: number}}>;
-    return BigInt(j.stockline?.block?.number ?? 0);
+    return BigInt(j.lendora?.block?.number ?? 0);
   };
   return {
     port,

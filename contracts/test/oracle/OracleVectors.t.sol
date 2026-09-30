@@ -6,9 +6,9 @@ import {OracleMath} from "../../src/libraries/OracleMath.sol";
 import {MarketHours} from "../../src/MarketHours.sol";
 import {IMarketHours} from "../../src/interfaces/IMarketHours.sol";
 import {StockWrapper} from "../../src/StockWrapper.sol";
-import {StocklineOracle} from "../../src/oracles/StocklineOracle.sol";
-import {StocklineOracleBase} from "../../src/oracles/StocklineOracleBase.sol";
-import {IStocklineOracle} from "../../src/interfaces/IStocklineOracle.sol";
+import {LendoraOracle} from "../../src/oracles/LendoraOracle.sol";
+import {LendoraOracleBase} from "../../src/oracles/LendoraOracleBase.sol";
+import {ILendoraOracle} from "../../src/interfaces/ILendoraOracle.sol";
 import {MockStockToken} from "../mocks/MockStockToken.sol";
 import {MockChainlinkAggregator} from "../mocks/MockChainlinkAggregator.sol";
 import {MockCollateralToken} from "../mocks/MockCollateralToken.sol";
@@ -133,7 +133,7 @@ contract OracleVectorsTest is Test {
 
         _loadCalendar(json, mh, address(stock));
 
-        IStocklineOracle.Params memory p = IStocklineOracle.Params({
+        ILendoraOracle.Params memory p = ILendoraOracle.Params({
             zWad: uint64(vm.parseJsonUint(json, ".params.z")),
             sigmaWad: uint64(vm.parseJsonUint(json, ".params.sigma")),
             bMinWad: uint64(vm.parseJsonUint(json, ".params.bMin")),
@@ -147,8 +147,8 @@ contract OracleVectorsTest is Test {
             bandHighWad: 2e18,
             maxQuietMultiplierStepWad: 0.05e18
         });
-        StocklineOracle oracle = new StocklineOracle(
-            StocklineOracleBase.Deployment(
+        LendoraOracle oracle = new LendoraOracle(
+            LendoraOracleBase.Deployment(
                 address(feed),
                 address(usdg),
                 address(stock),

@@ -1,7 +1,7 @@
 # Runbook · List a new stock
 
 Operational version of [03 §5](../prd/03-lending-markets.md#5-listing-a-new-stock-checklist). Every onchain step is in
-`contracts/script/StocklineDeploy.sol` (`_deployStock`); the governance steps go through the 48h timelock.
+`contracts/script/LendoraDeploy.sol` (`_deployStock`); the governance steps go through the 48h timelock.
 Phase 1 only runs this on anvil and on forks. Nothing here broadcasts to Robinhood Chain until Phase 3.
 
 ## 0. Go / no-go inputs (offchain)
@@ -13,7 +13,7 @@ Phase 1 only runs this on anvil and on forks. Nothing here broadcasts to Robinho
 | Chainlink feed | Listed in `external-addresses.json` with `marketHours: us_equities_24/5`, 8 dp, 0.5% / 24h | Feed exists and includes the multiplier (D1) |
 | DEX depth | `sim/phase0/dex_depth.py` on a **weekday** and a Saturday | Per-address cap ≈ 25% of the 2% depth (D8) |
 | Volatility, gaps, earnings | Sim: 5y σ, 10y weekend gaps, 10y earnings gaps | σ, z, event buffer, launch cap signed off by the risk owner |
-| Earnings calendar | Add entries to `packages/sdk/data/events.json` (single stocks only), `pnpm --filter @stockline/sdk gen:sessions` | Dates confirmed by the company's IR page (`confirmed: true`) |
+| Earnings calendar | Add entries to `packages/sdk/data/events.json` (single stocks only), `pnpm --filter @lendora/sdk gen:sessions` | Dates confirmed by the company's IR page (`confirmed: true`) |
 
 ## 1. Deploy (per stock)
 
@@ -22,7 +22,7 @@ Phase 1 only runs this on anvil and on forks. Nothing here broadcasts to Robinho
 3. Simulate on a fork: `forge script script/DeployFork.s.sol --fork-url $ROBINHOOD_RPC_URL --sender <deployer>` and
    check `packages/sdk/addresses.json` → `fork-4663`.
 4. Run the fork suite: `ROBINHOOD_RPC_URL=… forge test --mp "test/fork/phase1/*"` (code hash, wiring, flows).
-5. The script then deploys, in order: `StockWrapper` → `StocklineOracle` (owner = timelock) → Morpho market
+5. The script then deploys, in order: `StockWrapper` → `LendoraOracle` (owner = timelock) → Morpho market
    (wSTOCK / clUSDG, AdaptiveCurveIRM, LLTV 77%) seeded for `0xdead` → Vault V2 from the official factory →
    `MorphoMarketV1AdapterV2` from the official factory → caps (absolute = launch cap at the listing price on all three
    adapter ids; relative = 90% `U_MAX`) → `performanceFeeRecipient = FeeSplitter`, then `performanceFee = 10%`
@@ -34,7 +34,7 @@ Phase 1 only runs this on anvil and on forks. Nothing here broadcasts to Robinho
 
 | Proposal | Target |
 |---|---|
-| `StocklineRouter.listMarket(stock, …)` with the per-address cap | Router (task 8) |
+| `LendoraRouter.listMarket(stock, …)` with the per-address cap | Router (task 8) |
 | `MarketHours.replaceEventsFrom(stock, …)` if the stock has earnings windows | MarketHours |
 | Keeper configs: add the vault/adapter to the allocator, the pools to the guard keeper, the market to the liquidator | Ops (no timelock) |
 
@@ -44,7 +44,7 @@ Testnet vaults were deployed with `fee = 10%` to a keyless placeholder. Point th
 vault's **own** curator timelock (24h testnet, 48h mainnet; not the `TimelockController`):
 
 ```sh
-pnpm --filter @stockline/sdk timelock vault.setPerformanceFeeRecipient ticker=NVDA recipient=$(addr '.feeSplitter') --network $NET
+pnpm --filter @lendora/sdk timelock vault.setPerformanceFeeRecipient ticker=NVDA recipient=$(addr '.feeSplitter') --network $NET
 # 1. curator → vault: submitCalldata   2. wait: cast call $VAULT "executableAt(bytes)(uint256)" <data>
 # 3. anyone → vault: data               veto before 3: curator or guardian → vault: revokeCalldata
 cast call $VAULT "performanceFeeRecipient()(address)" --rpc-url $RPC      # = FeeSplitter

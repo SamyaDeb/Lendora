@@ -2,7 +2,7 @@ import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {encodeFunctionData, parseTransaction, type Hex} from "viem";
 import {generatePrivateKey, privateKeyToAccount} from "viem/accounts";
 import {anvil as anvilChain} from "viem/chains";
-import {erc20Abi} from "@stockline/sdk";
+import {erc20Abi} from "@lendora/sdk";
 import {startAnvil, type Anvil} from "./anvil.js";
 import {loadConfig} from "../src/common/config.js";
 import {GAS_HEADROOM_PCT, envKeySender, remoteTxSender, senderFromConfig} from "../src/common/signer.js";

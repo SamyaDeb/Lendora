@@ -3,7 +3,7 @@ import addresses from "../addresses.json" with {type: "json"};
 export type Address = `0x${string}`;
 export type Hex32 = `0x${string}`;
 
-/** One listed stock (written by contracts/script/StocklineDeploy.sol, LM-R10). */
+/** One listed stock (written by contracts/script/LendoraDeploy.sol, LM-R10). */
 export interface StockDeployment {
   stockToken: Address;
   feed: Address;
@@ -21,7 +21,7 @@ export interface StockDeployment {
   /** Absolute cap in raw wSTOCK units at listing (decimal string). */
   capAssets: string;
   perAddressCapUsd: number;
-  /** G5 receipt market (05 §3, A3): `rSTOCK` collateral, USDG loan, supplied by a Stockline USDG Vault V2. Present once
+  /** G5 receipt market (05 §3, A3): `rSTOCK` collateral, USDG loan, supplied by a Lendora USDG Vault V2. Present once
    * `ListReceiptMarket` ran (stage 1); it lends only after the curator's timelocked listing raised its caps. */
   receipt?: ReceiptMarketDeployment;
 }
@@ -100,14 +100,14 @@ export interface DnVaultDeployment {
  * simulated deployment on a Robinhood Chain fork). Only the mainnet launcher's publish step writes "4663" (MN-R6). */
 export type DeploymentKey = number | "fork-4663";
 
-/** Parse `DEPLOYMENT_KEY` / `STOCKLINE_NETWORK` ("31337", "46630", "fork-4663"). */
+/** Parse `DEPLOYMENT_KEY` / `LENDORA_NETWORK` ("31337", "46630", "fork-4663"). */
 export function parseDeploymentKey(s: string): DeploymentKey {
   return s === "fork-4663" ? s : Number(s);
 }
 
 const book = addresses.chains as unknown as Record<string, ChainDeployment>;
 
-/** Deployment for a key, or undefined if Stockline is not deployed there. */
+/** Deployment for a key, or undefined if Lendora is not deployed there. */
 export function getDeployment(key: DeploymentKey): ChainDeployment | undefined {
   return book[String(key)];
 }
@@ -140,7 +140,7 @@ export function resolveDeployment(
   const d = lookup(key);
   if (!d) {
     const hint = key === 4663 ? ": mainnet is served only after the launch publishes it (MN-R6)" : "";
-    throw new Error(`${service}: no deployment "${raw}" in @stockline/sdk addresses.json${hint}`);
+    throw new Error(`${service}: no deployment "${raw}" in @lendora/sdk addresses.json${hint}`);
   }
   return {key, chainId: chainIdOf(key), d};
 }

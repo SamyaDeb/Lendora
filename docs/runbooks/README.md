@@ -29,18 +29,18 @@ minutes → decision tree → exact commands → who signs → comms → post-mo
 | `DN_KILL_SWITCH` (MON-R25) | P1 | [dn-kill-switch.md](dn-kill-switch.md) | detection: monitor test; kill + unwind: `dnVault.test.ts` | – | ⏳ |
 | `COLLATERAL_BELOW_BUFFER` (MON-R26) | P2 | [collateral-below-buffer.md](collateral-below-buffer.md) | detection (direct and router withdrawal), resolve on top-up: monitor test | – | tester withdrawal below the buffer, paged and resolved, 2026-09-30 (T10) |
 
-Rehearsals: `pnpm --filter @stockline/devnet test` (runbooks.test.ts, real TimelockController with the calldata from
-the SDK tool) and `pnpm --filter @stockline/keepers test` (monitor.test.ts). **Fork rehearsal (Phase 3 task 11, no "go testnet"):**
+Rehearsals: `pnpm --filter @lendora/devnet test` (runbooks.test.ts, real TimelockController with the calldata from
+the SDK tool) and `pnpm --filter @lendora/keepers test` (monitor.test.ts). **Fork rehearsal (Phase 3 task 11, no "go testnet"):**
 [fork-drills-46630.md](fork-drills-46630.md) — the fee turn-on and every mainnet-launch §0 drill (guard-tripped, oracle
 re-anchor, calendar-push, multiplier-change, keeper-down, governance-change, P0 tabletop: wrapper shortfall) ran on an
 anvil fork of 46630 against the real testnet deployment and its 24h timelocks, 8/8 passing
-(`FORK_DRILLS_46630=1 pnpm --filter @stockline/devnet exec vitest run test/forkDrills.test.ts`). **Testnet drills**
+(`FORK_DRILLS_46630=1 pnpm --filter @lendora/devnet exec vitest run test/forkDrills.test.ts`). **Testnet drills**
 (the same steps on 46630, with date, tx hashes and who ran each) wait for the owner's "go testnet"; the fee contracts
 are deployed there with `contracts/script/DeployTestnetFees.s.sol` (`TESTNET_GO=yes`). Weekend log:
 [testnet-weekends.md](testnet-weekends.md).
 
 **Phase 4 Part C (2026-09-29, still no "go testnet"):** the fork report now also covers `DeployTestnetVault` and the
-USDG Earn flows (9/9 drills, 14 steps). The live path is `pnpm --filter @stockline/devnet drive live-drills` (see
+USDG Earn flows (9/9 drills, 14 steps). The live path is `pnpm --filter @lendora/devnet drive live-drills` (see
 [testnet.md](testnet.md) §2): immediate drills at once, timelocked halves on a re-run after 24h, refusing 4663 and
 refusing 46630 without `TESTNET_GO=yes`, the key and `DRILL_RAN_BY`; evidence goes to `live-drills-46630.json` and the
 markdown row it prints goes in the table below. Rehearsed in two passes on a fork (`test/liveDrills.test.ts`).
@@ -64,7 +64,7 @@ Other runbooks: [list-stock.md](list-stock.md), [testnet.md](testnet.md), [testn
 | Guard keeper | keeper EOA | `trip/clear(DEVIATION, L2_GAP)`, `poke` | `MANUAL` |
 | Anyone | – | `oracle.poke()`, Morpho `liquidate`, `clUSDG.unwrap`, `wrapper.unwrap`, vault `forceDeallocate` (penalty 0) | – |
 
-Nothing Stockline holds can pause Morpho, seize funds or block exits (CP-R4). Every response below only **stops new
+Nothing Lendora holds can pause Morpho, seize funds or block exits (CP-R4). Every response below only **stops new
 risk** (guard, liquidity pull, caps, delist) and keeps exits working.
 
 ## Conventions used in the commands
@@ -87,7 +87,7 @@ ADAPTER_ID=$(cast abi-encode "f(string,address)" this $ADAPTER)                 
 - **Reads** are `cast call … --rpc-url $RPC`. **Guardian actions** are Safe transactions: build the calldata with
   `cast calldata`, paste it into the Safe UI (to = the target), collect 2 of 4 signatures.
 - **Owner actions** go through the timelock:
-  `pnpm --filter @stockline/sdk timelock <action> key=value --network $NET --salt "<date> <what>"` prints
+  `pnpm --filter @lendora/sdk timelock <action> key=value --network $NET --salt "<date> <what>"` prints
   `scheduleCalldata` and `executeCalldata` (to = `$TIMELOCK`) and the operation `id`. The multisig submits schedule,
   waits the delay (`cast call $TIMELOCK "isOperationReady(bytes32)(bool)" <id>`), then submits execute.
 - Monitor: `curl $MONITOR_URL/incidents`, `curl $MONITOR_URL/weekends`, `curl $MONITOR_URL/health`.

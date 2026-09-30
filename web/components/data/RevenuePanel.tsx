@@ -1,4 +1,4 @@
-import type {api} from "@stockline/sdk";
+import type {api} from "@lendora/sdk";
 import {num} from "@/lib/format";
 import {AssetIcon, Stat} from "@/components/ui";
 

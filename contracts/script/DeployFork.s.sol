@@ -6,7 +6,7 @@ import {VmSafe} from "forge-std/Vm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ForkConfig} from "./ForkConfig.sol";
 
-/// @notice Stockline deployment **simulated** on a fork of Robinhood Chain (4663) with the live Morpho Blue, Vault V2
+/// @notice Lendora deployment **simulated** on a fork of Robinhood Chain (4663) with the live Morpho Blue, Vault V2
 /// factories, Stock Tokens, Chainlink feeds and USDG. Writes `packages/sdk/addresses.json` under "fork-4663".
 /// It refuses to broadcast: Phase 1 never sends a transaction to mainnet or testnet.
 ///

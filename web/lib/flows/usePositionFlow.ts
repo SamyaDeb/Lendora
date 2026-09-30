@@ -3,7 +3,7 @@ import {useState} from "react";
 import {useQueries, useQuery} from "@tanstack/react-query";
 import {formatUnits, maxUint256, type PublicClient} from "viem";
 import {useAccount, usePublicClient} from "wagmi";
-import {erc20Abi, stocklineRouterAbi} from "@stockline/sdk";
+import {erc20Abi, lendoraRouterAbi} from "@lendora/sdk";
 import {deployment, TICKERS} from "@/lib/env";
 import {browserApi} from "@/lib/api";
 import {deadline, useChainMarket} from "@/lib/hooks";
@@ -88,21 +88,21 @@ export function usePositionFlow(symbol: string) {
           id: "close",
           label: `Buy back ${wad(debt, 4)} ${symbol}, repay, withdraw collateral`,
           kind: "execute",
-          run: async () => void (await w.send({address: d.router!, abi: stocklineRouterAbi, functionName: "closeShort", args: [s.stockToken, usdgIn, buildSwap(d, d.usdg, s.stockToken, usdgIn, (debt * 1001n) / 1000n), w.address, dl]})),
+          run: async () => void (await w.send({address: d.router!, abi: lendoraRouterAbi, functionName: "closeShort", args: [s.stockToken, usdgIn, buildSwap(d, d.usdg, s.stockToken, usdgIn, (debt * 1001n) / 1000n), w.address, dl]})),
         },
       ],
       repay: [
         {id: "approve", label: `Approve ${symbol}`, kind: "approve", skip: u.stockAllowance >= (debt * 101n) / 100n, run: async () => void (await w.send({address: s.stockToken, abi: erc20Abi, functionName: "approve", args: [d.router!, maxUint256]}))},
-        {id: "repay", label: `Repay ${wad(debt, 4)} ${symbol}`, kind: "execute", run: async () => void (await w.send({address: d.router!, abi: stocklineRouterAbi, functionName: "repay", args: [s.stockToken, 0n, maxUint256, w.address, dl]}))},
+        {id: "repay", label: `Repay ${wad(debt, 4)} ${symbol}`, kind: "execute", run: async () => void (await w.send({address: d.router!, abi: lendoraRouterAbi, functionName: "repay", args: [s.stockToken, 0n, maxUint256, w.address, dl]}))},
       ],
       add: [
         {id: "approve", label: "Approve USDG", kind: "approve", skip: u.usdgAllowance >= addAmt, run: async () => void (await w.send({address: d.usdg, abi: erc20Abi, functionName: "approve", args: [d.router!, maxUint256]}))},
-        {id: "add", label: `Add ${add} USDG collateral`, kind: "execute", run: async () => void (await w.send({address: d.router!, abi: stocklineRouterAbi, functionName: "addCollateral", args: [s.stockToken, addAmt, w.address, dl]}))},
+        {id: "add", label: `Add ${add} USDG collateral`, kind: "execute", run: async () => void (await w.send({address: d.router!, abi: lendoraRouterAbi, functionName: "addCollateral", args: [s.stockToken, addAmt, w.address, dl]}))},
       ],
-      withdrawCollateral: [{id: "withdraw", label: "Withdraw all collateral", kind: "execute", run: async () => void (await w.send({address: d.router!, abi: stocklineRouterAbi, functionName: "withdrawCollateral", args: [s.stockToken, maxUint256, w.address, dl]}))}],
+      withdrawCollateral: [{id: "withdraw", label: "Withdraw all collateral", kind: "execute", run: async () => void (await w.send({address: d.router!, abi: lendoraRouterAbi, functionName: "withdrawCollateral", args: [s.stockToken, maxUint256, w.address, dl]}))}],
       withdrawLend: [
         {id: "approve", label: `Approve r${symbol}`, kind: "approve", skip: u.vaultAllowance >= u.vaultShares, run: async () => void (await w.send({address: s.vault, abi: erc20Abi, functionName: "approve", args: [d.router!, maxUint256]}))},
-        {id: "withdraw", label: `Withdraw all ${symbol}`, kind: "execute", run: async () => void (await w.send({address: d.router!, abi: stocklineRouterAbi, functionName: "withdrawLend", args: [s.stockToken, u.vaultShares, 0n, w.address, dl]}))},
+        {id: "withdraw", label: `Withdraw all ${symbol}`, kind: "execute", run: async () => void (await w.send({address: d.router!, abi: lendoraRouterAbi, functionName: "withdrawLend", args: [s.stockToken, u.vaultShares, 0n, w.address, dl]}))},
       ],
     };
   }

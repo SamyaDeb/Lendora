@@ -6,7 +6,7 @@ For you to run; nothing here has been sent to anyone. Targets from [`12-open-que
 
 **Before every call.** Stock Tokens are not offered to US, Canadian, UK, Swiss or UAE persons (and other restricted
 jurisdictions). Screen interviewees first and do not interview anyone in a restricted jurisdiction about using the
-product. State that Stockline is a research project, nothing is being offered, and there is no token. Do not quote
+product. State that Lendora is a research project, nothing is being offered, and there is no token. Do not quote
 yields as promises (CP-R7). Take notes in the results template below, not verbatim recordings, unless the interviewee
 consents.
 

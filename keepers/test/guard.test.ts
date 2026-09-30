@@ -1,5 +1,5 @@
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
-import {mockStockTokenAbi, mockUniswapV3PoolAbi, stocklineOracleAbi} from "@stockline/sdk";
+import {mockStockTokenAbi, mockUniswapV3PoolAbi, lendoraOracleAbi} from "@lendora/sdk";
 import {anvil as anvilChain} from "viem/chains";
 import {startAnvil, type Anvil} from "./anvil.js";
 import {call, DEPLOYER, freshRounds, WED} from "./helpers.js";
@@ -18,7 +18,7 @@ describe("guard keeper on anvil with the task-7 deployment (OR-R31, OR-R32, OR-R
 
   const setTick = (tick: number) => a.send(DEPLOYER, a.d.mocks!.NVDA_USDG_pool, call(mockUniswapV3PoolAbi, "setTick", [tick]));
   const reasons = (fn: "latchedReasons" | "emittedReasons" | "guardReasons") =>
-    a.client.readContract({address: a.d.stocks.NVDA.oracle, abi: stocklineOracleAbi, functionName: fn});
+    a.client.readContract({address: a.d.stocks.NVDA.oracle, abi: lendoraOracleAbi, functionName: fn});
   const nvda = async () => (await keeper.tick()).find((x) => x.ticker === "NVDA")!;
   /** Advance in small steps (fresh rounds, no L2 gap) and tick. */
   async function advance(seconds: bigint, step = 240n) {
@@ -111,7 +111,7 @@ describe("guard keeper on anvil with the task-7 deployment (OR-R31, OR-R32, OR-R
     await a.setTime(t0 + 600n); // sequencer produced no block for 10 minutes
     await keeper.tick();
     for (const s of Object.values(a.d.stocks)) {
-      const l = await a.client.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "latchedReasons"});
+      const l = await a.client.readContract({address: s.oracle, abi: lendoraOracleAbi, functionName: "latchedReasons"});
       expect(l & REASON.L2_GAP).toBe(REASON.L2_GAP);
     }
     await advance(3600n, 240n);

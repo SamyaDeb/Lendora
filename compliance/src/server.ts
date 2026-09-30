@@ -3,8 +3,8 @@ import type {Server} from "node:http";
 import {serve} from "@hono/node-server";
 import pg from "pg";
 import {createPublicClient, http, type PublicClient} from "viem";
-import {logPoolErrors, resolveDeployment, restrictedListFromEnv, TERMS_VERSION, type Address} from "@stockline/sdk";
-import {envKeyTypedDataSigner, remoteTypedDataSigner, type TypedDataSigner} from "@stockline/keepers/signer";
+import {logPoolErrors, resolveDeployment, restrictedListFromEnv, TERMS_VERSION, type Address} from "@lendora/sdk";
+import {envKeyTypedDataSigner, remoteTypedDataSigner, type TypedDataSigner} from "@lendora/keepers/signer";
 import {createComplianceApp} from "./app.js";
 import {StaticRangeReputation, type IpReputation, type SanctionsScreen} from "./checks.js";
 import {sanctionsFromEnv, sanctionsProviderOf} from "./sanctions/index.js";
@@ -69,16 +69,16 @@ export function assertStartupConfig(env: NodeJS.ProcessEnv, raw: string): void {
 }
 
 export async function startCompliance(env: NodeJS.ProcessEnv = process.env, o: ComplianceOverrides = {}): Promise<RunningCompliance> {
-  const raw = env.STOCKLINE_NETWORK ?? env.DEPLOYMENT_KEY ?? "31337";
+  const raw = env.LENDORA_NETWORK ?? env.DEPLOYMENT_KEY ?? "31337";
   assertStartupConfig(env, raw);
   const {key, chainId, d} = resolveDeployment(raw, "compliance"); // MN-R6
-  if (!d.router) throw new Error(`no router for "${raw}" in @stockline/sdk addresses.json`);
+  if (!d.router) throw new Error(`no router for "${raw}" in @lendora/sdk addresses.json`);
   if (!env.DATABASE_URL) throw new Error("DATABASE_URL is required");
   const sanctions = o.sanctions ?? sanctionsFromEnv(env);
   console.log(`[compliance] network ${raw} · sanctions provider ${sanctions.name ?? "custom"}`); // CP-R3: the provider in the startup log, never the key
   const client = createPublicClient({transport: http(env.RPC_URL ?? "http://127.0.0.1:8545")}) as PublicClient;
   const pool = logPoolErrors(new pg.Pool({connectionString: env.DATABASE_URL, max: 5}), "compliance", env);
-  const store = new TermsStore(pool, env.COMPLIANCE_SCHEMA ?? "stockline_compliance");
+  const store = new TermsStore(pool, env.COMPLIANCE_SCHEMA ?? "lendora_compliance");
   await store.migrate();
   const terms = loadTerms(env.TERMS_VERSION ?? TERMS_VERSION);
   const signer = o.signer ?? signerFromEnv(env);

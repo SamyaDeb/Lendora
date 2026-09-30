@@ -9,8 +9,8 @@
  * Every command ends with `fresh`, so the oracle guard doesn't trip on the block gap a warp creates.
  */
 import {readFileSync} from "node:fs";
-import {feedSessions} from "@stockline/sdk";
-import {ChainDriver, connectAnvil, DnDriver} from "@stockline/devnet";
+import {feedSessions} from "@lendora/sdk";
+import {ChainDriver, connectAnvil, DnDriver} from "@lendora/devnet";
 
 const {rpc} = JSON.parse(readFileSync(new URL("./.live-stack.json", import.meta.url), "utf8")) as {rpc: string};
 const drv = new ChainDriver(await connectAnvil(rpc));

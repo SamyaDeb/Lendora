@@ -3,7 +3,7 @@
  * earnings event windows from data/events.json. Writes data/calendar.json, which the deploy scripts and the
  * test-vector generator read.
  *
- *   pnpm --filter @stockline/sdk gen:sessions [from=2026-06-22] [to=2027-12-31]
+ *   pnpm --filter @lendora/sdk gen:sessions [from=2026-06-22] [to=2027-12-31]
  */
 import {readFileSync, writeFileSync} from "node:fs";
 import {dirname, join} from "node:path";

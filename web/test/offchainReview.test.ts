@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {BaseError, encodeErrorResult, type Abi, type AbiParameter} from "viem";
-import {collateralTokenAbi, deltaNeutralVaultAbi, feeConverterAbi, feeSplitterAbi, marketHoursAbi, navOracleAbi, stocklineLiquidatorAbi, stocklineOracleAbi, stocklineRouterAbi, stockWrapperAbi, strategyManagerAbi} from "@stockline/sdk";
+import {collateralTokenAbi, deltaNeutralVaultAbi, feeConverterAbi, feeSplitterAbi, marketHoursAbi, navOracleAbi, lendoraLiquidatorAbi, lendoraOracleAbi, lendoraRouterAbi, stockWrapperAbi, strategyManagerAbi} from "@lendora/sdk";
 import {explainError} from "@/lib/errors";
 import {contentSecurityPolicy, securityHeaders} from "@/lib/csp";
 import {MAX_KEYS, POST as analytics, GET as analyticsCounts} from "@/app/api/analytics/route";
@@ -22,14 +22,14 @@ function zero(p: AbiParameter): unknown {
   return 0n;
 }
 
-describe("OFF-14 the revert decoder covers every Stockline custom error", () => {
-  const stockline: [string, Abi][] = [
-    ["router", stocklineRouterAbi as Abi],
+describe("OFF-14 the revert decoder covers every Lendora custom error", () => {
+  const lendora: [string, Abi][] = [
+    ["router", lendoraRouterAbi as Abi],
     ["wrapper", stockWrapperAbi as Abi],
     ["clUSDG", collateralTokenAbi as Abi],
-    ["oracle", stocklineOracleAbi as Abi],
+    ["oracle", lendoraOracleAbi as Abi],
     ["MarketHours", marketHoursAbi as Abi],
-    ["liquidator", stocklineLiquidatorAbi as Abi],
+    ["liquidator", lendoraLiquidatorAbi as Abi],
     ["FeeSplitter", feeSplitterAbi as Abi],
     ["FeeConverter", feeConverterAbi as Abi],
     ["DeltaNeutralVault", deltaNeutralVaultAbi as Abi],
@@ -38,7 +38,7 @@ describe("OFF-14 the revert decoder covers every Stockline custom error", () => 
   ];
   it("OFF_14 every error decodes by name (never raw hex), including the fee contracts'", () => {
     let n = 0;
-    for (const [label, abi] of stockline) {
+    for (const [label, abi] of lendora) {
       for (const e of abi.filter((x) => x.type === "error") as {name: string; inputs: readonly AbiParameter[]}[]) {
         const data = encodeErrorResult({abi, errorName: e.name, args: e.inputs.map(zero)} as never);
         const msg = explainError(new Wrapped(data));
@@ -69,20 +69,20 @@ describe("OFF-14 the revert decoder covers every Stockline custom error", () => 
       return new Wrapped(encodeErrorResult({abi: feeConverterAbi, errorName, args: e.inputs.map(zero)} as never));
     };
     expect(explainError(enc("SlippageTooLoose"))).toMatch(/1% below the oracle/);
-    expect(explainError(enc("NotKeeper"))).toMatch(/reserved to a Stockline role/);
+    expect(explainError(enc("NotKeeper"))).toMatch(/reserved to a Lendora role/);
     expect(explainError(enc("MarketClosed"))).toMatch(/session is closed/);
   });
 });
 
 describe("OFF-12 CSP and HSTS", () => {
   it("OFF_12 the policy locks scripts, framing and connections to the listed origins", () => {
-    const csp = contentSecurityPolicy({NODE_ENV: "production", NEXT_PUBLIC_API_URL: "https://api.stockline.xyz", NEXT_PUBLIC_RPC_URL: "https://rpc.testnet.chain.robinhood.com", NEXT_PUBLIC_CHAIN_ID: "46630"});
+    const csp = contentSecurityPolicy({NODE_ENV: "production", NEXT_PUBLIC_API_URL: "https://api.lendora.xyz", NEXT_PUBLIC_RPC_URL: "https://rpc.testnet.chain.robinhood.com", NEXT_PUBLIC_CHAIN_ID: "46630"});
     const dir = Object.fromEntries(csp.split("; ").map((d) => [d.split(" ")[0], d.split(" ").slice(1)]));
     expect(dir["default-src"]).toEqual(["'self'"]);
     expect(dir["script-src"]).not.toContain("'unsafe-eval'");
     expect(dir["frame-ancestors"]).toEqual(["'none'"]);
     expect(dir["object-src"]).toEqual(["'none'"]);
-    expect(dir["connect-src"]).toEqual(expect.arrayContaining(["https://api.stockline.xyz", "wss://api.stockline.xyz", "https://rpc.testnet.chain.robinhood.com"]));
+    expect(dir["connect-src"]).toEqual(expect.arrayContaining(["https://api.lendora.xyz", "wss://api.lendora.xyz", "https://rpc.testnet.chain.robinhood.com"]));
     expect(dir["connect-src"].some((o: string) => o.includes("*") && !/walletconnect|web3modal|reown|coinbase/.test(o))).toBe(false);
     const h = securityHeaders({NODE_ENV: "production"});
     expect(h.find((x) => x.key === "Strict-Transport-Security")?.value).toMatch(/max-age=63072000/);

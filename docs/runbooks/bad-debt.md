@@ -1,6 +1,6 @@
 # Runbook · Bad debt (`BAD_DEBT`, MON-R1, P0)
 
-**Trigger.** Morpho `Liquidate` on a Stockline market with `badDebtAssets > 0`. The page carries the market, borrower,
+**Trigger.** Morpho `Liquidate` on a Lendora market with `badDebtAssets > 0`. The page carries the market, borrower,
 tx hash, `badDebtAssets` (raw wSTOCK) and `seizedAssets` (clUSDG). Auto-resolves after 24h (A30); the follow-up is this
 runbook.
 
@@ -35,7 +35,7 @@ cast calldata "trip(uint256)" 1                      # to = $ORACLE
 # Sentinel (guardian Safe): stop new supply being lent out (instant cap decrease), and pull free liquidity
 cast calldata "decreaseAbsoluteCap(bytes,uint256)" $ADAPTER_ID 0   # to = $VAULT
 # Owner (timelock): stop router entries in the market
-pnpm --filter @stockline/sdk timelock router.delistMarket ticker=NVDA --network $NET --salt "$(date -u +%F) NVDA delist"
+pnpm --filter @lendora/sdk timelock router.delistMarket ticker=NVDA --network $NET --salt "$(date -u +%F) NVDA delist"
 ```
 
 **Who signs.** Guardian 2-of-4 for the trip and cap decrease (instant). Owner 4-of-7 through the timelock for delisting

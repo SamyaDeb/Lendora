@@ -66,7 +66,7 @@
       {
         "name": "l",
         "type": "tuple",
-        "internalType": "struct StocklineLiquidator.Liquidation",
+        "internalType": "struct LendoraLiquidator.Liquidation",
         "components": [
           {
             "name": "market",
@@ -118,7 +118,7 @@
           {
             "name": "swap",
             "type": "tuple",
-            "internalType": "struct StocklineLiquidator.Swap",
+            "internalType": "struct LendoraLiquidator.Swap",
             "components": [
               {
                 "name": "target",
@@ -229,7 +229,7 @@
       {
         "name": "mode",
         "type": "uint8",
-        "internalType": "enum StocklineLiquidator.SwapMode"
+        "internalType": "enum LendoraLiquidator.SwapMode"
       }
     ],
     "outputs": [],
@@ -249,7 +249,7 @@
       {
         "name": "",
         "type": "uint8",
-        "internalType": "enum StocklineLiquidator.SwapMode"
+        "internalType": "enum LendoraLiquidator.SwapMode"
       }
     ],
     "stateMutability": "view"
@@ -343,7 +343,7 @@
         "name": "mode",
         "type": "uint8",
         "indexed": false,
-        "internalType": "enum StocklineLiquidator.SwapMode"
+        "internalType": "enum LendoraLiquidator.SwapMode"
       }
     ],
     "anonymous": false

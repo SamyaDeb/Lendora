@@ -2,7 +2,7 @@
  * Shared test vectors for Solidity ↔ SDK cross-checks (OR-R1, OR-R22; Phase 1 brief §4 "one source of math").
  * The SDK computes every expected value; forge reads the files with vm.readFile/vm.parseJson (no ffi).
  *
- *   pnpm --filter @stockline/sdk gen:vectors
+ *   pnpm --filter @lendora/sdk gen:vectors
  *
  * Writes contracts/test/vectors/{buffer,price,receipt,fullbuffer,health,nvda_launch_rounds}.json.
  * Deterministic (fixed seed): re-running produces identical files.

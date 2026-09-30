@@ -37,7 +37,7 @@ export function isRestricted(geo: {country?: string | null; region?: string | nu
  */
 export function termsMessage(address: Address, version: string, termsHash: string): string {
   return [
-    "Stockline: I accept the Terms of Use and the Risk Disclosure.",
+    "Lendora: I accept the Terms of Use and the Risk Disclosure.",
     "",
     "I understand that lending and borrowing Stock Tokens carries risk, including liquidation, that rates are variable,",
     "that nothing here is an offer of securities or investment advice, and that access is not available in restricted regions.",

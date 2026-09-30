@@ -1,4 +1,4 @@
-// Copies ABIs of Stockline contracts (contracts/src) from Foundry output into packages/sdk/abis.
+// Copies ABIs of Lendora contracts (contracts/src) from Foundry output into packages/sdk/abis.
 // Run `forge build` in contracts/ first.
 import {readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync} from "node:fs";
 import {join, basename, dirname} from "node:path";
@@ -38,9 +38,9 @@ const typed = [
   ["stockWrapperAbi", "StockWrapper.sol/StockWrapper.json"],
   ["collateralTokenAbi", "CollateralToken.sol/CollateralToken.json"],
   ["marketHoursAbi", "MarketHours.sol/MarketHours.json"],
-  ["stocklineOracleAbi", "StocklineOracle.sol/StocklineOracle.json"],
-  ["stocklineRouterAbi", "StocklineRouter.sol/StocklineRouter.json"],
-  ["stocklineLiquidatorAbi", "StocklineLiquidator.sol/StocklineLiquidator.json"],
+  ["lendoraOracleAbi", "LendoraOracle.sol/LendoraOracle.json"],
+  ["lendoraRouterAbi", "LendoraRouter.sol/LendoraRouter.json"],
+  ["lendoraLiquidatorAbi", "LendoraLiquidator.sol/LendoraLiquidator.json"],
   ["vaultV2Abi", "IMorphoVaultV2.sol/IVaultV2Min.json"],
   ["marketAdapterAbi", "IMorphoVaultV2.sol/IMorphoMarketV1AdapterV2Min.json"],
   ["morphoAbi", "IMorpho.sol/IMorpho.0.8.19.default.json"],

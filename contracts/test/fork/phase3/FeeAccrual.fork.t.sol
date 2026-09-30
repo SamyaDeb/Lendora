@@ -5,7 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IMorpho} from "morpho-blue/src/interfaces/IMorpho.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {IVaultV2Min} from "../../../src/interfaces/external/IMorphoVaultV2.sol";
-import {IStocklineRouter} from "../../../src/interfaces/IStocklineRouter.sol";
+import {ILendoraRouter} from "../../../src/interfaces/ILendoraRouter.sol";
 import {ForkConfig} from "../../../script/ForkConfig.sol";
 import {Phase1ForkBase} from "../phase1/Phase1ForkBase.sol";
 
@@ -91,7 +91,7 @@ contract FeeAccrualForkTest is Phase1ForkBase, ForkConfig {
         (uint256 p,) = nvda.oracle.stockAnswer();
         uint256 collateral = p * (amount / 1e18) * 3 / 100; // 3x the debt value, USDG 6 dp
         deal(USDG, borrower, collateral, true);
-        IStocklineRouter.Attestation memory att;
+        ILendoraRouter.Attestation memory att;
         att.expiry = block.timestamp + 1 days;
         (uint8 sv, bytes32 r, bytes32 s) =
             vm.sign(attester.privateKey, core.router.attestationDigest(borrower, att.expiry));

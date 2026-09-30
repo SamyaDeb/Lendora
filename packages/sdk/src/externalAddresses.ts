@@ -14,7 +14,7 @@ export interface ChainlinkFeed {
   marketHours?: string;
 }
 
-/** Third-party contracts Stockline depends on, per chain. Never Stockline's own deployments (see `addresses.ts`). */
+/** Third-party contracts Lendora depends on, per chain. Never Lendora's own deployments (see `addresses.ts`). */
 export interface ExternalChain {
   name: string;
   tokens: {USDG: Address; WETH: Address; syrupUSDG: Address};

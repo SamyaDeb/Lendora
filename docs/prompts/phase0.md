@@ -1,4 +1,4 @@
-We're building Stockline, a stock lending layer for Robinhood Chain built on unmodified Morpho Blue and MetaMorpho.
+We're building Lendora, a stock lending layer for Robinhood Chain built on unmodified Morpho Blue and MetaMorpho.
 This session runs **Phase 0: Validation** end to end. Phase 0 turns every [VERIFY] assumption in the PRD into a
 verified fact (with evidence) or a documented "no" (with its consequence). It then produces a go/no-go memo.
 
@@ -39,7 +39,7 @@ Never print or commit secrets.
   else is labeled `UNVERIFIED` with what would verify it. Never fill a gap from memory. If a doc and the chain disagree,
   the chain wins and both are recorded.
 - **Read-only.** Never send a transaction to mainnet or testnet, and never sign anything. All onchain checks are `eth_call`,
-  log queries or Foundry fork tests (`vm.createSelectFork`). Deploying Stockline contracts *inside a fork* is fine.
+  log queries or Foundry fork tests (`vm.createSelectFork`). Deploying Lendora contracts *inside a fork* is fine.
 - **No outreach.** Don't contact issuers, Morpho, Chainlink, venues or interviewees. Produce the kits and I'll run them.
 - **No legal conclusions.** Produce questions for counsel, not opinions.
 - **CI stays green.** Fork tests live in `contracts/test/fork/` and skip cleanly when `ROBINHOOD_RPC_URL` is unset

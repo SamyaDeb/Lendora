@@ -3,9 +3,9 @@ pragma solidity 0.8.26;
 
 import {IMorpho, MarketParams, Position} from "morpho-blue/src/interfaces/IMorpho.sol";
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
-import {StocklineRouter} from "../../src/StocklineRouter.sol";
-import {IStocklineRouter} from "../../src/interfaces/IStocklineRouter.sol";
-import {LocalStockline} from "../utils/LocalStockline.sol";
+import {LendoraRouter} from "../../src/LendoraRouter.sol";
+import {ILendoraRouter} from "../../src/interfaces/ILendoraRouter.sol";
+import {LocalLendora} from "../utils/LocalLendora.sol";
 
 /// T10 / residual (e) in 05 §1: `withdrawCollateral` is an exit with no RT-R1 check, so a borrower with debt can
 /// withdraw down to Morpho's LLTV at today's price, below the 24h weekend/earnings buffer.
@@ -15,7 +15,7 @@ import {LocalStockline} from "../utils/LocalStockline.sol";
 /// is skipped until the owner approves the upgrade through the timelock.
 /// forge-config: default.isolate = true
 /// forge-config: ci.isolate = true
-contract WithdrawCollateralBufferTest is LocalStockline {
+contract WithdrawCollateralBufferTest is LocalLendora {
     using MarketParamsLib for MarketParams;
 
     uint256 internal constant NVDA = 1;
@@ -24,7 +24,7 @@ contract WithdrawCollateralBufferTest is LocalStockline {
     address internal alice = makeAddr("alice");
     address internal nvdaToken;
     IMorpho internal morpho;
-    StocklineRouter internal router;
+    LendoraRouter internal router;
 
     function setUp() public override {
         super.setUp();
@@ -39,7 +39,7 @@ contract WithdrawCollateralBufferTest is LocalStockline {
         m.feeds[NVDA].setAnswer(225.66e8);
         m.usdgFeed.setAnswer(1e8);
         // A healthy position: $5,000 of clUSDG against 10 NVDA ($2,256.60), HF(t + 24h) well above 1.10.
-        IStocklineRouter.Attestation memory att = _attest(alice);
+        ILendoraRouter.Attestation memory att = _attest(alice);
         vm.prank(alice);
         router.borrow(nvdaToken, 5000e6, 10e18, alice, att, block.timestamp);
     }

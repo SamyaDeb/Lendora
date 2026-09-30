@@ -3,7 +3,7 @@ import {lookup as dnsLookup} from "node:dns/promises";
 import {request as httpRequest} from "node:http";
 import {request as httpsRequest} from "node:https";
 import {isIP} from "node:net";
-import type {AlertSettings} from "@stockline/sdk";
+import type {AlertSettings} from "@lendora/sdk";
 
 /**
  * APP-R8 delivery behind one interface. Real providers are wired by env (Resend for email, the Telegram Bot API,
@@ -54,7 +54,7 @@ export class ResendEmailTransport implements Transport {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {authorization: `Bearer ${this.apiKey}`, "content-type": "application/json"},
-      body: JSON.stringify({from: this.from, to, subject: a.title, text: `${a.body}\n\nStockline alerts. Not investment advice.`}),
+      body: JSON.stringify({from: this.from, to, subject: a.title, text: `${a.body}\n\nLendora alerts. Not investment advice.`}),
       signal: AbortSignal.timeout(10_000),
     });
     if (!r.ok) throw new Error(`email ${r.status}`);
@@ -150,7 +150,7 @@ export class WebhookTransport implements Transport {
         u,
         {
           method: "POST",
-          headers: {"content-type": "application/json", "content-length": Buffer.byteLength(body), "x-stockline-signature": `sha256=${sig}`},
+          headers: {"content-type": "application/json", "content-length": Buffer.byteLength(body), "x-lendora-signature": `sha256=${sig}`},
           // Pinned: the socket connects to the address checked above; TLS still verifies the certificate for `host`.
           lookup: ((_h: string, opts: {all?: boolean}, cb: (...args: unknown[]) => void) =>
             opts?.all ? cb(null, [{address: pin.address, family: pin.family}]) : cb(null, pin.address, pin.family)) as never,

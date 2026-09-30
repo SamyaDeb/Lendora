@@ -40,15 +40,15 @@ function has(bin: string): boolean {
 export async function startPostgres(): Promise<Service> {
   if (process.env.DATABASE_URL) return freshDatabase(process.env.DATABASE_URL);
   if (!has("postgres") || !has("initdb")) throw new Error("set DATABASE_URL or install postgres (initdb, postgres) on PATH");
-  const dir = mkdtempSync(join(tmpdir(), "stockline-pg-"));
-  const init = spawnSync("initdb", ["-D", dir, "-U", "stockline", "--auth=trust", "-E", "UTF8", "--no-instructions"], {stdio: "ignore"});
+  const dir = mkdtempSync(join(tmpdir(), "lendora-pg-"));
+  const init = spawnSync("initdb", ["-D", dir, "-U", "lendora", "--auth=trust", "-E", "UTF8", "--no-instructions"], {stdio: "ignore"});
   if (init.status !== 0) throw new Error("initdb failed");
   const port = await freePort();
   const proc: ChildProcess = spawn("postgres", ["-D", dir, "-p", String(port), "-k", dir, "-h", "127.0.0.1", "-c", "fsync=off", "-c", "max_connections=200"], {stdio: "ignore"});
   await waitPort(port);
   // The server accepts TCP before it accepts logins; retry createdb until it does.
   for (let i = 0; i < 100; i++) {
-    const r = spawnSync("createdb", ["-h", "127.0.0.1", "-p", String(port), "-U", "stockline", "stockline"], {stdio: "ignore"});
+    const r = spawnSync("createdb", ["-h", "127.0.0.1", "-p", String(port), "-U", "lendora", "lendora"], {stdio: "ignore"});
     if (r.status === 0) break;
     await new Promise((res) => setTimeout(res, 100));
   }
@@ -59,7 +59,7 @@ export async function startPostgres(): Promise<Service> {
   proc.on("exit", cleanup);
   spawn("sh", ["-c", `while kill -0 ${process.pid} 2>/dev/null; do sleep 2; done; kill -INT ${proc.pid} 2>/dev/null; sleep 3; kill -9 ${proc.pid} 2>/dev/null; rm -rf '${dir}'`], {detached: true, stdio: "ignore"}).unref();
   return {
-    url: `postgres://stockline@127.0.0.1:${port}/stockline`,
+    url: `postgres://lendora@127.0.0.1:${port}/lendora`,
     stop: () => {
       proc.kill("SIGINT");
     },
@@ -77,13 +77,13 @@ export async function startRedis(): Promise<Service> {
 
 /** A new, empty database on the server of `serverUrl`; `stop()` drops it (best effort, connections forced closed). */
 async function freshDatabase(serverUrl: string): Promise<Service> {
-  const name = `stockline_${Date.now().toString(36)}_${Math.floor(Math.random() * 1e9).toString(36)}`;
+  const name = `lendora_${Date.now().toString(36)}_${Math.floor(Math.random() * 1e9).toString(36)}`;
   const admin = new pg.Client({connectionString: serverUrl});
   await admin.connect();
   try {
     await admin.query(`create database "${name}"`);
     // A test process can exit before its drop completes: sweep this helper's databases older than 6h.
-    const {rows} = await admin.query(`select datname from pg_database where datname like 'stockline\\_%\\_%'`);
+    const {rows} = await admin.query(`select datname from pg_database where datname like 'lendora\\_%\\_%'`);
     for (const {datname} of rows as {datname: string}[]) {
       const born = parseInt(datname.split("_")[1] ?? "", 36);
       if (Number.isFinite(born) && Date.now() - born > 6 * 3600_000) {

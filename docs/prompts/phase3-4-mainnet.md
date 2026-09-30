@@ -1,6 +1,6 @@
-We're building Stockline, a stock lending layer for Robinhood Chain (chain id 4663, testnet 46630) on unmodified
+We're building Lendora, a stock lending layer for Robinhood Chain (chain id 4663, testnet 46630) on unmodified
 Morpho Blue and Morpho Vault V2. Phases 0–2 and the remediation are committed, the audit package is frozen at
-`docs/audit/FREEZE`, and **Stockline is live on testnet 46630 since 2026-09-28** (`packages/sdk/addresses.json` →
+`docs/audit/FREEZE`, and **Lendora is live on testnet 46630 since 2026-09-28** (`packages/sdk/addresses.json` →
 `chains["46630"]`, smoke 13/13).
 
 This session **builds everything engineering can build for Phase 3 (fees, audit support, guarded-mainnet
@@ -23,7 +23,7 @@ gets long, finish the current task, commit, and continue. Don't skip ahead.
    questions), `docs/phase0/01-chain-facts.md` §7 (perp venues)
 4. Mainnet: `docs/runbooks/mainnet-launch.md`, `docs/runbooks/README.md` (drill table), `docs/runbooks/testnet.md`,
    `docs/audit/README.md`, `docs/audit/threat-model.md`, `docs/owner-actions/*` (what's waiting on the owner)
-5. Code: `contracts/script/{StocklineDeploy.sol,DeployTestnet.s.sol,DeployFork.s.sol,ForkConfig.sol}`,
+5. Code: `contracts/script/{LendoraDeploy.sol,DeployTestnet.s.sol,DeployFork.s.sol,ForkConfig.sol}`,
    `contracts/src/**`, `contracts/lib/vault-v2/src/VaultV2.sol` (**performance fee, fee recipient, timelocked
    setters: read the real function names, don't guess**), `keepers/src/{common,allocator,liquidator,monitor}/*`,
    `indexer/`, `api/`, `compliance/src/*`, `web/app/**`, `infra/**`, `sim/{README.md,phase0,event_timing}`,
@@ -38,7 +38,7 @@ cd .. && pnpm -r typecheck && pnpm -r lint && pnpm -r test
 ```
 
 Expected (2026-09-28, no `ROBINHOOD_RPC_URL`): Foundry **205 passed / 15 skipped**; TS **183+ passed** (plus the new
-`keepers/test/pager.test.ts`); `StocklineRouter` runtime 24,092 bytes (484 under EIP-170). If the tree has
+`keepers/test/pager.test.ts`); `LendoraRouter` runtime 24,092 bytes (484 under EIP-170). If the tree has
 uncommitted work that belongs to the repo (monitor `LOW_GAS` pager change, `scripts/dev-testnet.sh`, `scripts/lib/`,
 `docs/prompts/*`, `web/AGENTS.md`, `web/CLAUDE.md`), show me the diff and commit it as task 0 once I confirm. If
 anything fails, stop and report before changing code.
@@ -55,9 +55,9 @@ anything fails, stop and report before changing code.
   "Post-freeze diff" section of `docs/audit/README.md` (file, commit, why). New contracts (FeeSplitter,
   FeeConverter, Phase 4 vault) are **new scope**: Phase 3 contracts go to audit round 2 / delta review, Phase 4 gets
   its own package.
-- **Router size:** 484 bytes of headroom. Nothing in this session should grow `StocklineRouter`; if something must,
+- **Router size:** 484 bytes of headroom. Nothing in this session should grow `LendoraRouter`; if something must,
   check `forge build --sizes` in the same commit.
-- **One source of truth:** addresses, ABIs and safety math come from `@stockline/sdk`. After any ABI change, re-export
+- **One source of truth:** addresses, ABIs and safety math come from `@lendora/sdk`. After any ABI change, re-export
   (`packages/sdk/scripts/export-abis.mjs`), regenerate `api/openapi.json` / `packages/sdk/src/api/schema.ts` when
   touched, and update every caller.
 - **Exits are never blocked** (CP-R4, APP-R2, APP-R4, DN-R1): repay, close, withdraw, unwrap, rescue top-ups, and
@@ -75,7 +75,7 @@ anything fails, stop and report before changing code.
   config in `infra/railway/`, `.env.example` lines, and a start line in `scripts/dev.sh`.
 - **Commit after each task** with the task ID, e.g. `feat(contracts): FeeSplitter FE-R2 FE-R3 (phase 3 task 1)`, with
   the attribution lines your environment requires.
-- **Don't touch `client/`** (separate marketing page, untracked) and don't rename "Stockline" (Q6 pending).
+- **Don't touch `client/`** (separate marketing page, untracked) and don't rename "Lendora" (Q6 pending).
 - **Ask, don't guess.** New engineering assumptions go in `12-open-questions.md` as A29+. If a §3 decision is still
   `[OWNER]`, use the default, build it as configurable, and list it in the final summary.
 - **Be honest about gates.** Don't mark any acceptance box `[x]` that needs time, people or mainnet. Write
@@ -113,7 +113,7 @@ anything fails, stop and report before changing code.
 ### Task 2 · Wire the performance fee into deployment (FE-R1)
 
 - Read the real Vault V2 API for performance fee and fee recipient (both timelocked curator actions) and add them to
-  `StocklineDeploy.sol`: deploy `FeeSplitter` in `_deployCore`, set `feeRecipient = FeeSplitter` and `fee = 10%` per
+  `LendoraDeploy.sol`: deploy `FeeSplitter` in `_deployCore`, set `feeRecipient = FeeSplitter` and `fee = 10%` per
   `rSTOCK` vault in `_deployStock` **before** `increaseTimelock` locks it. Add the step to `docs/runbooks/list-stock.md`.
 - A "turn fees on later" path for already-deployed vaults (testnet): timelock calldata in
   `packages/sdk/scripts/timelockCalldata.ts` (schedule → wait → execute), with a devnet rehearsal test.
@@ -148,7 +148,7 @@ New rules in `keepers/src/monitor/` with IDs `MON-R16…` in `10-risk-compliance
 
 | Rule | Condition | Sev |
 |---|---|---|
-| `TIMELOCK_SCHEDULED` | Any `CallScheduled` on a Stockline timelock; decode the call (SDK) into the page | P1 |
+| `TIMELOCK_SCHEDULED` | Any `CallScheduled` on a Lendora timelock; decode the call (SDK) into the page | P1 |
 | `TIMELOCK_EXECUTED` | Any `CallExecuted`; P0 if it wasn't scheduled through the tracked path | P1 |
 | `ROLE_CHANGED` | Ownership, guardian, keeper, allocator, sentinel, curator or attestation-signer change on any contract | P0 |
 | `LIQUIDATION_UNPROFITABLE` | Liquidatable position where the best DEX route at the current size loses money after LIF (missed-liquidation runbook) | P1 |
@@ -168,7 +168,7 @@ Each rule fires once and resolves once on anvil from real chain conditions (exte
 ### Task 7 · Mainnet deploy script and role verification (mainnet-launch §1–§3)
 
 - `contracts/script/DeployMainnet.s.sol` + `MainnetConfig.sol`: no mocks, real addresses (Morpho Blue, Vault V2
-  factories, Stock Tokens, USDG, Chainlink feeds, UniversalRouter), **every `STOCKLINE_*` role a distinct address**
+  factories, Stock Tokens, USDG, Chainlink feeds, UniversalRouter), **every `LENDORA_*` role a distinct address**
   (A27 must not carry over), 48h timelocks, caps at **25% of the D8 targets**, per-address and global caps, oracle
   params from 10, event buffers, `sequencerFeed = address(0)`, `forceDeallocatePenalty = 0`, fee → `FeeSplitter`.
   The script **refuses to run** if any role address is zero, equals another role, equals the deployer, or if the
@@ -250,7 +250,7 @@ build (14–18) under Q11: tested and audit-ready, but **no non-zero cap anywher
 
 ### Task 13 · Simulation gate (08 §"Simulation gate")
 
-- `sim/dn_vault/`: fetch ≥ 12 months of hourly funding (public API), perp/spot basis, and Stockline borrow
+- `sim/dn_vault/`: fetch ≥ 12 months of hourly funding (public API), perp/spot basis, and Lendora borrow
   utilization/APY proxies (Morpho stock-loan markets on 4663 or the Phase 0 data; state which), cached in `sim/data/`.
 - Model the position structure exactly as 08 (`S`, `M`, `C`, `L = 3`, `c = 5%`, `LEND_RATIO`, sleeves) with swap and
   rebalance costs from measured DEX depth, the delta band (DN-R2), margin targets (2× open, 3× during closures), the

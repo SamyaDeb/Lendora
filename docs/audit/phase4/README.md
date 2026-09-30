@@ -1,4 +1,4 @@
-# Stockline · audit package (Phase 4: USDG Earn, delta-neutral vault)
+# Lendora · audit package (Phase 4: USDG Earn, delta-neutral vault)
 
 Scope, architecture, roles and trust, integrations, invariants with their tests, how to run them, and the known issues
 we accept, for the **delta-neutral vault** (PRD [08](../../prd/08-delta-neutral-vault.md), DN-R1…R14) and the
@@ -7,7 +7,7 @@ deployment logic that ships it. The Phase 1–3 package is [../README.md](../REA
 (NAV reporter and co-signer, DN rebalancer, `/v1/vault/*`) is reviewed in [../offchain-review.md](../offchain-review.md)
 §5 (OFF-18…OFF-22).
 
-*Prepared 2026-09-29 (Phase 4 task 18). Working name "Stockline" (brand decision Q6 pending; nothing renamed).*
+*Prepared 2026-09-29 (Phase 4 task 18). The product was renamed from Stockline to Lendora on 2026-09-30, after the freeze: at the freeze commit the files and contracts named `Lendora*` here are `Stockline*`.*
 
 ## 1. Scope
 
@@ -31,14 +31,14 @@ non-comment lines.
 | **Total new `src/`** | **1,022** | | |
 
 Runtime sizes (`forge build --sizes`): `DeltaNeutralVault` 12,499 B, `StrategyManager` 15,008 B, `NavOracle` 10,033 B.
-`StocklineRouter` is **unchanged** at 24,092 B (484 B headroom).
+`LendoraRouter` is **unchanged** at 24,092 B (484 B headroom).
 
 **Deployment logic in scope** (as in rounds 1–2):
 
 | File | nSLOC | What it does |
 |---|---:|---|
 | `script/DnVaultDeploy.sol` | 164 | `_deployDnVault`: vault, strategy, oracle, adapter wiring, roles, handover to the timelock. **MN-R7**: on chain 4663 it refuses a mock venue and any non-zero cap |
-| `script/MainnetConfig.sol` | 225 | Adds `DnRoles` from `STOCKLINE_DN_OPERATOR`, `STOCKLINE_NAV_SIGNER_1/2` and **MN-R8** `_assertDnRoles` (distinct, non-zero, not the deployer, not another Stockline role) |
+| `script/MainnetConfig.sol` | 225 | Adds `DnRoles` from `LENDORA_DN_OPERATOR`, `LENDORA_NAV_SIGNER_1/2` and **MN-R8** `_assertDnRoles` (distinct, non-zero, not the deployer, not another Lendora role) |
 | `script/VerifyRoles.s.sol` | 472 | Read-only; new `_dn` section (owners, operator, signers, caps 0, adapter) |
 | `script/ReceiptMarketDeploy.sol`, `script/ListReceiptMarket.s.sol` | 152 + 101 | G5 receipt market (A3): stage 1 deploys with caps 0; listing is the curator's timelocked step, CL-R10 window enforced on 4663 |
 | `script/DeployTestnetVault.s.sol` | 76 | Testnet DN vault on the existing 46630 deployment: **mock venue, caps 0** |
@@ -91,8 +91,8 @@ tick; the **NAV reporter** / **co-signer** (`keepers/src/navReporter`); the moni
 
 | Integration | Where | Notes |
 |---|---|---|
-| Stockline Phase 1–3 (router attestation digest, `MarketHours`, `StocklineOracle.quote`, wrappers, rSTOCK Vault V2) | vault, strategy, oracle | Read-only use of frozen contracts; `rSTOCK` deposits/redeems through Vault V2's ERC-4626 |
-| Uniswap UniversalRouter (4663) / mock aggregator (anvil, testnet) | `StrategyManager` swaps, `Transfer` mode | Output measured by balance delta; floor from the Stockline oracle, never from the calldata |
+| Lendora Phase 1–3 (router attestation digest, `MarketHours`, `LendoraOracle.quote`, wrappers, rSTOCK Vault V2) | vault, strategy, oracle | Read-only use of frozen contracts; `rSTOCK` deposits/redeems through Vault V2's ERC-4626 |
+| Uniswap UniversalRouter (4663) / mock aggregator (anvil, testnet) | `StrategyManager` swaps, `Transfer` mode | Output measured by balance delta; floor from the Lendora oracle, never from the calldata |
 | Lighter (Robinhood Chain instance) | future production adapter | Contract-held accounts via onchain `changePubKey` (fork-verified selectors); 5 `[VERIFY]` items in [01-perp-venue.md](../../phase4/01-perp-venue.md) §2; **no adapter shipped** |
 | `MockPerpVenue` (test only) | anvil, testnet | Gated venue + adapter: funding, liquidation, withdrawal delay, halt switch |
 
@@ -138,7 +138,7 @@ FOUNDRY_PROFILE=deep forge test --match-contract DnVaultInvariantTest     # deep
 ROBINHOOD_RPC_URL=https://rpc.mainnet.chain.robinhood.com forge test --match-path "test/fork/phase4/*"
 forge coverage --ir-minimum --report summary
 slither .                                                                 # no medium+; triage in slither.config.json
-cd .. && pnpm --filter @stockline/keepers exec vitest run test/dnVault.test.ts test/dnWeek.test.ts test/monitorDn.test.ts
+cd .. && pnpm --filter @lendora/keepers exec vitest run test/dnVault.test.ts test/dnWeek.test.ts test/monitorDn.test.ts
 ```
 
 The sim gate lives in `sim/dn_vault` (report: [sim/reports/phase4-dn-vault.md](../../../sim/reports/phase4-dn-vault.md)).

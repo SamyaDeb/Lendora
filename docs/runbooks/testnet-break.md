@@ -81,16 +81,16 @@ Feed session open. With real bypass transactions (tester key).
 | K · compliance | a sanctioned address (deny-list) is never attested | ok | 403 {"code":"SANCTIONED","error":"this wallet cannot open positions"} |
 | K · compliance | compliance direct: forged proxy secret is not trusted (CP-R8) | ok | 403 {"code":"GEO_UNKNOWN","error":"your location could not be de |
 | K · compliance | compliance direct: a 12 MB body is refused | ok | 403 |
-| R · router (simulated) | router.listMarket from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Stockline role (owner, guardian or keeper…" |
-| R · router (simulated) | router.delistMarket from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Stockline role (owner, guardian or keeper…" |
-| R · router (simulated) | router.setCapOverride from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Stockline role (owner, guardian or keeper…" |
-| R · router (simulated) | router.setGlobalCap from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Stockline role (owner, guardian or keeper…" |
-| R · router (simulated) | router.setAttestationSigner from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Stockline role (owner, guardian or keeper…" |
-| R · router (simulated) | router.setSwapTarget from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Stockline role (owner, guardian or keeper…" |
-| R · router (simulated) | router.transferOwnership from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Stockline role (owner, guardian or keeper…" |
-| R · router (simulated) | router.upgradeToAndCall from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Stockline role (owner, guardian or keeper…" |
-| R · router (simulated) | clUSDG.mint outside the router → NotRouter (CL-R2) | ok | reverted: NotRouter → "clUSDG collateral moves only through the Stockline router (or Morpho);…" |
-| R · router (simulated) | clUSDG wallet-to-wallet transfer → TransferNotAllowed (CL-R3) | ok | reverted: TransferNotAllowed → "clUSDG collateral moves only through the Stockline router (or Morpho);…" |
+| R · router (simulated) | router.listMarket from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper…" |
+| R · router (simulated) | router.delistMarket from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper…" |
+| R · router (simulated) | router.setCapOverride from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper…" |
+| R · router (simulated) | router.setGlobalCap from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper…" |
+| R · router (simulated) | router.setAttestationSigner from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper…" |
+| R · router (simulated) | router.setSwapTarget from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper…" |
+| R · router (simulated) | router.transferOwnership from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper…" |
+| R · router (simulated) | router.upgradeToAndCall from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper…" |
+| R · router (simulated) | clUSDG.mint outside the router → NotRouter (CL-R2) | ok | reverted: NotRouter → "clUSDG collateral moves only through the Lendora router (or Morpho);…" |
+| R · router (simulated) | clUSDG wallet-to-wallet transfer → TransferNotAllowed (CL-R3) | ok | reverted: TransferNotAllowed → "clUSDG collateral moves only through the Lendora router (or Morpho);…" |
 | R · router (simulated) | lend to the zero address is refused (shares would be lost) | ok | reverted: ZeroAddress → "The recipient address is empty (0x0). Send to your own wallet address.…" |
 | R · router (simulated) | lend more than the balance → ERC20InsufficientBalance | ok | reverted: Your balance is too low for this amount. The contract function "lend" reverted w → "Your balance is too low for this amount.…" |
 | R · router (simulated) | lend with minShares above the preview → InsufficientOutput | ok | reverted: InsufficientOutput → "The swap returned less than your minimum (price moved beyond your slip…" |

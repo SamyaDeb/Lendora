@@ -98,7 +98,7 @@ describe("OFF-6 webhook SSRF", () => {
       let b = "";
       req.on("data", (c) => (b += c));
       req.on("end", () => {
-        got.push({sig: req.headers["x-stockline-signature"] as string, body: b});
+        got.push({sig: req.headers["x-lendora-signature"] as string, body: b});
         res.writeHead(req.url === "/redirect" ? 302 : 200, req.url === "/redirect" ? {location: "http://169.254.169.254/"} : {}).end();
       });
     });

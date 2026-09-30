@@ -49,8 +49,8 @@ difference between indexed and onchain values.
 ```sh
 curl -s $ALLOCATOR_URL/health | jq; curl -s $GUARD_URL/health | jq; curl -s $LIQUIDATOR_URL/health | jq
 railway redeploy --service allocator            # or the platform's restart
-DRY_RUN=false KEEPER_SIGNER=env-key pnpm --filter @stockline/keepers allocator   # run locally as a stopgap (needs the key)
-pnpm --filter @stockline/indexer reconcile      # SI-R5 on demand
+DRY_RUN=false KEEPER_SIGNER=env-key pnpm --filter @lendora/keepers allocator   # run locally as a stopgap (needs the key)
+pnpm --filter @lendora/indexer reconcile      # SI-R5 on demand
 ```
 
 **Who signs.** On-call engineer (restart); guardian 2-of-4 for manual pulls.

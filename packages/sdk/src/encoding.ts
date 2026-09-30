@@ -58,7 +58,7 @@ export function capIds(adapter: Address, p: MarketParams): [Hex, Hex, Hex] {
 
 // ---------------------------------------------------------------------- RT-R2 / CP-R3 attestation
 
-/** EIP-712 type of `StocklineRouter.ATTESTATION_TYPEHASH` = `Attestation(address user,uint256 expiry)`. */
+/** EIP-712 type of `LendoraRouter.ATTESTATION_TYPEHASH` = `Attestation(address user,uint256 expiry)`. */
 export const attestationTypes = {
   Attestation: [
     {name: "user", type: "address"},
@@ -76,7 +76,7 @@ export const ATTESTATION_TTL_SEC = 24n * 3600n;
 
 // ---------------------------------------------------------------------- RT-R3 swaps
 
-/** `IStocklineRouter.Swap`. */
+/** `ILendoraRouter.Swap`. */
 export interface RouterSwap {
   target: Address;
   data: Hex;

@@ -6,8 +6,8 @@ import {fileURLToPath} from "node:url";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {createPublicClient, createTestClient, createWalletClient, encodeFunctionData, erc20Abi, http, type Hex, type PublicClient} from "viem";
 import {generatePrivateKey, privateKeyToAccount} from "viem/accounts";
-import {getExternal} from "@stockline/sdk";
-import {freePort} from "@stockline/devnet";
+import {getExternal} from "@lendora/sdk";
+import {freePort} from "@lendora/devnet";
 import {applyPlan, checkChain, checkGates, checkRoles, checkSafes, checkSigner, checkTree, launch, parseServiceEnv, planProblems, publishDeployment, Refusal, run, type Run} from "../src/index.js";
 
 const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
@@ -54,11 +54,11 @@ describe("launcher refusals (Part D)", () => {
 
   it("missing role, duplicate role, role = deployer (MN-R1, MN-R8)", () => {
     const env: NodeJS.ProcessEnv = {LAUNCH_DEPLOYER: addr()};
-    for (const r of ["OWNER", "CURATOR", "GUARDIAN", "ALLOCATOR", "GUARD_KEEPER", "TREASURY", "BACKSTOP_RESERVE", "FEE_KEEPER", "ATTESTATION_SIGNER", "DN_OPERATOR", "NAV_SIGNER_1", "NAV_SIGNER_2"]) env[`STOCKLINE_${r}`] = addr();
+    for (const r of ["OWNER", "CURATOR", "GUARDIAN", "ALLOCATOR", "GUARD_KEEPER", "TREASURY", "BACKSTOP_RESERVE", "FEE_KEEPER", "ATTESTATION_SIGNER", "DN_OPERATOR", "NAV_SIGNER_1", "NAV_SIGNER_2"]) env[`LENDORA_${r}`] = addr();
     expect(checkRoles(env).problems).toEqual([]);
-    expect(checkRoles({...env, STOCKLINE_FEE_KEEPER: undefined}).problems).toContain("STOCKLINE_FEE_KEEPER is not set");
-    expect(checkRoles({...env, STOCKLINE_NAV_SIGNER_2: env.STOCKLINE_NAV_SIGNER_1}).problems.join()).toMatch(/NAV_SIGNER_2 equals STOCKLINE_NAV_SIGNER_1/);
-    expect(checkRoles({...env, STOCKLINE_ALLOCATOR: env.LAUNCH_DEPLOYER}).problems.join()).toMatch(/ALLOCATOR is the deployer/);
+    expect(checkRoles({...env, LENDORA_FEE_KEEPER: undefined}).problems).toContain("LENDORA_FEE_KEEPER is not set");
+    expect(checkRoles({...env, LENDORA_NAV_SIGNER_2: env.LENDORA_NAV_SIGNER_1}).problems.join()).toMatch(/NAV_SIGNER_2 equals LENDORA_NAV_SIGNER_1/);
+    expect(checkRoles({...env, LENDORA_ALLOCATOR: env.LAUNCH_DEPLOYER}).problems.join()).toMatch(/ALLOCATOR is the deployer/);
   });
 
   it("signer: never a private key in the env; hardware wallet or KMS on a real launch", () => {
@@ -74,8 +74,8 @@ describe("launcher refusals (Part D)", () => {
     const owner = await mockSafe(n.url, 3, 7, "owner"); // needs 4-of-7
     const guardian = await mockSafe(n.url, 2, 4, "guardian");
     const problems = await checkSafes(n.client, {OWNER: owner, GUARDIAN: guardian, CURATOR: addr()});
-    expect(problems.join("\n")).toMatch(/STOCKLINE_OWNER threshold 3 of 7/);
-    expect(problems.join("\n")).toMatch(/STOCKLINE_CURATOR .* is an EOA/);
+    expect(problems.join("\n")).toMatch(/LENDORA_OWNER threshold 3 of 7/);
+    expect(problems.join("\n")).toMatch(/LENDORA_CURATOR .* is an EOA/);
     expect(problems.join("\n")).not.toMatch(/GUARDIAN/);
   }, 60_000);
 
@@ -114,7 +114,7 @@ describe("launcher refusals (Part D)", () => {
   it("services: the template starts with the monitor; unfilled values and missing secrets are listed by name; --apply needs railway login", () => {
     const plan = parseServiceEnv(join(ROOT, "infra/mainnet.env.example"));
     expect(plan[0].service).toBe("monitor");
-    expect(plan.find((s) => s.service === "api")!.vars.find((v) => v.key === "STOCKLINE_NETWORK")?.literal).toBe("4663");
+    expect(plan.find((s) => s.service === "api")!.vars.find((v) => v.key === "LENDORA_NETWORK")?.literal).toBe("4663");
     const p = planProblems(plan, {PROXY_SECRET: "s".repeat(40)});
     expect(p.join("\n")).toMatch(/compliance.SANCTIONS_API_KEY: secret SANCTIONS_API_KEY is not in the environment/);
     expect(p.join("\n")).not.toMatch(/ssss/); // values never appear
@@ -163,7 +163,7 @@ const MAINNET_RPC = process.env.ROBINHOOD_RPC_URL || "https://rpc.mainnet.chain.
  * with gas and 2 × SEED of each launch stock, then the launcher end to end with `--dry-run` (`DeployMainnetDryRun`;
  * nothing leaves this machine): a wrong confirmation sends nothing; the right one deploys, VerifyRoles passes every
  * row, the temp address book gets chains["4663"]; the real address book is untouched. Opt-in (needs the public 4663
- * RPC to fork from): `LAUNCH_DRY_RUN_4663=1 pnpm --filter @stockline/launch test`.
+ * RPC to fork from): `LAUNCH_DRY_RUN_4663=1 pnpm --filter @lendora/launch test`.
  */
 describe.skipIf(!DRY)("launcher --dry-run on a local anvil fork of 4663", () => {
   let n: Awaited<ReturnType<typeof anvil>>;
@@ -180,18 +180,18 @@ describe.skipIf(!DRY)("launcher --dry-run on a local anvil fork of 4663", () => 
       HOME: process.env.HOME,
       ROBINHOOD_RPC_URL: n.url,
       LAUNCH_DEPLOYER: deployer,
-      STOCKLINE_OWNER: await mockSafe(n.url, 4, 7, "owner"),
-      STOCKLINE_CURATOR: await mockSafe(n.url, 3, 5, "curator"),
-      STOCKLINE_GUARDIAN: await mockSafe(n.url, 2, 4, "guardian"),
-      STOCKLINE_TREASURY: await mockSafe(n.url, 2, 3, "treasury"),
-      STOCKLINE_BACKSTOP_RESERVE: await mockSafe(n.url, 2, 3, "backstop"),
-      STOCKLINE_ALLOCATOR: addr(),
-      STOCKLINE_GUARD_KEEPER: addr(),
-      STOCKLINE_FEE_KEEPER: addr(),
-      STOCKLINE_ATTESTATION_SIGNER: addr(),
-      STOCKLINE_DN_OPERATOR: addr(),
-      STOCKLINE_NAV_SIGNER_1: addr(),
-      STOCKLINE_NAV_SIGNER_2: addr(),
+      LENDORA_OWNER: await mockSafe(n.url, 4, 7, "owner"),
+      LENDORA_CURATOR: await mockSafe(n.url, 3, 5, "curator"),
+      LENDORA_GUARDIAN: await mockSafe(n.url, 2, 4, "guardian"),
+      LENDORA_TREASURY: await mockSafe(n.url, 2, 3, "treasury"),
+      LENDORA_BACKSTOP_RESERVE: await mockSafe(n.url, 2, 3, "backstop"),
+      LENDORA_ALLOCATOR: addr(),
+      LENDORA_GUARD_KEEPER: addr(),
+      LENDORA_FEE_KEEPER: addr(),
+      LENDORA_ATTESTATION_SIGNER: addr(),
+      LENDORA_DN_OPERATOR: addr(),
+      LENDORA_NAV_SIGNER_1: addr(),
+      LENDORA_NAV_SIGNER_2: addr(),
     });
     await test.setBalance({address: deployer, value: 10n ** 18n});
     // 2 × SEED of each launch stock from its USDG pool (impersonated on the fork).

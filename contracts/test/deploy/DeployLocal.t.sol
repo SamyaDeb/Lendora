@@ -5,11 +5,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IMorpho, Id} from "morpho-blue/src/interfaces/IMorpho.sol";
 import {VaultV2Ids} from "../../src/libraries/VaultV2Ids.sol";
 import {IVaultV2Min} from "../../src/interfaces/external/IMorphoVaultV2.sol";
-import {IStocklineRouter} from "../../src/interfaces/IStocklineRouter.sol";
-import {LocalStockline} from "../utils/LocalStockline.sol";
+import {ILendoraRouter} from "../../src/interfaces/ILendoraRouter.sol";
+import {LocalLendora} from "../utils/LocalLendora.sol";
 
 /// @notice The anvil deployment (script/DeployLocal.s.sol) run in-process.
-contract DeployLocalTest is LocalStockline {
+contract DeployLocalTest is LocalLendora {
     function test_LM_R10_R23_localDeploymentWiring() public view {
         for (uint256 i; i < 3; i++) {
             StockDeployment memory d = ds[i];
@@ -21,7 +21,7 @@ contract DeployLocalTest is LocalStockline {
             assertEq(d.oracle.owner(), address(core.timelock));
             assertEq(IMorpho(m.morpho).market(Id.wrap(keccak256(abi.encode(d.market)))).totalSupplyAssets, SEED);
             assertEq(v.balanceOf(DEAD), SEED, "vault seeded for a dead address");
-            IStocklineRouter.Market memory rm = core.router.market(address(m.tokens[i]));
+            ILendoraRouter.Market memory rm = core.router.market(address(m.tokens[i]));
             assertTrue(rm.listed);
             assertEq(rm.vault, d.vault);
         }

@@ -1,7 +1,7 @@
 # api
 
-Stockline public short-interest API (docs/prd/07 §2, SI-R10…R14): Hono over the indexer's Postgres views, Redis for
-rate limits and WebSocket fan-out. Every number comes from `@stockline/sdk` (indexer snapshots computed by
+Lendora public short-interest API (docs/prd/07 §2, SI-R10…R14): Hono over the indexer's Postgres views, Redis for
+rate limits and WebSocket fan-out. Every number comes from `@lendora/sdk` (indexer snapshots computed by
 `shortInterestFields`; positions by `healthFactor` / `liquidationPrice`).
 
 | Endpoint | |
@@ -23,21 +23,21 @@ connections per key; headers `X-RateLimit-*`. API keys: only the SHA-256 of the 
 
 ## Typed client
 
-`pnpm --filter @stockline/api openapi` writes `openapi.json` and regenerates `packages/sdk/src/api/schema.ts`
+`pnpm --filter @lendora/api openapi` writes `openapi.json` and regenerates `packages/sdk/src/api/schema.ts`
 (openapi-typescript). The SDK exports the client as `api`:
 
 ```ts
-import {api} from "@stockline/sdk";
-const sl = api.createClient("https://api.stockline.xyz", {apiKey});
+import {api} from "@lendora/sdk";
+const sl = api.createClient("https://api.lendora.xyz", {apiKey});
 const {data, asOfBlock, confirmed} = await sl.markets();
 ```
 
 ## Run
 
 ```sh
-pnpm --filter @stockline/api dev        # env: .env.example (scripts/dev.sh sets it up locally)
-pnpm --filter @stockline/api test       # full stack on anvil: seed week → Ponder → Postgres → API
-pnpm --filter @stockline/api loadtest   # SI-R11: 200 WS clients + 50 req/s; writes loadtest/results.md
+pnpm --filter @lendora/api dev        # env: .env.example (scripts/dev.sh sets it up locally)
+pnpm --filter @lendora/api test       # full stack on anvil: seed week → Ponder → Postgres → API
+pnpm --filter @lendora/api loadtest   # SI-R11: 200 WS clients + 50 req/s; writes loadtest/results.md
 ```
 
 Measured (local, see `loadtest/results.md`): REST p97.5 33 ms at 50 req/s; WS push p95 246 ms after the block with

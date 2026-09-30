@@ -5,12 +5,12 @@ import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IMorpho, MarketParams, Position} from "morpho-blue/src/interfaces/IMorpho.sol";
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
-import {StocklineRouter} from "../../src/StocklineRouter.sol";
-import {IStocklineRouter} from "../../src/interfaces/IStocklineRouter.sol";
+import {LendoraRouter} from "../../src/LendoraRouter.sol";
+import {ILendoraRouter} from "../../src/interfaces/ILendoraRouter.sol";
 import {MockSwapAggregator} from "../mocks/MockSwapAggregator.sol";
 import {MockStockToken} from "../mocks/MockStockToken.sol";
 import {MockChainlinkAggregator} from "../mocks/MockChainlinkAggregator.sol";
-import {LocalStockline} from "../utils/LocalStockline.sol";
+import {LocalLendora} from "../utils/LocalLendora.sol";
 
 /// @notice Drives every router flow with fuzzed amounts, users and a misbehaving DEX (partial fills, fees, lying
 /// return values). Reverts are expected for many inputs (health, caps, slippage) and are swallowed; the invariants
@@ -18,7 +18,7 @@ import {LocalStockline} from "../utils/LocalStockline.sol";
 contract RouterHandler is Test {
     using MarketParamsLib for MarketParams;
 
-    StocklineRouter internal router;
+    LendoraRouter internal router;
     IMorpho internal morpho;
     MockSwapAggregator internal dex;
     MockStockToken internal stock;
@@ -28,12 +28,12 @@ contract RouterHandler is Test {
     address internal vault;
     MarketParams internal mp;
     address[] public users;
-    mapping(address => IStocklineRouter.Attestation) internal atts;
+    mapping(address => ILendoraRouter.Attestation) internal atts;
     uint256 public calls;
     uint256 public ok;
 
     constructor(
-        StocklineRouter router_,
+        LendoraRouter router_,
         IMorpho morpho_,
         MockSwapAggregator dex_,
         MockStockToken stock_,
@@ -43,7 +43,7 @@ contract RouterHandler is Test {
         address vault_,
         MarketParams memory mp_,
         address[] memory users_,
-        IStocklineRouter.Attestation[] memory atts_
+        ILendoraRouter.Attestation[] memory atts_
     ) {
         router = router_;
         morpho = morpho_;
@@ -64,8 +64,8 @@ contract RouterHandler is Test {
         return users[seed % users.length];
     }
 
-    function _sell(uint256 amountIn) internal view returns (IStocklineRouter.Swap memory) {
-        return IStocklineRouter.Swap(
+    function _sell(uint256 amountIn) internal view returns (ILendoraRouter.Swap memory) {
+        return ILendoraRouter.Swap(
             address(dex),
             abi.encodeCall(MockSwapAggregator.swap, (address(stock), address(usdg), amountIn, 0, address(router))),
             amountIn,
@@ -73,8 +73,8 @@ contract RouterHandler is Test {
         );
     }
 
-    function _buy(uint256 amountIn) internal view returns (IStocklineRouter.Swap memory) {
-        return IStocklineRouter.Swap(
+    function _buy(uint256 amountIn) internal view returns (ILendoraRouter.Swap memory) {
+        return ILendoraRouter.Swap(
             address(dex),
             abi.encodeCall(MockSwapAggregator.swap, (address(usdg), address(stock), amountIn, 0, address(router))),
             amountIn,
@@ -198,7 +198,7 @@ contract RouterHandler is Test {
 /// forge-config: default.invariant.fail-on-revert = true
 /// forge-config: deep.invariant.runs = 1000
 /// forge-config: deep.invariant.depth = 1000
-contract StocklineRouterInvariantTest is LocalStockline {
+contract LendoraRouterInvariantTest is LocalLendora {
     RouterHandler internal handler;
     uint256 internal constant I = 1; // NVDA
 
@@ -209,7 +209,7 @@ contract StocklineRouterInvariantTest is LocalStockline {
         _lendAndAllocate(I, lender, 2000e18);
 
         address[] memory us = new address[](3);
-        IStocklineRouter.Attestation[] memory as_ = new IStocklineRouter.Attestation[](3);
+        ILendoraRouter.Attestation[] memory as_ = new ILendoraRouter.Attestation[](3);
         for (uint256 i; i < 3; i++) {
             us[i] = makeAddr(string.concat("user", vm.toString(i)));
             _onboard(us[i], 500e18, 5_000_000e6);

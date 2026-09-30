@@ -35,14 +35,14 @@ contract VaultV2CodeHashForkTest is Phase1ForkBase {
     function test_LM_R20_vaultRuntimeCodeHashMatchesLiveFactory() public {
         address ours = deployCode("out/VaultV2Factory.sol/VaultV2Factory.json");
         address owner = makeAddr("owner");
-        address vLive = IVaultV2FactoryMin(LIVE_VAULT_FACTORY).createVaultV2(owner, NVDA, bytes32("stockline"));
-        address vOurs = IVaultV2FactoryMin(ours).createVaultV2(owner, NVDA, bytes32("stockline"));
+        address vLive = IVaultV2FactoryMin(LIVE_VAULT_FACTORY).createVaultV2(owner, NVDA, bytes32("lendora"));
+        address vOurs = IVaultV2FactoryMin(ours).createVaultV2(owner, NVDA, bytes32("lendora"));
         assertTrue(IVaultV2FactoryMin(LIVE_VAULT_FACTORY).isVaultV2(vLive));
         assertEq(vLive.codehash, vOurs.codehash, "VaultV2 code hash");
         emit log_named_bytes32("VaultV2 runtime codehash (asset NVDA)", vLive.codehash);
 
         // An existing production vault (Steakhouse USDG, 6-dp asset) differs only in its immutables.
-        address vUsdg = IVaultV2FactoryMin(ours).createVaultV2(owner, USDG, bytes32("stockline"));
+        address vUsdg = IVaultV2FactoryMin(ours).createVaultV2(owner, USDG, bytes32("lendora"));
         assertEq(
             keccak256(_masked(vUsdg.code, "out/VaultV2.sol/VaultV2.json")),
             keccak256(_masked(STEAKHOUSE_USDG.code, "out/VaultV2.sol/VaultV2.json")),

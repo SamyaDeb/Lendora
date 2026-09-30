@@ -1,12 +1,12 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Stockline short-interest API",
+    "title": "Lendora short-interest API",
     "version": "1.0.0",
-    "description": "Live short interest for Stockline markets on Robinhood Chain (docs/prd/07). Scope: Stockline markets only.\n\nEvery data response carries `asOfBlock`, `asOfTime` and `confirmed` (finalized) — SI-R13.\n\nLimits (SI-R10): free 60 req/min and 1 WebSocket connection per IP; keyed 600 req/min and 10 connections. Create a key with Sign-In with Ethereum at `POST /v1/auth/keys`.\n\nWebSocket `/v1/stream`: send `{\"channel\":\"market\",\"symbol\":\"NVDA\"}` or `{\"channel\":\"events\",\"symbol\":\"*\"}`; `\"op\":\"unsubscribe\"` to stop.\n\nChain id 46630. Data as is, no warranty; attribution requested (/v1/terms).",
+    "description": "Live short interest for Lendora markets on Robinhood Chain (docs/prd/07). Scope: Lendora markets only.\n\nEvery data response carries `asOfBlock`, `asOfTime` and `confirmed` (finalized) — SI-R13.\n\nLimits (SI-R10): free 60 req/min and 1 WebSocket connection per IP; keyed 600 req/min and 10 connections. Create a key with Sign-In with Ethereum at `POST /v1/auth/keys`.\n\nWebSocket `/v1/stream`: send `{\"channel\":\"market\",\"symbol\":\"NVDA\"}` or `{\"channel\":\"events\",\"symbol\":\"*\"}`; `\"op\":\"unsubscribe\"` to stop.\n\nChain id 46630. Data as is, no warranty; attribution requested (/v1/terms).",
     "license": {
       "name": "Data terms",
-      "url": "https://stockline.xyz/terms/data"
+      "url": "https://lendora.xyz/terms/data"
     }
   },
   "servers": [
@@ -2700,7 +2700,7 @@
         "tags": [
           "positions"
         ],
-        "summary": "Positions of a wallet in Stockline markets (public onchain data)",
+        "summary": "Positions of a wallet in Lendora markets (public onchain data)",
         "parameters": [
           {
             "schema": {

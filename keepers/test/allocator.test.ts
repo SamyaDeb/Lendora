@@ -1,5 +1,5 @@
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
-import {erc20Abi, marketHoursAbi, morphoAbi, stocklineOracleAbi, vaultV2Abi} from "@stockline/sdk";
+import {erc20Abi, marketHoursAbi, morphoAbi, lendoraOracleAbi, vaultV2Abi} from "@lendora/sdk";
 import {startAnvil, type Anvil} from "./anvil.js";
 import {allocation, call, freshRounds, lend, WED} from "./helpers.js";
 import {Allocator} from "../src/allocator/allocator.js";
@@ -44,13 +44,13 @@ describe("allocator keeper on anvil with the task-7 deployment (LM-R30…R34, D5
   });
 
   it("LM-R31: a tripped guard pulls all free liquidity in one tick; new borrows then have nothing to take", async () => {
-    await a.send(a.d.roles.guardian, a.d.stocks.NVDA.oracle, call(stocklineOracleAbi, "trip", [1n]));
+    await a.send(a.d.roles.guardian, a.d.stocks.NVDA.oracle, call(lendoraOracleAbi, "trip", [1n]));
     const actions = await allocator.tick();
     expect(actions.NVDA.kind).toBe("deallocate");
     const m = await a.client.readContract({address: a.d.morpho, abi: morphoAbi, functionName: "market", args: [a.d.stocks.NVDA.marketId]});
     expect(m.totalSupplyAssets - m.totalBorrowAssets).toBe(10n ** 12n); // only the dead-address seed remains
     expect((await allocator.tick()).NVDA.kind).toBe("none");
-    await a.send(a.d.roles.guardian, a.d.stocks.NVDA.oracle, call(stocklineOracleAbi, "clear", [1n]));
+    await a.send(a.d.roles.guardian, a.d.stocks.NVDA.oracle, call(lendoraOracleAbi, "clear", [1n]));
     expect((await allocator.tick()).NVDA.kind).toBe("allocate");
   });
 

@@ -1,8 +1,8 @@
 /**
  * CP-R8: the headers the web app's server-side proxy sends to the compliance service. Nothing the browser sent is
  * forwarded: only the geo and client-IP headers that the edge platform itself sets (`GEO_PLATFORM`), normalized to
- * `x-geo-country` / `x-geo-region` / `x-forwarded-for`, plus `x-stockline-proxy: $PROXY_SECRET`. A client-sent
- * `cf-ipcountry` on Vercel, `x-vercel-ip-country` on Cloudflare, `x-geo-*`, `x-forwarded-for` or `x-stockline-proxy` is
+ * `x-geo-country` / `x-geo-region` / `x-forwarded-for`, plus `x-lendora-proxy: $PROXY_SECRET`. A client-sent
+ * `cf-ipcountry` on Vercel, `x-vercel-ip-country` on Cloudflare, `x-geo-*`, `x-forwarded-for` or `x-lendora-proxy` is
  * dropped.
  *
  * `static` is for the local testnet stack only (scripts/dev.sh --network 46630), where no edge sets geo headers: the
@@ -61,6 +61,6 @@ export function complianceProxyHeaders(incoming: Headers, platform: GeoPlatform,
   if (country) out.set("x-geo-country", country);
   if (region) out.set("x-geo-region", region);
   if (ip) out.set("x-forwarded-for", ip);
-  if (secret) out.set("x-stockline-proxy", secret);
+  if (secret) out.set("x-lendora-proxy", secret);
   return out;
 }

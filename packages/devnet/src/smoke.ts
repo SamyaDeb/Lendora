@@ -1,5 +1,5 @@
 import {encodeFunctionData, erc20Abi} from "viem";
-import {morphoAbi} from "@stockline/sdk";
+import {morphoAbi} from "@lendora/sdk";
 import type {ChainDriver, DriverEvent} from "./driver.js";
 
 const E18 = 10n ** 18n;

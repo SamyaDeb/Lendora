@@ -1,5 +1,5 @@
 {
-  "$comment": "Third-party contracts on each chain (Phase 0, verified 2026-09-26). Evidence per entry: docs/phase0/01-chain-facts.md. Distinct from addresses.json (Stockline's own deployments).",
+  "$comment": "Third-party contracts on each chain (Phase 0, verified 2026-09-26). Evidence per entry: docs/phase0/01-chain-facts.md. Distinct from addresses.json (Lendora's own deployments).",
   "4663": {
     "name": "Robinhood Chain",
     "tokens": {

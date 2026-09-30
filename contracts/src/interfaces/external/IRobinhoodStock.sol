@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/// @notice Robinhood Stock Token surface Stockline reads (Sourcify 4663/0xb35490d6f9163DE4F80d88dc75c3516eb64C5aE2,
+/// @notice Robinhood Stock Token surface Lendora reads (Sourcify 4663/0xb35490d6f9163DE4F80d88dc75c3516eb64C5aE2,
 /// `src/Stock.sol`, `src/OraclePausable.sol`). Signatures copied from the verified source.
 interface IRobinhoodStock {
     /// @notice Per-token pause OR the registry's global pause.

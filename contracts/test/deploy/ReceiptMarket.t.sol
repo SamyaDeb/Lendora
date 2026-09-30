@@ -8,14 +8,14 @@ import {VaultV2Ids} from "../../src/libraries/VaultV2Ids.sol";
 import {IVaultV2Min} from "../../src/interfaces/external/IMorphoVaultV2.sol";
 import {ReceiptMarketDeploy, IVaultV2Liquidity} from "../../script/ReceiptMarketDeploy.sol";
 import {ListReceiptMarket} from "../../script/ListReceiptMarket.s.sol";
-import {LocalStockline} from "../utils/LocalStockline.sol";
+import {LocalLendora} from "../utils/LocalLendora.sol";
 
 /// @notice G5 receipt market (A3; 05 §3, CL-R10…R12) on the full local deployment: stage 1 keeps every cap at 0 and
 /// hands every role away; the listing only happens through the curator's 48h vault timelock; then lenders of USDG
 /// supply through the vault, an `rNVDA` holder borrows at LLTV 62.5% against the buffered receipt price, exits work
 /// with the oracle guard tripped, and a liquidator seizes `rNVDA` and redeems it for `wNVDA` (CL-R11).
 /// forge-config: default.isolate = true
-contract ReceiptMarketTest is LocalStockline, ReceiptMarketDeploy {
+contract ReceiptMarketTest is LocalLendora, ReceiptMarketDeploy {
     using MarketParamsLib for MarketParams;
 
     uint256 internal constant NVDA = 1;
@@ -181,9 +181,9 @@ contract ReceiptMarketTest is LocalStockline, ReceiptMarketDeploy {
         ListReceiptMarket s = new ListReceiptMarket();
         s.checkNetwork("fork-4663", 4663);
         s.checkNetwork("31337", 31_337);
-        vm.expectRevert("STOCKLINE_NETWORK does not match the chain");
+        vm.expectRevert("LENDORA_NETWORK does not match the chain");
         s.checkNetwork("46630", 4663);
-        vm.expectRevert("bad STOCKLINE_NETWORK");
+        vm.expectRevert("bad LENDORA_NETWORK");
         s.checkNetwork("46a30", 46_630);
         vm.expectRevert("MN-R4: no broadcast to 4663 without I_HAVE_THE_OWNERS_GO=1");
         s.checkGo(4663);

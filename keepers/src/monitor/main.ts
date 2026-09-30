@@ -1,11 +1,11 @@
 import {serve} from "@hono/node-server";
 import pg from "pg";
-import {reconcile} from "@stockline/indexer/reconcile";
+import {reconcile} from "@lendora/indexer/reconcile";
 import {loadConfig} from "../common/config.js";
 import {publicClient} from "../common/chain.js";
 import {Health} from "../common/health.js";
 import {runService} from "../common/loop.js";
-import {getExternal, isRobinhoodMainnet, logPoolErrors} from "@stockline/sdk";
+import {getExternal, isRobinhoodMainnet, logPoolErrors} from "@lendora/sdk";
 import {IndexerBorrowers, Monitor} from "./monitor.js";
 import {mockAggregatorQuoter, uniswapQuoter} from "./quoter.js";
 import {pagersFromEnv} from "./pager.js";
@@ -13,7 +13,7 @@ import {monitorApp} from "./server.js";
 import {MonitorStore} from "./store.js";
 
 /**
- * `pnpm --filter @stockline/keepers monitor` (MON-R1…R20). Read-only: no signer, no dry run. Env (keepers/.env.example):
+ * `pnpm --filter @lendora/keepers monitor` (MON-R1…R20). Read-only: no signer, no dry run. Env (keepers/.env.example):
  * DATABASE_URL, INDEXER_SCHEMA, MONITOR_SCHEMA, MONITOR_INTERVAL_MS (default 2000), PORT (42073), MONITOR_KEEPERS
  * ("allocator=http://…/health,guard=…"), pagers (PAGERDUTY_ROUTING_KEY, OPSGENIE_API_KEY, MONITOR_TELEGRAM_*,
  * MONITOR_WEBHOOK_*), L2_GAP_SEC, RECONCILE_EVERY_MS (SI-R5 in-process; 0 disables), MONITOR_GAS_WATCH
@@ -23,12 +23,12 @@ import {MonitorStore} from "./store.js";
 const cfg = loadConfig();
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
 const pool = logPoolErrors(new pg.Pool({connectionString: process.env.DATABASE_URL, max: 5}), "monitor", process.env);
-const store = new MonitorStore(pool, process.env.MONITOR_SCHEMA ?? "stockline_monitor");
+const store = new MonitorStore(pool, process.env.MONITOR_SCHEMA ?? "lendora_monitor");
 await store.migrate();
 const client = publicClient(cfg.rpcUrl, cfg.deploymentKey, cfg.archiveRpcUrl);
 const health = new Health(cfg.maxStaleMs);
 const pagers = pagersFromEnv();
-const indexerSchema = process.env.INDEXER_SCHEMA ?? "stockline";
+const indexerSchema = process.env.INDEXER_SCHEMA ?? "lendora";
 const parseList = (v: string | undefined): Record<string, string> =>
   Object.fromEntries(
     (v ?? "")

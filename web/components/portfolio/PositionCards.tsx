@@ -2,7 +2,7 @@
 import {useState} from "react";
 import Link from "next/link";
 import {formatUnits} from "viem";
-import {underlyingEquivalent, withdrawableAssets} from "@stockline/sdk";
+import {underlyingEquivalent, withdrawableAssets} from "@lendora/sdk";
 import type {PositionAction, PositionFlow} from "@/lib/flows/usePositionFlow";
 import {preview} from "@/lib/preview";
 import {hfTone, num, wad} from "@/lib/format";

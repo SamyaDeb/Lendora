@@ -31,7 +31,7 @@ contract MorphoStackSmokeTest is Test {
 
         MetaMorphoV1_1Factory factory = new MetaMorphoV1_1Factory(address(morpho));
         IMetaMorphoV1_1 vault =
-            factory.createMetaMorpho(owner, 1 days, address(asset), "Stockline TEST", "rTEST", bytes32(0));
+            factory.createMetaMorpho(owner, 1 days, address(asset), "Lendora TEST", "rTEST", bytes32(0));
 
         vm.startPrank(owner);
         vault.submitCap(idle, 1000e18);

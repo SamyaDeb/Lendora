@@ -1,11 +1,11 @@
 /**
  * Chain driver CLI (Phase 2 task 0). Anvil only: it refuses any other chain id.
  *
- *   pnpm --filter @stockline/devnet drive seed [--rpc URL]       # the seed week (tests reuse the same scenario)
- *   pnpm --filter @stockline/devnet drive live [--rpc URL]       # fresh rounds + allocator pass every 15 s (dev stack)
- *   pnpm --filter @stockline/devnet drive serve [--port 8545]    # anvil with the DeployLocal fixture, foreground
- *   pnpm --filter @stockline/devnet drive dump-state [--rpc URL] # write the node's state to fixtures/anvil-state.hex
- *   pnpm --filter @stockline/devnet drive live-drills --rpc URL [--unlocked] [--state FILE]
+ *   pnpm --filter @lendora/devnet drive seed [--rpc URL]       # the seed week (tests reuse the same scenario)
+ *   pnpm --filter @lendora/devnet drive live [--rpc URL]       # fresh rounds + allocator pass every 15 s (dev stack)
+ *   pnpm --filter @lendora/devnet drive serve [--port 8545]    # anvil with the DeployLocal fixture, foreground
+ *   pnpm --filter @lendora/devnet drive dump-state [--rpc URL] # write the node's state to fixtures/anvil-state.hex
+ *   pnpm --filter @lendora/devnet drive live-drills --rpc URL [--unlocked] [--state FILE]
  *       Part C runbook drills on 46630 without time travel (re-run after 24h to execute the scheduled halves).
  *       Live: TESTNET_GO=yes TESTNET_DEPLOYER_KEY=… DRILL_RAN_BY=… (env only). Rehearsal: --unlocked on an anvil fork.
  */
@@ -72,7 +72,7 @@ if (cmd === "serve") {
   const me = privateKeyToAccount(key).address;
   const compliance = flag("compliance", "");
   const {complianceAttestationProvider} = await import("./liveSmoke.js");
-  const provider = compliance ? complianceAttestationProvider(`${compliance}/v1/compliance`, key, {"x-geo-country": "DE", ...(process.env.PROXY_SECRET ? {"x-stockline-proxy": process.env.PROXY_SECRET} : {})}) : undefined;
+  const provider = compliance ? complianceAttestationProvider(`${compliance}/v1/compliance`, key, {"x-geo-country": "DE", ...(process.env.PROXY_SECRET ? {"x-lendora-proxy": process.env.PROXY_SECRET} : {})}) : undefined;
   const drv = new ChainDriver(a, {log: console.log, attestationProvider: provider, attestationKey: process.env.ATTESTATION_SIGNER_KEY as `0x${string}` | undefined});
   const events = await smokeFlows(drv, me);
   console.log(`smoke flows done on chain ${chainId}: ${events.length} actions`);

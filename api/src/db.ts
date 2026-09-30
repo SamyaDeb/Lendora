@@ -1,5 +1,5 @@
 import pg from "pg";
-import {logPoolErrors} from "@stockline/sdk";
+import {logPoolErrors} from "@lendora/sdk";
 
 /**
  * Read-only access to the indexer's tables (through the `--views-schema` views in production) plus the API's own

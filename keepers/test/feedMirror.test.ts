@@ -1,5 +1,5 @@
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
-import {aggregatorV3Abi, mockSwapAggregatorAbi, stocklineOracleAbi} from "@stockline/sdk";
+import {aggregatorV3Abi, mockSwapAggregatorAbi, lendoraOracleAbi} from "@lendora/sdk";
 import {anvil as anvilChain} from "viem/chains";
 import {startAnvil, type Anvil} from "./anvil.js";
 import {DEPLOYER, WED} from "./helpers.js";
@@ -29,7 +29,7 @@ describe("feed mirror (testnet mock feeds)", () => {
     expect(await answer(a.d.mocks!.usdgFeed)).toBe(99_990000n);
     const rate = await a.client.readContract({address: a.d.mocks!.swapAggregator, abi: mockSwapAggregatorAbi, functionName: "rate", args: [a.d.stocks.NVDA.stockToken, a.d.usdg]});
     expect(rate).toBe(230_000000n);
-    const [p] = await a.client.readContract({address: a.d.stocks.NVDA.oracle, abi: stocklineOracleAbi, functionName: "stockAnswer"});
+    const [p] = await a.client.readContract({address: a.d.stocks.NVDA.oracle, abi: lendoraOracleAbi, functionName: "stockAnswer"});
     expect(p).toBe(230_00000000n); // the oracle accepts it (inside the OR-R7 band)
   });
 

@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {getDeployment, type ChainDeployment} from "@stockline/sdk";
+import {getDeployment, type ChainDeployment} from "@lendora/sdk";
 import {devPagesEnabled, faucetKind, isTestChain, webDeployment} from "@/lib/network";
 import {geoPlatform} from "@/lib/complianceProxy";
 

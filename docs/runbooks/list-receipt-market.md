@@ -9,7 +9,7 @@ session.
 |---|---|
 | Market | loan USDG, collateral `rSTOCK` (the stock's Vault V2 share), `ReceiptCollateralOracle`, AdaptiveCurveIrm, **LLTV 62.5%** |
 | Oracle | `convertToAssets(1 share) × feed price × (1 − b(t)) / USDG price` (no multiplier, D1); params, guardian, keeper, sequencer feed and blocklist copied from the stock's oracle; owner = timelock |
-| USDG supply | A Stockline USDG Vault V2 per receipt market (`sUSDG-rNVDA`), liquidity adapter = the market (no keeper), 10% performance fee → `FeeSplitter`, 48h timelocks, owner = timelock, curator = curator Safe, sentinel = guardian |
+| USDG supply | A Lendora USDG Vault V2 per receipt market (`sUSDG-rNVDA`), liquidity adapter = the market (no keeper), 10% performance fee → `FeeSplitter`, 48h timelocks, owner = timelock, curator = curator Safe, sentinel = guardian |
 | Caps at stage 1 | **0** (the vault refuses deposits; nothing can be borrowed) |
 | Listing | 6 curator actions: absolute cap to the listing cap and relative cap to 100% on the adapter, collateral and market ids |
 
@@ -32,7 +32,7 @@ cd contracts
 # rehearsal on a fork of 4663 (no broadcast)
 forge test --match-contract ReceiptMarketForkTest --fork-url $ROBINHOOD_RPC_URL
 # mainnet, only with the owner's go
-STOCKLINE_NETWORK=4663 TICKER=NVDA STOCK_LAUNCH_TS=<unix> I_HAVE_THE_OWNERS_GO=1 \
+LENDORA_NETWORK=4663 TICKER=NVDA STOCK_LAUNCH_TS=<unix> I_HAVE_THE_OWNERS_GO=1 \
   forge script script/ListReceiptMarket.s.sol --rpc-url $ROBINHOOD_RPC_URL --broadcast --slow --verify \
   --sender <deployer> <hardware-wallet or remote-signer flags>
 ```

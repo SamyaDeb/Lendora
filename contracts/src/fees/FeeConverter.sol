@@ -9,11 +9,11 @@ import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/Reentrancy
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IFeeConverter} from "../interfaces/IFeeConverter.sol";
-import {IStocklineOracle} from "../interfaces/IStocklineOracle.sol";
+import {ILendoraOracle} from "../interfaces/ILendoraOracle.sol";
 import {IStockWrapper} from "../interfaces/IStockWrapper.sol";
 import {IMarketHours} from "../interfaces/IMarketHours.sol";
 
-/// @dev Feed getters of `StocklineOracleBase` (not part of `IStocklineOracle`).
+/// @dev Feed getters of `LendoraOracleBase` (not part of `ILendoraOracle`).
 interface IOracleFeeds {
     function STOCK_FEED() external view returns (address);
     function USDG_FEED_ADDRESS() external view returns (address);
@@ -73,7 +73,7 @@ contract FeeConverter is IFeeConverter, Ownable, ReentrancyGuardTransient {
     /// @inheritdoc IFeeConverter
     function setVault(address vault, address oracle) external onlyOwner {
         if (vault == address(0)) revert ZeroAddress();
-        if (oracle != address(0) && IERC4626(vault).asset() != IStocklineOracle(oracle).WRAPPER()) {
+        if (oracle != address(0) && IERC4626(vault).asset() != ILendoraOracle(oracle).WRAPPER()) {
             revert BadVault(vault);
         }
         oracleOf[vault] = oracle;
@@ -122,7 +122,7 @@ contract FeeConverter is IFeeConverter, Ownable, ReentrancyGuardTransient {
     {
         if (msg.sender != keeper) revert NotKeeper();
         if (shares == 0) revert ZeroShares();
-        IStocklineOracle oracle = IStocklineOracle(oracleOf[vault]);
+        ILendoraOracle oracle = ILendoraOracle(oracleOf[vault]);
         if (address(oracle) == address(0)) revert VaultNotSet(vault);
         if (!IMarketHours(oracle.MARKET_HOURS()).isOpen(block.timestamp)) revert MarketClosed();
         uint256 reasons = oracle.guardReasons();
@@ -142,7 +142,7 @@ contract FeeConverter is IFeeConverter, Ownable, ReentrancyGuardTransient {
     }
 
     /// @dev rSTOCK → wSTOCK → Stock Token; returns the raw Stock Token units received (balance deltas).
-    function _redeemToStock(IStocklineOracle oracle, address vault, uint256 shares) internal returns (uint256) {
+    function _redeemToStock(ILendoraOracle oracle, address vault, uint256 shares) internal returns (uint256) {
         IStockWrapper wrapper = IStockWrapper(oracle.WRAPPER());
         IERC20 stock = IERC20(oracle.STOCK_TOKEN());
         uint256 wBefore = IERC20(address(wrapper)).balanceOf(address(this));
@@ -178,12 +178,12 @@ contract FeeConverter is IFeeConverter, Ownable, ReentrancyGuardTransient {
     function quote(address vault, uint256 stockAmount) external view returns (uint256 value, uint256 floor) {
         address oracle = oracleOf[vault];
         if (oracle == address(0)) revert VaultNotSet(vault);
-        return _quote(IStocklineOracle(oracle), stockAmount);
+        return _quote(ILendoraOracle(oracle), stockAmount);
     }
 
     /// @dev USDG raw = stock raw × P_stock / P_usdg, both feeds in their own decimals (D1: the feed already includes
     /// the multiplier; no buffer). Rounded down; `floor` = value × (1 − 1%), rounded up.
-    function _quote(IStocklineOracle oracle, uint256 stockAmount) internal view returns (uint256 value, uint256 floor) {
+    function _quote(ILendoraOracle oracle, uint256 stockAmount) internal view returns (uint256 value, uint256 floor) {
         // Only the answers are needed; the guard (checked in `convert`) covers their age (slither.config.json).
         // slither-disable-next-line unused-return
         (uint256 stockAns,) = oracle.stockAnswer();

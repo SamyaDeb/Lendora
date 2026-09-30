@@ -1,7 +1,7 @@
 import {expect, test, type Page} from "@playwright/test";
 import {createPublicClient, http, type PublicClient} from "viem";
-import {deltaNeutralVaultAbi, erc20Abi, getDeployment, marketHoursAbi} from "@stockline/sdk";
-import {ChainDriver, connectAnvil, DnDriver} from "@stockline/devnet";
+import {deltaNeutralVaultAbi, erc20Abi, getDeployment, marketHoursAbi} from "@lendora/sdk";
+import {ChainDriver, connectAnvil, DnDriver} from "@lendora/devnet";
 import {E2E_ACCOUNT} from "./stack";
 
 /**

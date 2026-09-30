@@ -6,12 +6,12 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {FeeConverter} from "../../src/fees/FeeConverter.sol";
 import {IFeeConverter} from "../../src/interfaces/IFeeConverter.sol";
 import {IVaultV2Min} from "../../src/interfaces/external/IMorphoVaultV2.sol";
-import {IStocklineOracle} from "../../src/interfaces/IStocklineOracle.sol";
+import {ILendoraOracle} from "../../src/interfaces/ILendoraOracle.sol";
 import {MockSwapAggregator} from "../mocks/MockSwapAggregator.sol";
 import {MockChainlinkAggregator} from "../mocks/MockChainlinkAggregator.sol";
 import {MockStockToken} from "../mocks/MockStockToken.sol";
 import {MockUSDG} from "../mocks/MockUSDG.sol";
-import {LocalStockline} from "../utils/LocalStockline.sol";
+import {LocalLendora} from "../utils/LocalLendora.sol";
 
 /// @notice Drives a live FeeConverter (full local deployment) with random conversions, DEX rates, price moves,
 /// donations and calls from non-keepers.
@@ -96,7 +96,7 @@ contract FeeConverterHandler is Test {
         // Only while the gates are open: a long random walk can take the feed past the oracle's ×0.5–×2 sanity
         // band,
         // which trips the guard; conversion is then refused by design (tested in FeeConverter.t.sol).
-        if (IStocklineOracle(conv.oracleOf(vault)).guardReasons() != 0) return;
+        if (ILendoraOracle(conv.oracleOf(vault)).guardReasons() != 0) return;
         (, uint256 floor) = conv.quote(vault, stockIn);
         dex.setRate(
             address(stock), address(usdg), uint256(_answer()) * 1e6 / 1e8 * bound(dexBps, 10_000, 10_500) / 10_000
@@ -146,7 +146,7 @@ contract FeeConverterHandler is Test {
 /// @notice FE-R4 invariants (Phase 3 task 10, audit round 2): the keeper can only trigger; value leaves the converter
 /// only to the owner-set destination; no conversion pays below the onchain 1% floor; nothing is stranded.
 /// `FOUNDRY_PROFILE=deep` for 1,000 × 1,000 calls.
-contract FeeConverterInvariantTest is LocalStockline {
+contract FeeConverterInvariantTest is LocalLendora {
     uint256 internal constant NVDA = 1;
     FeeConverter internal conv;
     FeeConverterHandler internal h;

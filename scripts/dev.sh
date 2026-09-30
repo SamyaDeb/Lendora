@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The whole Stockline stack on one machine, offline (Phase 2 task 0).
+# The whole Lendora stack on one machine, offline (Phase 2 task 0).
 #
 #   scripts/dev.sh                 # Postgres + Redis, anvil, DeployLocal, compliance signer, all services
 #   scripts/dev.sh --fixture       # load the DeployLocal fixture instead of deploying (seconds instead of a minute)
@@ -8,7 +8,7 @@
 #   scripts/dev.sh --network 46630 [--stop|--status]   # the services against Robinhood Chain testnet (dev-testnet.sh)
 #
 # Infra: docker-compose (postgres, redis) when Docker works, else local `postgres` / `redis-server` binaries with data
-# in .dev/ (STOCKLINE_INFRA=docker|native forces one). Anvil is always the local binary on :8545 so `forge script`
+# in .dev/ (LENDORA_INFRA=docker|native forces one). Anvil is always the local binary on :8545 so `forge script`
 # can deploy to it. Nothing here touches a real chain: the RPC is checked to be 31337.
 #
 # Secrets: none in the repo. The compliance signer key is generated on first run into .dev/compliance.key (gitignored)
@@ -20,9 +20,9 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 for a in "$@"; do case "$a" in --network|--network=*) exec "$ROOT/scripts/dev-testnet.sh" "$@" ;; esac; done
 DEV="$ROOT/.dev"
 mkdir -p "$DEV/logs"
-ANVIL_PORT="${STOCKLINE_ANVIL_PORT:-8545}"
-PG_PORT="${STOCKLINE_PG_PORT:-55432}"
-REDIS_PORT="${STOCKLINE_REDIS_PORT:-56379}"
+ANVIL_PORT="${LENDORA_ANVIL_PORT:-8545}"
+PG_PORT="${LENDORA_PG_PORT:-55432}"
+REDIS_PORT="${LENDORA_REDIS_PORT:-56379}"
 RPC="http://127.0.0.1:$ANVIL_PORT"
 FIXTURE=0 SEED=0 INFRA_ONLY=0
 for a in "$@"; do
@@ -54,7 +54,7 @@ if cast chain-id --rpc-url "$RPC" >/dev/null 2>&1; then
   echo "[dev] anvil already running on $RPC"
 else
   if [ "$FIXTURE" = 1 ]; then
-    pnpm --silent --filter @stockline/devnet drive serve --port "$ANVIL_PORT" >"$DEV/logs/anvil.log" 2>&1 &
+    pnpm --silent --filter @lendora/devnet drive serve --port "$ANVIL_PORT" >"$DEV/logs/anvil.log" 2>&1 &
     PIDS+=($!)
   else
     anvil --port "$ANVIL_PORT" --silent >"$DEV/logs/anvil.log" 2>&1 &
@@ -90,7 +90,7 @@ DEPLOYMENT_KEY=31337
 DATABASE_URL=$DATABASE_URL
 REDIS_URL=$REDIS_URL
 COMPLIANCE_SIGNER_KEY_FILE=$DEV/compliance.key
-INDEXER_SCHEMA=stockline_dev
+INDEXER_SCHEMA=lendora_dev
 NEXT_PUBLIC_CHAIN_ID=31337
 NEXT_PUBLIC_RPC_URL=$RPC
 NEXT_PUBLIC_API_URL=http://127.0.0.1:42070
@@ -103,7 +103,7 @@ if [ "$SEED" = 1 ]; then
   echo "[dev] seeding a week of activity (chain driver)"
   # Same key as the compliance service, so the seed's own attestations don't replace the router's trusted signer.
   ATTESTATION_SIGNER_KEY="$(cat "$DEV/compliance.key")" \
-    pnpm --silent --filter @stockline/devnet drive seed --rpc "$RPC" >"$DEV/logs/seed.log" 2>&1
+    pnpm --silent --filter @lendora/devnet drive seed --rpc "$RPC" >"$DEV/logs/seed.log" 2>&1
   tail -1 "$DEV/logs/seed.log"
 fi
 

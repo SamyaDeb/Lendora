@@ -3,7 +3,7 @@
  * from these SDK functions, SI-R20). Checked in forge against the pinned AdaptiveCurveIrm bytecode and
  * `MorphoBalancesLib.expectedMarketBalances` on an unmodified Morpho Blue (`test/sdk/MorphoMathVectors.t.sol`).
  *
- *   pnpm --filter @stockline/sdk gen:vectors:morpho
+ *   pnpm --filter @lendora/sdk gen:vectors:morpho
  *
  * Deterministic (fixed seed). Writes contracts/test/vectors/{irm,morpho}.json.
  */

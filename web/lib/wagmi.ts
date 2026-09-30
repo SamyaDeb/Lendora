@@ -11,8 +11,8 @@ const connectors = E2E
   ? [mock({accounts: [E2E_ACCOUNT], features: {reconnect: true}})]
   : [
       injected({shimDisconnect: true}),
-      ...(WALLETCONNECT_PROJECT_ID ? [walletConnect({projectId: WALLETCONNECT_PROJECT_ID, showQrModal: true, metadata: {name: "Stockline", description: "Stock lending on Robinhood Chain", url: "https://stockline.xyz", icons: []}})] : []),
-      coinbaseWallet({appName: "Stockline"}),
+      ...(WALLETCONNECT_PROJECT_ID ? [walletConnect({projectId: WALLETCONNECT_PROJECT_ID, showQrModal: true, metadata: {name: "Lendora", description: "Stock lending on Robinhood Chain", url: "https://lendora.xyz", icons: []}})] : []),
+      coinbaseWallet({appName: "Lendora"}),
     ];
 
 export const wagmiConfig = createConfig({

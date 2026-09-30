@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Every Stockline backend service on this machine against Robinhood Chain testnet (46630), plus the web app.
+# Every Lendora backend service on this machine against Robinhood Chain testnet (46630), plus the web app.
 #
 #   scripts/dev.sh --network 46630            # start (idempotent: running services are left alone)
 #   scripts/dev.sh --network 46630 --status   # pid + health per service
@@ -8,16 +8,16 @@
 #
 # Only Postgres and Redis run locally: no anvil, no deploy. The deployment is packages/sdk/addresses.json["46630"].
 # Services run detached (own process group, pid in .dev/run/, log in .dev/logs/<name>.log) and survive this script.
-# Restart-safe: the indexer resumes its schema (stockline_46630) instead of backfilling from startBlock again.
+# Restart-safe: the indexer resumes its schema (lendora_46630) instead of backfilling from startBlock again.
 #
 # Env: repo-root .env (ROBINHOOD_TESTNET_RPC_URL, ROBINHOOD_MAINNET_READ_RPC_URL) and, exported by the owner,
 # TESTNET_DEPLOYER_KEY (keepers), COMPLIANCE_SIGNER_KEY (compliance) and PROXY_SECRET (compliance + web). Secrets reach
 # the services only through their environment; this script never prints or writes them. Phase 4 (once the book has
 # `dnVault`): NAV_COSIGNER_KEY (the second NAV signer, testnet-only key) and COSIGNER_TOKEN (>= 32 chars).
-# Optional: STOCKLINE_SERVICES_RPC_URL (the services' RPC; default ROBINHOOD_TESTNET_RPC_URL — a free-tier provider
+# Optional: LENDORA_SERVICES_RPC_URL (the services' RPC; default ROBINHOOD_TESTNET_RPC_URL — a free-tier provider
 # that caps eth_getLogs, e.g. Alchemy's 10 blocks, breaks the indexer, monitor and DN keepers: use the public endpoint
 # https://rpc.testnet.chain.robinhood.com or a paid plan), INDEXER_RPC_URL (the indexer's own 46630 RPC, T3; default the
-# services' RPC), GEO_STATIC_COUNTRY (web, default DE), STOCKLINE_WEB_RPC_URL (browser RPC, default the public endpoint),
+# services' RPC), GEO_STATIC_COUNTRY (web, default DE), LENDORA_WEB_RPC_URL (browser RPC, default the public endpoint),
 # SANCTIONS_DENY_LIST (default: the `sanctioned` test user in .dev/testnet-users.json), GAS_BURN_WEI_PER_DAY.
 set -euo pipefail
 
@@ -25,8 +25,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DEV="$ROOT/.dev"
 RUN="$DEV/run"
 mkdir -p "$DEV/logs" "$RUN"
-PG_PORT="${STOCKLINE_PG_PORT:-55432}"
-REDIS_PORT="${STOCKLINE_REDIS_PORT:-56379}"
+PG_PORT="${LENDORA_PG_PORT:-55432}"
+REDIS_PORT="${LENDORA_REDIS_PORT:-56379}"
 NETWORK="" MODE=start READ_ONLY=0
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -94,7 +94,7 @@ required=(ROBINHOOD_TESTNET_RPC_URL)
 missing=()
 for v in "${required[@]}"; do [ -n "${!v:-}" ] || missing+=("$v"); done
 if [ ${#missing[@]} -gt 0 ]; then echo "[dev] missing env: ${missing[*]} (export them; see docs/runbooks/testnet.md §2)" >&2; exit 1; fi
-RPC="${STOCKLINE_SERVICES_RPC_URL:-$ROBINHOOD_TESTNET_RPC_URL}"
+RPC="${LENDORA_SERVICES_RPC_URL:-$ROBINHOOD_TESTNET_RPC_URL}"
 [ "$(cast chain-id --rpc-url "$RPC")" = 46630 ] || { echo "[dev] the services' RPC is not chain 46630; refusing" >&2; exit 1; }
 
 addr() { node -e "const d=require('$ROOT/packages/sdk/addresses.json').chains['46630'];console.log($1)"; }
@@ -127,13 +127,13 @@ TSX="$ROOT/node_modules/.bin/tsx"
 [ -x "$TSX" ] || TSX="$ROOT/keepers/node_modules/.bin/tsx"
 # pnpm hoists the binaries to the root; a package-local .bin is used when it exists.
 bin() { if [ -x "$ROOT/$1/node_modules/.bin/$2" ]; then echo "./node_modules/.bin/$2"; else echo "$ROOT/node_modules/.bin/$2"; fi; }
-pnpm --silent --filter @stockline/sdk build >/dev/null
+pnpm --silent --filter @lendora/sdk build >/dev/null
 
 # Reads pinned to past blocks (indexer snapshots, the NAV co-signer's checks) fall back to ROBINHOOD_TESTNET_RPC_URL
 # when the services use another RPC: the public endpoint keeps no historical state (A24).
 ARCHIVE=""; [ "$RPC" = "$ROBINHOOD_TESTNET_RPC_URL" ] || ARCHIVE="$ROBINHOOD_TESTNET_RPC_URL"
-COMMON=(STOCKLINE_NETWORK=46630 DEPLOYMENT_KEY=46630 RPC_URL="$RPC" RPC_URL_ARCHIVE="$ARCHIVE" DATABASE_URL="$DATABASE_URL" REDIS_URL="$REDIS_URL")
-INDEXER_VIEWS=stockline_testnet
+COMMON=(LENDORA_NETWORK=46630 DEPLOYMENT_KEY=46630 RPC_URL="$RPC" RPC_URL_ARCHIVE="$ARCHIVE" DATABASE_URL="$DATABASE_URL" REDIS_URL="$REDIS_URL")
+INDEXER_VIEWS=lendora_testnet
 
 # T3: INDEXER_RPC_URL (optional) is the indexer's own RPC budget, not shared with the keepers: a catch-up after an
 # outage on the shared endpoint hits 429s and Ponder's limiter pins at 3 req/s. Pinned reads still fall back to the
@@ -149,11 +149,11 @@ else
   echo "[dev] indexer shares the services' RPC (INDEXER_RPC_URL unset; see docs/runbooks/testnet.md §2)"
 fi
 start indexer indexer "${COMMON[@]}" RPC_URL="$IDX_RPC" RPC_URL_ARCHIVE="$IDX_ARCHIVE" PONDER_POLLING_MS="${PONDER_POLLING_MS:-1000}" \
-  -- "$ROOT/scripts/lib/supervise.sh" "$(bin indexer ponder)" start --schema stockline_46630 --views-schema "$INDEXER_VIEWS" --port 42069
-start api api "${COMMON[@]}" INDEXER_SCHEMA="$INDEXER_VIEWS" API_SCHEMA=stockline_api_testnet PORT=42070 SIWE_DOMAIN=localhost:3000 \
+  -- "$ROOT/scripts/lib/supervise.sh" "$(bin indexer ponder)" start --schema lendora_46630 --views-schema "$INDEXER_VIEWS" --port 42069
+start api api "${COMMON[@]}" INDEXER_SCHEMA="$INDEXER_VIEWS" API_SCHEMA=lendora_api_testnet PORT=42070 SIWE_DOMAIN=localhost:3000 \
   -- "$TSX" src/index.ts
 if [ "$READ_ONLY" = 0 ]; then
-start compliance compliance "${COMMON[@]}" COMPLIANCE_SCHEMA=stockline_compliance_testnet PORT=42071 TRUST_PROXY=true \
+start compliance compliance "${COMMON[@]}" COMPLIANCE_SCHEMA=lendora_compliance_testnet PORT=42071 TRUST_PROXY=true \
   SANCTIONS_PROVIDER=deny-list SANCTIONS_DENY_LIST="$DENY_LIST" ALLOWED_ORIGINS=http://localhost:3000 \
   -- "$TSX" src/index.ts
 # Keepers: live on testnet with the operator key (KEEPER_PRIVATE_KEY is read only by the env-key signer).
@@ -187,7 +187,7 @@ if [ -n "$HAS_DN" ]; then
   start venue-mirror keepers "${KEEPER[@]}" HEALTH_PORT=8796 INTERVAL_MS=300000 \
     -- "$TSX" src/venueMirror/main.ts
 fi
-start alerts keepers "${COMMON[@]}" DRY_RUN=false KEEPER_SIGNER=env-key INDEXER_SCHEMA="$INDEXER_VIEWS" ALERTS_SCHEMA=stockline_alerts_testnet PORT=42072 \
+start alerts keepers "${COMMON[@]}" DRY_RUN=false KEEPER_SIGNER=env-key INDEXER_SCHEMA="$INDEXER_VIEWS" ALERTS_SCHEMA=lendora_alerts_testnet PORT=42072 \
   -- "$TSX" src/alerts/main.ts
 fi
 MONITOR_KEEPERS=""
@@ -197,20 +197,20 @@ if [ "$READ_ONLY" = 0 ]; then
   [ -z "$HAS_DN" ] || MONITOR_KEEPERS+=",dn-rebalancer=http://127.0.0.1:8792/health,nav-reporter=http://127.0.0.1:8793/health,nav-cosigner=http://127.0.0.1:8795/health,venue-mirror=http://127.0.0.1:8796/health"
 fi
 # Ops monitor: read-only; pages to the console (its log) and .dev/pages.jsonl until a real pager is configured.
-start monitor keepers "${COMMON[@]}" INDEXER_SCHEMA="$INDEXER_VIEWS" MONITOR_SCHEMA=stockline_monitor_testnet PORT=42073 \
+start monitor keepers "${COMMON[@]}" INDEXER_SCHEMA="$INDEXER_VIEWS" MONITOR_SCHEMA=lendora_monitor_testnet PORT=42073 \
   MONITOR_KEEPERS="$MONITOR_KEEPERS" \
   MONITOR_GAS_WATCH="operator=$OPERATOR" GAS_BURN_WEI_PER_DAY="${GAS_BURN_WEI_PER_DAY:-1200000000000000}" \
   MONITOR_PAGE_FILE="$DEV/pages.jsonl" \
   -- "$TSX" src/monitor/main.ts
-[ "$READ_ONLY" = 1 ] || start web web NODE_ENV=development NEXT_PUBLIC_CHAIN_ID=46630 NEXT_PUBLIC_RPC_URL="${STOCKLINE_WEB_RPC_URL:-https://rpc.testnet.chain.robinhood.com}" \
+[ "$READ_ONLY" = 1 ] || start web web NODE_ENV=development NEXT_PUBLIC_CHAIN_ID=46630 NEXT_PUBLIC_RPC_URL="${LENDORA_WEB_RPC_URL:-https://rpc.testnet.chain.robinhood.com}" \
   NEXT_PUBLIC_API_URL=http://127.0.0.1:42070 API_URL_INTERNAL=http://127.0.0.1:42070 COMPLIANCE_URL=http://127.0.0.1:42071 \
   NEXT_PUBLIC_FEATURE_VAULT="${HAS_DN:+1}" NEXT_PUBLIC_FEATURE_RECEIPT_MARKET="${NEXT_PUBLIC_FEATURE_RECEIPT_MARKET:-}" \
   ALERTS_URL=http://127.0.0.1:42072 GEO_PLATFORM=static GEO_STATIC_COUNTRY="${GEO_STATIC_COUNTRY:-DE}" \
   -- "$(bin web next)" dev -p 3000
 
 # ---------------------------------------------------------------- health summary
-echo "[dev] waiting for health (up to ${STOCKLINE_HEALTH_WAIT:-120} s; the indexer's /ready waits for its backfill)"
-deadline=$(( $(date +%s) + ${STOCKLINE_HEALTH_WAIT:-120} ))
+echo "[dev] waiting for health (up to ${LENDORA_HEALTH_WAIT:-120} s; the indexer's /ready waits for its backfill)"
+deadline=$(( $(date +%s) + ${LENDORA_HEALTH_WAIT:-120} ))
 while [ "$(date +%s)" -lt "$deadline" ]; do
   bad=0
   for s in "${SERVICES[@]}"; do alive "${s%%|*}" && { [ "$(code "${s#*|}")" = 200 ] || bad=$((bad + 1)); }; done

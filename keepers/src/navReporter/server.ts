@@ -1,7 +1,7 @@
 import {createHash, timingSafeEqual} from "node:crypto";
 import {Hono} from "hono";
 import {bodyLimit} from "hono/body-limit";
-import {safeErrorLine} from "@stockline/sdk";
+import {safeErrorLine} from "@lendora/sdk";
 import type {Health} from "../common/health.js";
 import {parseReport, type Cosigner} from "./navReporter.js";
 

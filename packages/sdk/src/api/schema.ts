@@ -322,7 +322,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Positions of a wallet in Stockline markets (public onchain data) */
+        /** Positions of a wallet in Lendora markets (public onchain data) */
         get: {
             parameters: {
                 query?: never;

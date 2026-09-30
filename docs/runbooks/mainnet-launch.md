@@ -1,7 +1,7 @@
 # Runbook · Guarded mainnet launch (Phase 3)
 
 The deployment and role checklist for chain 4663. **Nothing here runs without the owner's go**; every box needs a
-named person and evidence (tx hash, screenshot, link) in the launch log. Deploy logic: `contracts/script/StocklineDeploy.sol`
+named person and evidence (tx hash, screenshot, link) in the launch log. Deploy logic: `contracts/script/LendoraDeploy.sol`
 (the `_deployCore` / `_deployStock` / `_finalize` steps the fork suite exercises); per-stock steps:
 [list-stock.md](list-stock.md).
 
@@ -38,7 +38,7 @@ The boxes below are ticked only by the people who close them.
 | Treasury, `BackstopReserve` | Two Safes (≥ 2 signers each), owner-provided (Q9) | `FeeConverter.destination()` |
 | Fee keeper | Separate KMS key; can only trigger `FeeConverter.convert` | `FeeConverter.keeper()` |
 
-**A27 must not carry over:** on testnet one key held every role; on mainnet **every** `STOCKLINE_*` role is a
+**A27 must not carry over:** on testnet one key held every role; on mainnet **every** `LENDORA_*` role is a
 distinct address from the table above. `DeployMainnet` refuses otherwise (MN-R1…MN-R3), and the fork test replays the
 exact config before broadcasting (§3, step 3).
 
@@ -68,10 +68,10 @@ commands it wraps are listed per step for review; do not run them by hand.
 ```sh
 # the operator, after the owner's written go is in the launch log:
 export I_HAVE_THE_OWNERS_GO=1
-export STOCKLINE_OWNER=0x… STOCKLINE_CURATOR=0x… STOCKLINE_GUARDIAN=0x… STOCKLINE_ALLOCATOR=0x…
-export STOCKLINE_GUARD_KEEPER=0x… STOCKLINE_TREASURY=0x… STOCKLINE_BACKSTOP_RESERVE=0x…
-export STOCKLINE_FEE_KEEPER=0x… STOCKLINE_ATTESTATION_SIGNER=0x…
-export STOCKLINE_DN_OPERATOR=0x… STOCKLINE_NAV_SIGNER_1=0x… STOCKLINE_NAV_SIGNER_2=0x…
+export LENDORA_OWNER=0x… LENDORA_CURATOR=0x… LENDORA_GUARDIAN=0x… LENDORA_ALLOCATOR=0x…
+export LENDORA_GUARD_KEEPER=0x… LENDORA_TREASURY=0x… LENDORA_BACKSTOP_RESERVE=0x…
+export LENDORA_FEE_KEEPER=0x… LENDORA_ATTESTATION_SIGNER=0x…
+export LENDORA_DN_OPERATOR=0x… LENDORA_NAV_SIGNER_1=0x… LENDORA_NAV_SIGNER_2=0x…
 export LAUNCH_DEPLOYER=0x… LAUNCH_SIGNER=ledger        # or trezor | aws | gcp (KMS); never a key
 export ROBINHOOD_RPC_URL=https://…                    # the real 4663 endpoint (dedicated provider)
 scripts/mainnet-launch.sh [--services-env infra/mainnet.env] [--apply]
@@ -90,7 +90,7 @@ scripts/mainnet-launch.sh [--services-env infra/mainnet.env] [--apply]
 | 8 post-launch | reminders: announce 48h ahead, list at 25% caps, first-weekend watch, bug bounty listing, DN caps stay 0 | – |
 
 Progress is recorded in `contracts/deployments/4663.launch.json`: re-running after any stop skips finished steps
-(checks 0–2 always re-run). `pnpm --filter @stockline/launch publish-deployment` is step 6 alone.
+(checks 0–2 always re-run). `pnpm --filter @lendora/launch publish-deployment` is step 6 alone.
 
 **Rehearsal (`--dry-run`).** Against a **local anvil fork of 4663** only (the launcher checks chain id, `anvil` and a
 local host; `DeployMainnetDryRun` checks `web3_clientVersion` again and refuses `I_HAVE_THE_OWNERS_GO`): unsigned gates
@@ -102,7 +102,7 @@ VerifyRoles' DN sleeve check compared by index, and the file lists stocks alphab
 
 ```sh
 anvil --fork-url https://rpc.mainnet.chain.robinhood.com --port 8600 &
-ROBINHOOD_RPC_URL=http://127.0.0.1:8600 STOCKLINE_…=… LAUNCH_DEPLOYER=… scripts/mainnet-launch.sh --dry-run --skip-suite
+ROBINHOOD_RPC_URL=http://127.0.0.1:8600 LENDORA_…=… LAUNCH_DEPLOYER=… scripts/mainnet-launch.sh --dry-run --skip-suite
 ```
 
 ## 4. Services before the first deposit
@@ -120,7 +120,7 @@ on the first run, so a `CallScheduled` before it starts is never paged, MON-R16/
 - [ ] Calendar runway ≥ 30 days pushed; earnings windows within 60 days pushed (MON-R13 quiet).
 - [ ] Status page and comms channels ready; comms templates from [README.md](README.md).
 
-**Service network rules on 4663 (MN-R6).** Every service calls `resolveDeployment` from `@stockline/sdk` at startup
+**Service network rules on 4663 (MN-R6).** Every service calls `resolveDeployment` from `@lendora/sdk` at startup
 and refuses a network that `addresses.json` does not list, so nothing starts on 4663 until the launcher's step 6 has published
 `chains["4663"]` (released SDK build). What differs on 4663, audited per service:
 

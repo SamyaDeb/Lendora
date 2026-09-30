@@ -1,4 +1,4 @@
-import {getExternal, isRobinhoodMainnet} from "@stockline/sdk";
+import {getExternal, isRobinhoodMainnet} from "@lendora/sdk";
 import {loadConfig} from "../common/config.js";
 import {chainFor, publicClient} from "../common/chain.js";
 import {senderFromConfig, type TxSender} from "../common/signer.js";

@@ -1,5 +1,5 @@
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
-import {morphoAbi, stocklineOracleAbi} from "@stockline/sdk";
+import {morphoAbi, lendoraOracleAbi} from "@lendora/sdk";
 import {startAnvil, type Anvil} from "../src/anvil.js";
 import {ChainDriver} from "../src/driver.js";
 import {seedWeek, USERS, type SeedResult} from "../src/scenario.js";
@@ -34,10 +34,10 @@ describe("chain driver seed week on anvil (Phase 2 task 0)", () => {
     expect(await drv.isOpen(t.rampStart + 3600n)).toBe(true);
     expect(await drv.isOpen(t.close + 3600n)).toBe(false);
     const nvda = drv.stock("NVDA");
-    const [, u] = await a.client.readContract({address: nvda.oracle, abi: stocklineOracleAbi, functionName: "stockAnswer"});
-    const bufAtClose = await a.client.readContract({address: nvda.oracle, abi: stocklineOracleAbi, functionName: "bufferAt", args: [t.close, t.close - 600n]});
+    const [, u] = await a.client.readContract({address: nvda.oracle, abi: lendoraOracleAbi, functionName: "stockAnswer"});
+    const bufAtClose = await a.client.readContract({address: nvda.oracle, abi: lendoraOracleAbi, functionName: "bufferAt", args: [t.close, t.close - 600n]});
     expect(bufAtClose > 9n * 10n ** 16n).toBe(true); // NVDA 48h b_full ≈ 9.6%
-    expect(await a.client.readContract({address: nvda.oracle, abi: stocklineOracleAbi, functionName: "bufferAt", args: [t.reopen + 120n, u]})).toBe(0n);
+    expect(await a.client.readContract({address: nvda.oracle, abi: lendoraOracleAbi, functionName: "bufferAt", args: [t.reopen + 120n, u]})).toBe(0n);
   });
 
   it("the Monday gap made Erin liquidatable and a standard Morpho liquidation left her healthy", async () => {
@@ -56,7 +56,7 @@ describe("chain driver seed week on anvil (Phase 2 task 0)", () => {
     const repayAfter = r.events.findIndex((e, i) => i > pause && e.kind === "repay" && e.ticker === "AAPL");
     expect(repayAfter).toBeGreaterThan(pause);
     expect(r.events.some((e, i) => i > pause && e.kind === "deallocate" && e.ticker === "AAPL")).toBe(true);
-    expect(await a.client.readContract({address: drv.stock("AAPL").oracle, abi: stocklineOracleAbi, functionName: "guardTripped"})).toBe(false);
+    expect(await a.client.readContract({address: drv.stock("AAPL").oracle, abi: lendoraOracleAbi, functionName: "guardTripped"})).toBe(false);
   });
 
   it("closed positions are flat: Frank (closeShort) and Grace (repay all) owe nothing", async () => {

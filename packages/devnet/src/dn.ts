@@ -1,5 +1,5 @@
 import {encodeFunctionData, maxUint256, type Hex, type TransactionReceipt} from "viem";
-import {deltaNeutralVaultAbi, erc20Abi, mockPerpVenueAbi, navOracleAbi, navReportTypedData, perpAdapterAbi, strategyManagerAbi, type NavReport} from "@stockline/sdk";
+import {deltaNeutralVaultAbi, erc20Abi, mockPerpVenueAbi, navOracleAbi, navReportTypedData, perpAdapterAbi, strategyManagerAbi, type NavReport} from "@lendora/sdk";
 import type {ChainDriver} from "./driver.js";
 
 /** DeployLocal's Phase 4 roles on anvil (dev accounts; the node holds the keys, none in the repo). */

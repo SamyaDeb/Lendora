@@ -1,11 +1,11 @@
 import {keccak256, parseAbiItem, type Hex, type Log, type PublicClient} from "viem";
-import {decodeStocklineCall, type ChainDeployment} from "@stockline/sdk";
+import {decodeLendoraCall, type ChainDeployment} from "@lendora/sdk";
 import type {Observation} from "./rules.js";
 import type {MonitorStore} from "./store.js";
 
 /**
  * Governance watch (docs/prd/10 MON-R16…R18, threat model §7): every scheduled and executed timelock operation and
- * every role change on a Stockline contract pages, with the call decoded by the SDK. Two timelocks exist:
+ * every role change on a Lendora contract pages, with the call decoded by the SDK. Two timelocks exist:
  * - the OpenZeppelin `TimelockController` (owner of router, oracles, `MarketHours`, vaults, splitter, converters):
  *   `CallScheduled` → `TIMELOCK_SCHEDULED`; `CallExecuted` → `TIMELOCK_EXECUTED`, or `TIMELOCK_EXECUTED_UNTRACKED`
  *   (P0) when this monitor never saw (and paged) the schedule, i.e. nobody had the delay to react;
@@ -94,14 +94,14 @@ export class GovernanceWatch {
     const a = l.args;
 
     if (isTimelock && l.eventName === "CallScheduled") {
-      const call = decodeStocklineCall(this.d, a.target as `0x${string}`, a.data as Hex);
+      const call = decodeLendoraCall(this.d, a.target as `0x${string}`, a.data as Hex);
       const key = `timelock:${a.id as string}:${String(a.index)}`;
       await this.store.markScheduled(key);
       obs.push({rule: "TIMELOCK_SCHEDULED", subject: key, active: true, title: `Timelock scheduled: ${call.summary}`, details: {...where, id: a.id, delaySec: String(a.delay), call: str(call)}});
       return;
     }
     if (isTimelock && l.eventName === "CallExecuted") {
-      const call = decodeStocklineCall(this.d, a.target as `0x${string}`, a.data as Hex);
+      const call = decodeLendoraCall(this.d, a.target as `0x${string}`, a.data as Hex);
       const key = `timelock:${a.id as string}:${String(a.index)}`;
       const tracked = await this.store.wasScheduled(key);
       obs.push({rule: tracked ? "TIMELOCK_EXECUTED" : "TIMELOCK_EXECUTED_UNTRACKED", subject: key, active: true, title: `Timelock executed${tracked ? "" : " (schedule never paged)"}: ${call.summary}`, details: {...where, id: a.id, call: str(call)}});
@@ -113,7 +113,7 @@ export class GovernanceWatch {
     }
     if (vaultTicker && (l.eventName === "Submit" || l.eventName === "Accept" || l.eventName === "Revoke")) {
       const data = a.data as Hex;
-      const call = decodeStocklineCall(this.d, l.address, data);
+      const call = decodeLendoraCall(this.d, l.address, data);
       const key = `vault:${vaultTicker}:${keccak256(data)}`;
       if (l.eventName === "Submit") {
         await this.store.markScheduled(key);

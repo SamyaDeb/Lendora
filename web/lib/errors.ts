@@ -10,30 +10,30 @@ import {
   mockStockTokenAbi,
   morphoAbi,
   navOracleAbi,
-  stocklineLiquidatorAbi,
-  stocklineOracleAbi,
-  stocklineRouterAbi,
+  lendoraLiquidatorAbi,
+  lendoraOracleAbi,
+  lendoraRouterAbi,
   stockWrapperAbi,
   strategyManagerAbi,
   vaultV2FullAbi,
-} from "@stockline/sdk";
+} from "@lendora/sdk";
 import {guardReasonText} from "./guard";
 import {faucetAbi} from "./network";
 
 /**
  * APP-R3: every simulation or transaction failure is shown in plain language. Custom errors are decoded against every
- * Stockline ABI (router, wrapper, clUSDG, oracle, MarketHours, liquidator, FeeSplitter, FeeConverter; OFF-14) plus
+ * Lendora ABI (router, wrapper, clUSDG, oracle, MarketHours, liquidator, FeeSplitter, FeeConverter; OFF-14) plus
  * Morpho, Vault V2 and its adapter, and the token ABIs; Morpho's string errors are mapped too.
  */
 export const abis = [
-  stocklineRouterAbi,
+  lendoraRouterAbi,
   vaultV2FullAbi,
   marketAdapterAbi,
   stockWrapperAbi,
   collateralTokenAbi,
-  stocklineOracleAbi,
+  lendoraOracleAbi,
   marketHoursAbi,
-  stocklineLiquidatorAbi,
+  lendoraLiquidatorAbi,
   feeSplitterAbi,
   feeConverterAbi,
   deltaNeutralVaultAbi,
@@ -61,7 +61,7 @@ function fromName(name: string, args: readonly unknown[] = []): string {
     case "PerAddressCapExceeded":
       return "This borrow would exceed the per-address limit for this market.";
     case "GlobalCapExceeded":
-      return "Stockline's total collateral cap is reached. Try again later.";
+      return "Lendora's total collateral cap is reached. Try again later.";
     case "BadAttestation":
       return "The compliance attestation is missing, expired or not for this wallet. Get a new one and retry.";
     case "InsufficientOutput":
@@ -95,7 +95,7 @@ function fromName(name: string, args: readonly unknown[] = []): string {
       return "The recipient address is empty (0x0). Send to your own wallet address.";
     case "NotRouter":
     case "TransferNotAllowed":
-      return "clUSDG collateral moves only through the Stockline router (or Morpho); it can't be minted or sent wallet to wallet.";
+      return "clUSDG collateral moves only through the Lendora router (or Morpho); it can't be minted or sent wallet to wallet.";
     case "Panic":
       return BigInt(String(args[0] ?? 0)) === 0x11n
         ? "That amount is more than you hold in this position. Use a smaller amount or Max."
@@ -107,7 +107,7 @@ function fromName(name: string, args: readonly unknown[] = []): string {
     case "NotOperator":
     case "NotStrategy":
     case "NotKeeper":
-      return "This action is reserved to a Stockline role (owner, guardian or keeper); your wallet cannot run it.";
+      return "This action is reserved to a Lendora role (owner, guardian or keeper); your wallet cannot run it.";
     case "SlippageTooLoose":
       return "The conversion would sell more than 1% below the oracle price, so it was refused (FE-R4).";
     case "MarketClosed":

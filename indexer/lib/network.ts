@@ -1,9 +1,9 @@
-import {getExternal, isRobinhoodMainnet, resolveDeployment, type Address, type ChainDeployment, type DeploymentKey, type StockDeployment} from "@stockline/sdk";
+import {getExternal, isRobinhoodMainnet, resolveDeployment, type Address, type ChainDeployment, type DeploymentKey, type StockDeployment} from "@lendora/sdk";
 
 /**
- * Which deployment the indexer follows (SI-R1): `STOCKLINE_NETWORK` = "31337" (anvil + mocks), "fork-4663" (anvil
+ * Which deployment the indexer follows (SI-R1): `LENDORA_NETWORK` = "31337" (anvil + mocks), "fork-4663" (anvil
  * fork of Robinhood Chain with the simulated deployment) or "46630" (testnet). Addresses and ABIs come only from
- * `@stockline/sdk`. "4663" (mainnet) only once the launch has published its deployment (MN-R6).
+ * `@lendora/sdk`. "4663" (mainnet) only once the launch has published its deployment (MN-R6).
  */
 export interface NetworkConfig {
   key: DeploymentKey;
@@ -41,7 +41,7 @@ export interface NetworkConfig {
 const lc = (a: string) => a.toLowerCase();
 
 export function networkConfig(env: NodeJS.ProcessEnv = process.env): NetworkConfig {
-  const raw = env.STOCKLINE_NETWORK ?? env.DEPLOYMENT_KEY ?? "31337";
+  const raw = env.LENDORA_NETWORK ?? env.DEPLOYMENT_KEY ?? "31337";
   const {key, chainId, d} = resolveDeployment(raw, "indexer"); // MN-R6: 4663 only once the launch published it
   const stocks = d.stocks;
   const tickers = Object.keys(stocks).sort();

@@ -1,7 +1,7 @@
 import {defineChain} from "viem";
 import {anvil} from "viem/chains";
 
-/** Chains Stockline runs on (01-chain-facts §1). The app offers only the chain of its deployment (APP-R1). */
+/** Chains Lendora runs on (01-chain-facts §1). The app offers only the chain of its deployment (APP-R1). */
 export const robinhoodChain = defineChain({
   id: 4663,
   name: "Robinhood Chain",
@@ -21,7 +21,7 @@ export const robinhoodTestnet = defineChain({
   testnet: true,
 });
 
-export const localChain = {...anvil, name: "Stockline local (anvil)"} as const;
+export const localChain = {...anvil, name: "Lendora local (anvil)"} as const;
 
 /** The viem chain for a deployment's chain id, with an optional RPC override. */
 export function chainFor(chainId: number, rpcUrl?: string) {
