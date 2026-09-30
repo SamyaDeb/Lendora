@@ -9,7 +9,7 @@ import type {IndexerDb, EventCursor} from "./db.js";
 import type {Limiter} from "./limits.js";
 import {clientKey, ipFromForwardedFor} from "./limits.js";
 import type {ApiKeys} from "./keys.js";
-import {HttpError} from "./errors.js";
+import {HttpError, errorStatus} from "./errors.js";
 import type {ChainReader} from "./chain.js";
 import {envelope, eventView, historyView, iso, marketView, positionView, wad, type Envelope} from "./model.js";
 import * as S from "./schemas.js";
@@ -83,9 +83,10 @@ export function createApp(deps: AppDeps) {
   });
 
   app.onError((err, c) => {
-    if (err instanceof HttpError) return c.json({error: err.message}, err.status);
-    console.error(`[api] ${c.req.method} ${c.req.path}: ${safeErrorLine(err, process.env)}`); // OFF-1
-    return c.json({error: "internal error"}, 500);
+    const r = errorStatus(err);
+    if (r.status === 500) console.error(`[api] ${c.req.method} ${c.req.path}: ${safeErrorLine(err, process.env)}`); // OFF-1
+    if (r.retryAfter) c.header("Retry-After", String(r.retryAfter));
+    return c.json({error: r.error}, r.status);
   });
 
   app.use(

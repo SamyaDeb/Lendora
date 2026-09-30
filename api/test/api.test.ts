@@ -128,6 +128,14 @@ describe("public API on the indexed seed week (SI-R10…R14)", () => {
     expect((await get("/v1/markets/NVDA/events?cursor=bogus")).status).toBe(400);
   });
 
+  it("history: a from/to that is not an ISO time is a 400, not a 500 (found by testnetBreak on 46630)", async () => {
+    for (const q of ["from=abc", "to=abc", "from=99999999999&to=1", "from=1&to=99999999999&interval=1m", "from=2026-13-45T00:00:00Z"]) {
+      const r = await get(`/v1/markets/NVDA/history?${q}`);
+      expect(r.status, q).toBe(400);
+      expect(((await r.json()) as {error: string}).error, q).toBeTruthy();
+    }
+  });
+
   it("positions: health factor and debt equal the router's view at the snapshot block (OR-R22)", async () => {
     const body = (await getJson(`/v1/positions/${USERS.heidi}`)) as unknown as {asOfBlock: string; data: {symbol: string; healthFactor: string}[]};
     const nvda = body.data.find((p) => p.symbol === "NVDA")!;

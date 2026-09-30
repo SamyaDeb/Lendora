@@ -6,6 +6,12 @@ const Dec = z.string().openapi({description: "Decimal string", example: "1234.56
 const Int = z.string().regex(/^-?\d+$/).openapi({description: "Integer as a decimal string (raw onchain units)", example: "1000000000000000000"});
 const Addr = z.string().regex(/^0x[0-9a-fA-F]{40}$/).openapi({example: "0x0000000000000000000000000000000000000000"});
 const Time = z.string().openapi({description: "ISO 8601 UTC", example: "2026-10-01T16:00:00.000Z"});
+/** A query time: ISO 8601 that parses (`Date.parse` alone takes "1" as 2001 and turns "abc" into NaN, a 500). */
+const TimeParam = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d{1,9})?)?(Z|[+-]\d{2}:\d{2})?)?$/, "an ISO 8601 time, e.g. 2026-10-01T16:00:00Z")
+  .refine((s) => !Number.isNaN(Date.parse(s)), "not a valid date")
+  .openapi({description: "ISO 8601 UTC", example: "2026-10-01T16:00:00.000Z"});
 
 export const Symbol = z.string().regex(/^[A-Za-z0-9.]{1,12}$/).openapi({param: {name: "symbol", in: "path"}, example: "NVDA"});
 
@@ -113,8 +119,8 @@ export const HistoryPoint = z
 
 export const HistoryQuery = z.object({
   interval: z.enum(["1m", "1h", "1d"]).default("1h").openapi({param: {name: "interval", in: "query"}}),
-  from: Time.optional().openapi({param: {name: "from", in: "query"}, description: "Inclusive; default: 7 days before `to`"}),
-  to: Time.optional().openapi({param: {name: "to", in: "query"}, description: "Exclusive; default: now"}),
+  from: TimeParam.optional().openapi({param: {name: "from", in: "query"}, description: "Inclusive; default: 7 days before `to`"}),
+  to: TimeParam.optional().openapi({param: {name: "to", in: "query"}, description: "Exclusive; default: now"}),
   format: z.enum(["json", "csv"]).default("json").openapi({param: {name: "format", in: "query"}, description: "SI-R12"}),
   limit: z.coerce.number().int().min(1).max(5000).default(2000).openapi({param: {name: "limit", in: "query"}}),
 });
