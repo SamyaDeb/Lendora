@@ -56,4 +56,12 @@ describe("APP-R3 revert reasons in plain language", () => {
     expect(explainError(err)).toMatch(/Not enough collateral/);
     expect(explainError(new Error("User rejected the request."))).toBe("You cancelled the request in your wallet.");
   });
+
+  it("T34 wallet changes mid-flow are explained: disconnected or switched account (EIP-1193 4100), another network", () => {
+    const unauthorized = Object.assign(new Error("The requested account and/or method has not been authorized by the user."), {code: 4100});
+    expect(explainError(unauthorized)).toMatch(/^Your wallet disconnected or switched accounts during this action/);
+    const mismatch = Object.assign(new Error("The current chain of the wallet (id: 1) does not match the target chain for the transaction (id: 46630 – Robinhood Chain Testnet)."), {name: "ChainMismatchError"});
+    expect(explainError(mismatch)).toMatch(/^Your wallet is on another network/);
+  });
+
 });

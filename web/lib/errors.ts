@@ -135,7 +135,20 @@ function fromName(name: string, args: readonly unknown[] = []): string {
   }
 }
 
+/** T34: the wallet changed under a running action (46630 browser pass: disconnect, account or chain switch mid-flow). */
+function walletChanged(e: unknown): string | undefined {
+  for (let x = e as {code?: unknown; name?: unknown; message?: unknown; cause?: unknown} | undefined, i = 0; x && i < 8; x = x.cause as typeof x, i++) {
+    const msg = String(x.message ?? "");
+    if (x.code === 4100 || /has not been authorized|not the active account|not connected/i.test(msg))
+      return "Your wallet disconnected or switched accounts during this action, so nothing was sent. Check the account in your wallet, then review it again.";
+    if (x.name === "ChainMismatchError" || /does not match the target chain/i.test(msg)) return "Your wallet is on another network, so nothing was sent. Switch back to Robinhood Chain in your wallet (or with the button at the top), then try again.";
+  }
+  return undefined;
+}
+
 export function explainError(e: unknown): string {
+  const changed = walletChanged(e);
+  if (changed) return changed;
   const err = e as BaseError & {data?: Hex};
   const withData = typeof err?.walk === "function" ? (err.walk((x) => typeof (x as {data?: unknown}).data === "string") as {data?: Hex} | null) : null;
   const data = withData?.data;
