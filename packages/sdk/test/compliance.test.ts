@@ -23,4 +23,9 @@ describe("compliance list and terms message (CP-R1, APP-R2, APP-R10)", () => {
     expect(m).toContain("Terms version: v1");
     expect(m).toContain("nothing here is an offer of securities");
   });
+
+  it("T31 the terms message says signing is free and moves no funds (what a wallet user checks before signing)", () => {
+    const m = termsMessage("0xAbC0000000000000000000000000000000000001", "v1", "0xhash");
+    expect(m).toMatch(/Signing this message is free: it sends no transaction, moves no funds and approves nothing\./);
+  });
 });

@@ -42,6 +42,8 @@ export function termsMessage(address: Address, version: string, termsHash: strin
     "I understand that lending and borrowing Stock Tokens carries risk, including liquidation, that rates are variable,",
     "that nothing here is an offer of securities or investment advice, and that access is not available in restricted regions.",
     "",
+    "Signing this message is free: it sends no transaction, moves no funds and approves nothing.",
+    "",
     `Wallet: ${address.toLowerCase()}`,
     `Terms version: ${version}`,
     `Terms SHA-256: ${termsHash}`,
