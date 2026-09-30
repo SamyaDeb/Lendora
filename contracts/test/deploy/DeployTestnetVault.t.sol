@@ -20,11 +20,15 @@ contract DeployTestnetVaultTest is Test {
     }
 
     function test_DN_R9_testnetFeeRecipientIsTheFeeSplitterOrRefused() public {
-        // The committed 46630 entry predates the fee contracts: live, this must stop, not pick a placeholder.
+        // A 46630 entry from before the fee contracts: live, this must stop, not pick a placeholder. (The committed
+        // book has had a FeeSplitter since DeployTestnetFees ran on 2026-09-29, so the case is built here.)
+        string memory noFees = string.concat('{"chains":{"46630":{"timelock":"', vm.toString(DEPLOYER), '"}}}');
         vm.expectRevert(
             bytes("DeployTestnetVault: no FeeSplitter in the address book: run DeployTestnetFees first (DN-R9)")
         );
-        s.feeRecipient(book, false);
+        s.feeRecipient(noFees, false);
+        // The committed book carries it now.
+        assertEq(s.feeRecipient(book, false), vm.parseJsonAddress(book, ".chains.46630.feeSplitter"));
         // After a live DeployTestnetFees the book carries it.
         address splitter = makeAddr("splitter");
         string memory withFees = vm.serializeAddress("b", "feeSplitter", splitter);

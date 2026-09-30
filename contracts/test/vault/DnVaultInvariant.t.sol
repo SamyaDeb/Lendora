@@ -272,7 +272,7 @@ contract DnHandler is CommonBase, StdCheats, StdUtils {
                 address(w.dex),
                 abi.encodeCall(MockSwapAggregator.swap, (w.tokens[i], address(w.usdg), wrapped, 0, address(w.strat)))
             );
-            try w.strat.sellSpot(i, wrapped, v * 99 / 100 + 1, sw) {
+            try w.strat.sellSpot(i, wrapped, (v * 99 + 99) / 100, sw) {
                 operatorSwaps++;
             } catch {}
         }
@@ -407,7 +407,9 @@ contract DnVaultInvariantTest is DnVaultBase {
             uint256 wr = IERC20(address(ds[i].wrapper)).balanceOf(address(strat));
             if (wr > 0) {
                 uint256 v = strat.quote(i, wr);
-                strat.sellSpot(i, wr, v * 99 / 100 + 1, _sellData(i, wr));
+                // The contract's own floor (1% slippage, rounded up): 0 for dust worth 0 USDG, which the guardian
+                // may sell for nothing. `v * 99 / 100 + 1` demanded 1 unit out of dust and reverted.
+                strat.sellSpot(i, wr, (v * 99 + 99) / 100, _sellData(i, wr));
             }
             (, uint256 size) = venue.shortSize(keccak256(bytes(["SPY", "NVDA", "AAPL"][i])));
             if (size > 0) strat.adjustShort(i, int256(size), 0);

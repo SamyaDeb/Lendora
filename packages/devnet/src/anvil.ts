@@ -251,6 +251,13 @@ export async function startAnvil(opts: StartOptions = {}): Promise<Anvil> {
   });
   try {
     if (state === "deploy") deployLocal(url);
+    // The fixture's chain keeps its own clock: new blocks continue from its head, not the wall clock. The seed week
+    // is pinned to Wed 2026-09-30 (SEED_WED); at the wall clock, from 15:00Z that day on, its first warp was "lower
+    // than the previous block's timestamp" and every seed-week suite failed.
+    if (state === "fixture") {
+      const head = await a.client.getBlock();
+      await (a.client.request as (r: {method: string; params: unknown[]}) => Promise<unknown>)({method: "anvil_setTime", params: [Number(head.timestamp) + 1]});
+    }
   } catch (e) {
     // Never leave anvil running on a failed start: it keeps the test process alive (a CI job hung this way when a
     // newer anvil could not decode the fixture). The fixture is written by the Foundry version pinned in CI.

@@ -2,6 +2,9 @@
 src = "src"
 test = "test"
 script = "script"
+# Tests live in test/. forge also runs `test*` functions of other contracts: DeployTestnetVault.testnetCap(uint256)
+# was fuzzed as a test and its (correct) revert above the 10M A49 cap failed `forge test`.
+no_match_path = "script/**"
 out = "out"
 libs = ["lib"]
 evm_version = "cancun"             # Robinhood Chain runs cancun opcodes (A4, verified Phase 0; docs/phase0/01-chain-facts.md)
