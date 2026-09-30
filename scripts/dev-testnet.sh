@@ -181,7 +181,8 @@ if [ -n "$HAS_DN" ]; then
   start nav-reporter keepers "${KEEPER[@]}" HEALTH_PORT=8793 NAV_SIGNER_SIGNER=env-key NAV_SIGNER_KEY="$TESTNET_DEPLOYER_KEY" \
     COSIGNER_URL=http://127.0.0.1:8794/cosign COSIGNER_TOKEN="$COSIGNER_TOKEN" \
     -- "$TSX" src/navReporter/main.ts
-  start dn-rebalancer keepers "${KEEPER[@]}" HEALTH_PORT=8792 DN_VENUE=mock \
+  # T14: the testnet book (~$150) is under the $100-per-trade default once split into sleeves: 10 USDG lets it deploy.
+  start dn-rebalancer keepers "${KEEPER[@]}" HEALTH_PORT=8792 DN_VENUE=mock DN_MIN_TRADE_USDG="${DN_MIN_TRADE_USDG:-10000000}" \
     -- "$TSX" src/dnRebalancer/main.ts
   start venue-mirror keepers "${KEEPER[@]}" HEALTH_PORT=8796 INTERVAL_MS=300000 \
     -- "$TSX" src/venueMirror/main.ts

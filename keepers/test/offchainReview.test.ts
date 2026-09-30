@@ -10,7 +10,8 @@ import {Health} from "../src/common/health.js";
 import {loadConfig} from "../src/common/config.js";
 import {envKeySender, GasPriceTooHigh, senderFromConfig} from "../src/common/signer.js";
 import {isPrivateAddress, WebhookTransport, type Alert} from "../src/alerts/transports.js";
-import {loadDnEnv, loadNavEnv} from "../src/common/dnEnv.js";
+import {loadDnEnv, loadNavEnv, navHealthStaleMs} from "../src/common/dnEnv.js";
+import {defaultDnParams, plan, type DnState} from "../src/dnRebalancer/rebalancer.js";
 import {cosignerApp} from "../src/navReporter/server.js";
 
 /** Offchain security pass (Phase 3 task 9, docs/audit/offchain-review.md): one test per keeper finding. */
@@ -218,6 +219,8 @@ describe("OFF-18…OFF-21 NAV co-signer and DN keepers", () => {
     expect(() => loadDnEnv({DN_ENTRY_CHUNK_USDG: "-1"})).toThrow(/DN_ENTRY_CHUNK_USDG/);
     expect(() => loadDnEnv({DN_MMF_WAD: "1e16"})).toThrow(/DN_MMF_WAD/);
     expect(loadDnEnv({}).DN_SLIPPAGE_BPS).toBe(50n);
+    expect(loadDnEnv({}).DN_MIN_TRADE_USDG).toBe(100_000_000n);
+    expect(() => loadDnEnv({DN_MIN_TRADE_USDG: "0"})).toThrow(/DN_MIN_TRADE_USDG/);
     for (const dir of ["navReporter", "dnRebalancer"]) {
       const main = readFileSync(new URL(`../src/${dir}/main.ts`, import.meta.url), "utf8");
       expect(main, dir).not.toMatch(/Number\(env\.|BigInt\(env\./);
@@ -230,5 +233,30 @@ describe("OFF-18…OFF-21 NAV co-signer and DN keepers", () => {
     expect(loadNavEnv({COSIGNER_URL: "http://nav-cosigner.railway.internal:8790/cosign", COSIGNER_TOKEN: token}).COSIGNER_URL).toContain("railway.internal");
     expect(() => loadNavEnv({NAV_MODE: "cosigner", COSIGNER_TOKEN: "short"})).toThrow(/COSIGNER_TOKEN/);
     expect(() => loadNavEnv({LIGHTER_API_URL: "http://api.rh.lighter.xyz"})).toThrow(/LIGHTER_API_URL/);
+  });
+
+  it("T14 a small book (46630: 157.5 USDG) deploys only when the minimum trade fits its sleeves (DN_MIN_TRADE_USDG)", () => {
+    const E6n = 10n ** 6n;
+    const sleeve = (id: number) => ({id, active: true, capUsdg: 10n ** 13n, maxLendBps: 9000n, stockToken: "0x1" as const, wrapper: "0x2" as const, rVault: "0x3" as const, unitValue: 200n * E6n, spot: 0n, lent: 0n, wrapped: 0n, loose: 0n, rShares: 0n, short: 0n, others: 0n, guardClear: true});
+    const s: DnState = {now: 0n, open: true, regular: true, fresh: true, paused: false, nav: 157_500_001n, idle: 157_500_001n, bufferBps: 500n, stratUsdg: 0n, queuedAssets: 0n, headOverdue: false, headPayable: false, margin: {equity: 0n, maintenance: 0n}, pending: 0n, sleeves: [sleeve(0), sleeve(1), sleeve(2)], kill: [false, false, false]};
+    // Default $100 minimum: the largest sleeve's target spot is ~$56, so nothing is ever built and venue equity stays 0.
+    expect(plan(s, defaultDnParams, false).filter((a) => a.kind === "build")).toEqual([]);
+    const builds = plan(s, {...defaultDnParams, minTradeUsdg: 10n * E6n}, false).filter((a) => a.kind === "build");
+    expect(builds.map((a) => a.sleeve)).toEqual([0, 1, 2]);
+  });
+
+  it("T15 the NAV co-signer's /health allows the oracle's max age between requests, not the keepers' 5 minutes", () => {
+    // The reporter asks every NAV_REPORT_EVERY_MS (5 min, up to 14): a 5-minute window read 503 between requests.
+    expect(navHealthStaleMs(loadNavEnv({NAV_MODE: "cosigner", COSIGNER_TOKEN: "x".repeat(32)}), 5 * 60_000)).toBe(15 * 60_000);
+    expect(navHealthStaleMs(loadNavEnv({}), 5 * 60_000)).toBe(5 * 60_000); // the reporter ticks every 30 s
+    expect(navHealthStaleMs(loadNavEnv({NAV_MODE: "cosigner", COSIGNER_TOKEN: "x".repeat(32)}), 20 * 60_000)).toBe(20 * 60_000);
+    // A co-signer that just started is healthy (its window counts from start), not 503 until the first request:
+    // every restart paged KEEPER_DOWN for up to NAV_REPORT_EVERY_MS.
+    const clock = {t: 0};
+    const h = new Health(15 * 60_000, () => clock.t);
+    cosignerApp({cosign: async () => "0xsig"}, "x".repeat(32), h);
+    expect(h.report().healthy).toBe(true);
+    clock.t = 16 * 60_000;
+    expect(h.report().healthy).toBe(false);
   });
 });

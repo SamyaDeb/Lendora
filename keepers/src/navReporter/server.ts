@@ -14,6 +14,8 @@ const digest = (s: string) => createHash("sha256").update(s).digest();
  */
 export function cosignerApp(co: Cosigner, token: string, health?: Health, env: Record<string, string | undefined> = process.env): Hono {
   const want = digest(`Bearer ${token}`);
+  // T15: healthy from start; the staleness window (navHealthStaleMs) then counts from the last co-signed report.
+  health?.ok("nav", 0n);
   const app = new Hono();
   app.post(
     "/cosign",

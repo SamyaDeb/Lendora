@@ -40,6 +40,7 @@ const p = {
   kill: {windowHours: dnEnv.DN_KILL_WINDOW_H, hours: dnEnv.DN_KILL_HOURS, lendingApy: dnEnv.DN_KILL_LENDING_APY},
   entryChunkUsdg: dnEnv.DN_ENTRY_CHUNK_USDG,
   slippageBps: dnEnv.DN_SLIPPAGE_BPS,
+  minTradeUsdg: dnEnv.DN_MIN_TRADE_USDG,
 };
 const interval = dnEnv.INTERVAL_MS; // DN_SLIPPAGE_BPS is bounded to 100 (1%, DN-R10) in loadDnEnv
 const health = new Health(Math.max(cfg.maxStaleMs, 3 * interval));

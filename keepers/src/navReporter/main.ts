@@ -4,7 +4,7 @@ import {chainFor, publicClient} from "../common/chain.js";
 import {senderFromConfig, typedDataSignerFromEnv} from "../common/signer.js";
 import {Health} from "../common/health.js";
 import {runService} from "../common/loop.js";
-import {loadNavEnv} from "../common/dnEnv.js";
+import {loadNavEnv, navHealthStaleMs} from "../common/dnEnv.js";
 import {cosignerApp} from "./server.js";
 import {HttpCosigner, LighterAccountSource, MockVenueSource, NavCosigner, NavReporter, sleeveMarkets, type EquitySource} from "./navReporter.js";
 
@@ -28,7 +28,7 @@ const source: EquitySource =
   nav.NAV_SOURCE === "lighter"
     ? new LighterAccountSource(nav.LIGHTER_API_URL, d.dnVault.perpAdapter, nav.LIGHTER_MARKET_IDS.map(Number))
     : new MockVenueSource(client, d.dnVault.perpAdapter, markets);
-const health = new Health(cfg.maxStaleMs);
+const health = new Health(navHealthStaleMs(nav, cfg.maxStaleMs));
 health.serve(cfg.healthPort);
 
 if (nav.NAV_MODE === "cosigner") {

@@ -72,6 +72,16 @@ export function loadNavEnv(env: NodeJS.ProcessEnv = process.env): NavEnv {
   return r.data;
 }
 
+/**
+ * T15: `/health` staleness for the NAV service. The reporter ticks every `INTERVAL_MS` (30 s), so the keepers' window
+ * fits. The co-signer only runs when the reporter asks (every `NAV_REPORT_EVERY_MS`, up to 14 min): with the 5-minute
+ * window it read 503 between requests. It gets the NAV oracle's max age (15 min, DN-R5): past that the NAV is stale
+ * anyway, so a 503 then means something.
+ */
+export function navHealthStaleMs(nav: NavEnv, maxStaleMs: number): number {
+  return nav.NAV_MODE === "cosigner" ? Math.max(maxStaleMs, 15 * 60_000) : maxStaleMs;
+}
+
 /** OFF-20: the DN rebalancer env (kill-switch window, chunk, slippage ≤ 1% per DN-R10, venue ids, maintenance fractions). */
 const DnEnv = z.object({
   DN_VENUE: z.enum(["mock", "lighter"], {message: "DN_VENUE must be mock or lighter"}).default("mock"),
@@ -80,6 +90,9 @@ const DnEnv = z.object({
   DN_KILL_LENDING_APY: fraction("DN_KILL_LENDING_APY", 0.02),
   DN_ENTRY_CHUNK_USDG: bigintIn("DN_ENTRY_CHUNK_USDG", 1_000_000n, 10n ** 15n, 50_000_000_000n),
   DN_SLIPPAGE_BPS: bigintIn("DN_SLIPPAGE_BPS", 1n, 100n, 50n),
+  // T14: smallest trade worth sending (USDG raw). A small book (46630: 157.5 USDG) has sleeve targets under the $100
+  // default and never deploys; the testnet stack lowers it so the structure is exercised.
+  DN_MIN_TRADE_USDG: bigintIn("DN_MIN_TRADE_USDG", 1_000_000n, 10n ** 15n, 100_000_000n),
   DN_MMF_WAD: list("DN_MMF_WAD", /^\d{1,19}$/, 16, "12000000000000000,30000000000000000,30000000000000000"),
   INTERVAL_MS: int("INTERVAL_MS", 1_000, 60 * 60_000, 60_000),
   LIGHTER_API_URL: httpUrl("LIGHTER_API_URL", true).default("https://api.rh.lighter.xyz"),
