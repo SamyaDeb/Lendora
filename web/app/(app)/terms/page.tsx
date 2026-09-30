@@ -12,7 +12,8 @@ export default async function TermsPage() {
           <>
             <pre className="whitespace-pre-wrap font-sans text-[15px] leading-7 text-dim">{t.text}</pre>
             <p className="num mt-5 border-t border-line pt-4 text-[12.5px] text-muted">
-              Version {t.version} · SHA-256 {t.hash}
+              {/* T19: the 66-character hash wraps; unbroken, it widened the page to 514 px on a 390 px phone. */}
+              Version {t.version} · SHA-256 <span className="break-all">{t.hash}</span>
             </p>
           </>
         ) : (

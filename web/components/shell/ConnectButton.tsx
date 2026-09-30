@@ -1,7 +1,7 @@
 "use client";
 import {useEffect, useState} from "react";
 import * as Menu from "@radix-ui/react-dropdown-menu";
-import {useAccount, useChainId, useConnect, useDisconnect, useSwitchChain} from "wagmi";
+import {useAccount, useConnect, useDisconnect, useSwitchChain} from "wagmi";
 import {chain, explorer} from "@/lib/env";
 import {short} from "@/lib/format";
 import {track} from "@/lib/analytics";
@@ -15,9 +15,10 @@ const pill = "pressable inline-flex h-10 items-center gap-2 whitespace-nowrap ro
 
 /** Whether the connected wallet is on another chain (the one-click switch is in the header and the action panel). */
 export function useWrongNetwork() {
-  const {isConnected, connector} = useAccount();
-  const chainId = useChainId();
-  return Boolean(isConnected && connector && chainId !== chain.id);
+  // T20: the connection's own chain id. `useChainId()` never follows the wallet to a chain the config doesn't list
+  // (wagmi keeps the last configured one), so a wallet on Ethereum mainnet read as 46630 and no prompt appeared.
+  const {isConnected, connector, chainId} = useAccount();
+  return Boolean(isConnected && connector && chainId !== undefined && chainId !== chain.id);
 }
 
 /** APP-R1: connect (injected, WalletConnect, Coinbase Wallet); wrong network → one-click switch; "unsupported wallet". */

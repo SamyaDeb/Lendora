@@ -256,7 +256,10 @@ await step(C, "a sanctioned address (deny-list) is never attested", async () => 
   if (!bad) return {skip: "no deny-listed test user in .dev/testnet-users.json"};
   const r = await get(`${web}/api/compliance/attest`, post(JSON.stringify({address: bad})));
   if (r.ok) throw new Error(`attested a deny-listed address (${r.status})`);
-  return `${r.status} ${(await r.text()).slice(0, 80)}`;
+  // Any unknown wallet is refused (TERMS_REQUIRED): only SANCTIONED proves the deny list screened it (checked first).
+  const text = await r.text();
+  if (!text.includes("SANCTIONED")) throw new Error(`refused, but not by the sanctions screen: ${r.status} ${text.slice(0, 80)}`);
+  return `${r.status} ${text.slice(0, 80)}`;
 });
 await step(C, "compliance direct: forged proxy secret is not trusted (CP-R8)", async () => {
   if (!compliance) return {skip: "no --compliance URL"};
