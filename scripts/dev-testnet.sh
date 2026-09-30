@@ -199,7 +199,7 @@ fi
 # Ops monitor: read-only; pages to the console (its log) and .dev/pages.jsonl until a real pager is configured.
 start monitor keepers "${COMMON[@]}" INDEXER_SCHEMA="$INDEXER_VIEWS" MONITOR_SCHEMA=stockline_monitor_testnet PORT=42073 \
   MONITOR_KEEPERS="$MONITOR_KEEPERS" \
-  MONITOR_GAS_WATCH="operator=$OPERATOR" GAS_BURN_WEI_PER_DAY="${GAS_BURN_WEI_PER_DAY:-200000000000000}" \
+  MONITOR_GAS_WATCH="operator=$OPERATOR" GAS_BURN_WEI_PER_DAY="${GAS_BURN_WEI_PER_DAY:-1200000000000000}" \
   MONITOR_PAGE_FILE="$DEV/pages.jsonl" \
   -- "$TSX" src/monitor/main.ts
 [ "$READ_ONLY" = 1 ] || start web web NODE_ENV=development NEXT_PUBLIC_CHAIN_ID=46630 NEXT_PUBLIC_RPC_URL="${STOCKLINE_WEB_RPC_URL:-https://rpc.testnet.chain.robinhood.com}" \

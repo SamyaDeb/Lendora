@@ -1,38 +1,38 @@
 # Product end-to-end on chain 46630
 
-Run 2026-09-30T09:58:52.620Z by `web/scripts/testnetE2E.ts` (222 s): web http://127.0.0.1:3000, API http://127.0.0.1:42070, compliance http://127.0.0.1:42071, monitor http://127.0.0.1:42073, RPC https://rpc.testnet.chain.robinhood.com.
+Run 2026-09-30T16:34:38.573Z by `web/scripts/testnetE2E.ts` (204 s): web http://127.0.0.1:3000, API http://127.0.0.1:42070, compliance http://127.0.0.1:42071, monitor http://127.0.0.1:42073, RPC https://rpc.testnet.chain.robinhood.com.
 Feed session open. With flows (tester key).
 **All checks passed** (81 ok, 1 skipped).
 
 | Group | Check | Result | Detail |
 |---|---|---|---|
-| A · surface | API /v1/status: chain and indexer lag | ok | lag 14 blocks |
-| A · surface | API /v1/markets → 200 | ok | 3400 bytes |
-| A · surface | API /v1/markets/NVDA → 200 | ok | 2390 bytes |
-| A · surface | API /v1/markets/NVDA/history → 200 | ok | 19987 bytes |
-| A · surface | API /v1/markets/NVDA/events → 200 | ok | 42259 bytes |
-| A · surface | API /v1/protocol/revenue → 200 | ok | 2253 bytes |
+| A · surface | API /v1/status: chain and indexer lag | ok | lag 8 blocks |
+| A · surface | API /v1/markets → 200 | ok | 3444 bytes |
+| A · surface | API /v1/markets/NVDA → 200 | ok | 2415 bytes |
+| A · surface | API /v1/markets/NVDA/history → 200 | ok | 22672 bytes |
+| A · surface | API /v1/markets/NVDA/events → 200 | ok | 42113 bytes |
+| A · surface | API /v1/protocol/revenue → 200 | ok | 2258 bytes |
 | A · surface | API /v1/terms → 200 | ok | 495 bytes |
 | A · surface | API /v1/receipt-markets → 200 | ok | 210 bytes |
 | A · surface | API /v1/openapi.json → 200 | ok | 46725 bytes |
-| A · surface | API /v1/positions/0x2E7AE2D13CcF6d89CABBc05E16Da746bb144CE12 → 200 | ok | 265 bytes |
-| A · surface | API /v1/vault/account/0x2E7AE2D13CcF6d89CABBc05E16Da746bb144CE12 → 200 | ok | 321 bytes |
-| A · surface | API /v1/vault/overview → 200 | ok | 1929 bytes |
+| A · surface | API /v1/positions/0xb83B69bC7e2f49Af4F4Fe01086950A7C934B84B5 → 200 | ok | 265 bytes |
+| A · surface | API /v1/vault/account/0xb83B69bC7e2f49Af4F4Fe01086950A7C934B84B5 → 200 | ok | 321 bytes |
+| A · surface | API /v1/vault/overview → 200 | ok | 2158 bytes |
 | A · surface | API /v1/markets/{symbol}: an unknown stock → 404 | ok | 404 |
 | A · surface | API invalid address → 400 (positions, vault account) | ok | both 400 |
 | A · surface | API /v1/markets/{symbol}: symbol injection refused | ok | 400 |
-| A · surface | API numbers equal the chain (vault TVL = totalAssets) | ok | tvl 146.25 at block 126641912 |
-| A · surface | page / → 200 | ok | 46073 bytes |
-| A · surface | page /markets → 200 | ok | 56697 bytes |
-| A · surface | page /stock/NVDA → 200 | ok | 98930 bytes |
-| A · surface | page /stock/NVDA?tab=lend → 200 | ok | 98975 bytes |
-| A · surface | page /stock/NVDA?tab=short → 200 | ok | 100615 bytes |
+| A · surface | API numbers equal the chain (vault TVL = totalAssets) | ok | tvl 163.13376 at block 126771672 |
+| A · surface | page / → 200 | ok | 46128 bytes |
+| A · surface | page /markets → 200 | ok | 56745 bytes |
+| A · surface | page /stock/NVDA → 200 | ok | 102604 bytes |
+| A · surface | page /stock/NVDA?tab=lend → 200 | ok | 102670 bytes |
+| A · surface | page /stock/NVDA?tab=short → 200 | ok | 104310 bytes |
 | A · surface | page /portfolio → 200 | ok | 30475 bytes |
-| A · surface | page /data → 200 | ok | 128886 bytes |
+| A · surface | page /data → 200 | ok | 138454 bytes |
 | A · surface | page /vault → 200 | ok | 29946 bytes |
 | A · surface | page /alerts → 200 | ok | 28593 bytes |
-| A · surface | page /terms → 200 | ok | 32114 bytes |
-| A · surface | page /status → 200 | ok | 34405 bytes |
+| A · surface | page /terms → 200 | ok | 32246 bytes |
+| A · surface | page /status → 200 | ok | 34395 bytes |
 | A · surface | page /restricted → 200 | ok | 28687 bytes |
 | A · surface | legacy route /market/NVDA redirects to /stock/NVDA | ok | 307 → /stock/NVDA |
 | A · surface | legacy route /lend/NVDA redirects to tab=lend | ok | 307 → /stock/NVDA?tab=lend |
@@ -67,27 +67,27 @@ Feed session open. With flows (tester key).
 | B · edge cases (simulated) | vault: guardian actions from a stranger → NotGuardian | ok | reverted: NotGuardian |
 | B · edge cases (simulated) | strategy: operator action from a stranger → NotOperator (DN-R10) | ok | reverted: NotOperator |
 | B · edge cases (simulated) | NAV oracle: an unsigned report → BadSignature (DN-R4) | ok | reverted: BadSignature |
-| B · edge cases (simulated) | vault: settle with an empty or unpayable queue changes nothing | ok | queue 11..11; settle(20) → 0 |
+| B · edge cases (simulated) | vault: settle with an empty or unpayable queue changes nothing | ok | queue 15..15; settle(20) → 0 |
 | C · flows | faucet: claim test USDG + stocks (once per 24h) | skip | already claimed in the last 24h (Error: tx would revert: Execution reverted for an unknown re) |
-| C · flows | terms signed + attestation through the web's compliance proxy | ok | valid until 2026-10-01T09:55:54.000Z |
+| C · flows | terms signed + attestation through the web's compliance proxy | ok | valid until 2026-10-01T16:31:54.000Z |
 | C · flows | lending and borrowing: lend, short, rescue top-up, repay, close, borrow, repay all, withdraw | ok | 11 txs (lend, openShort, addCollateral, repay, closeShort, borrow, withdrawCollateral, withdrawLend), indexed |
 | C · flows | API /v1/positions reflects the wallet after the flows | ok | [] |
-| C · edge cases (with a position) | lend 1 NVDA and wait for the allocator keeper to supply the market (liquidity for the checks below) | ok | lent in 0x76c4a767637e8ac1826efea0823e1624621eeb4c5c0d2270ec29eb5f290e7575; market has ≥ 0.5 NVDA free |
+| C · edge cases (with a position) | lend 1 NVDA and wait for the allocator keeper to supply the market (liquidity for the checks below) | ok | lent in 0x1f898f509aff6ac70be8f69fc4855ab23b1f0807bcc787e48f77e8d4a50ad22e; market has ≥ 0.5 NVDA free |
 | C · edge cases (with a position) | borrow inside Morpho's LLTV but under the router's buffered health → HealthTooLow (RT-R1) | ok | reverted: HealthTooLow |
 | C · edge cases (with a position) | openShort through a swap target that isn't allowlisted → SwapTargetNotAllowed (RT-R3) | ok | reverted: SwapTargetNotAllowed |
 | C · edge cases (with a position) | openShort with a minimum above what the DEX pays → InsufficientOutput (slippage, FE-R4-style bound) | ok | reverted: InsufficientOutput |
 | C · edge cases (with a position) | someone else's attestation is refused (bound to the wallet) | ok | reverted: BadAttestation |
 | C · edge cases (with a position) | withdraw more lent shares than held → refused | ok | reverted: Panic |
 | C · edge cases (with a position) | repay with no debt → refused or no-op | ok | repay(all) with no debt → reverts (The contract function "repay" reverted.) |
-| C · edge cases (with a position) | withdraw the 1 NVDA lent for the checks above (forceDeallocate when idle is short, LM-R22) | ok | withdrawn in 0xbdf934582510f290dec56cd42cfc78b43dcecd60c482f34215e569c0b52b983a |
-| C · flows | USDG Earn: attested deposit of 100 USDG mints shares at the share price | ok | 100 shares; API shares 167.499999999999999989 |
+| C · edge cases (with a position) | withdraw the 1 NVDA lent for the checks above (forceDeallocate when idle is short, LM-R22) | ok | withdrawn in 0x268c0b80598d40325be9f3dc81a7618c44c8df8f65cae6106f6420963e1406b4 |
+| C · flows | USDG Earn: attested deposit of 100 USDG mints shares at the share price | ok | 99.99354060894353 shares; API shares 184.365634227265837079 |
 | C · edge cases (with a position) | vault: deposit above the cap → refused (DN-R6) | ok | reverted: CapExceeded |
 | C · flows | USDG Earn: instant withdrawal of 10 USDG (no attestation, CP-R4) | ok | received 10 USDG |
 | C · edge cases (with a position) | vault: instant withdrawal above the cash buffer → ExceedsInstant | ok | reverted: ExceedsInstant |
 | C · edge cases (with a position) | vault: requestRedeem more shares than held → refused | ok | reverted: ERC20InsufficientBalance |
-| C · flows | USDG Earn: queued withdrawal request (always accepted) | ok | request 11, settles by 2026-10-05T13:30:00.000Z |
+| C · flows | USDG Earn: queued withdrawal request (always accepted) | ok | request 15, settles by 2026-10-05T13:30:00.000Z |
 | C · edge cases (with a position) | vault: claim before settlement → NotClaimable | ok | reverted: NotClaimable |
-| C · flows | USDG Earn: settle (permissionless) then claim; the API shows it claimed | ok | claimed 78.749999 USDG; API: claimed |
+| C · flows | USDG Earn: settle (permissionless) then claim; the API shows it claimed | ok | claimed 87.188771 USDG; API: claimed |
 
 **Not testable on a live chain now** (needs prices or time we don't control; covered on anvil / forks): liquidation of an
 unhealthy position (MON-R2), guard trips from a feed deviation or a stale feed, issuer pause / blocklist, the weekend
