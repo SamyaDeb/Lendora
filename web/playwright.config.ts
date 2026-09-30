@@ -4,6 +4,7 @@ import {defineConfig, devices} from "@playwright/test";
 export default defineConfig({
   testDir: "e2e",
   testMatch: /.*\.spec\.ts/,
+  testIgnore: /testnet\.spec\.ts/, // 46630 only: playwright.testnet.config.ts
   globalSetup: "./e2e/global-setup.ts",
   workers: 1,
   fullyParallel: false,

@@ -32,6 +32,8 @@ contracts/broadcast/*/46630/
 .next/
 web/e2e/.results/
 web/e2e/.report/
+web/e2e/.results-testnet/
+web/e2e/.report-testnet/
 web/lighthouse/*.json
 docs/audit/forge-doc/
 web/scripts/.live-stack.json
