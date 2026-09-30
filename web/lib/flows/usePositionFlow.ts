@@ -48,6 +48,7 @@ export function usePositionFlow(symbol: string) {
   const w = useTrackedWriter();
   const steps = useTxRunner(`portfolio:${symbol}`, w.lastHash);
   const [add, setAdd] = useState("");
+  const [repayIn, setRepay] = useState("");
   const principal = useQuery({
     queryKey: ["borrowFlows", symbol, w.address],
     enabled: Boolean(w.address),
@@ -76,6 +77,10 @@ export function usePositionFlow(symbol: string) {
   const u = st?.user;
   const debt = st ? currentDebt(st) : 0n;
   const addAmt = parseAmount(add, 6) ?? 0n;
+  // US-B5: a partial repay by amount; empty, or the whole debt or more, repays everything (by shares, no dust left).
+  const repayAmt = parseAmount(repayIn, 18) ?? 0n;
+  const repayAll = repayAmt === 0n || repayAmt >= debt;
+  const repaying = repayAll ? debt : repayAmt;
 
   function lists(): Record<PositionAction, Step[]> | undefined {
     if (!st || !u) return;
@@ -92,8 +97,13 @@ export function usePositionFlow(symbol: string) {
         },
       ],
       repay: [
-        {id: "approve", label: `Approve ${symbol}`, kind: "approve", skip: u.stockAllowance >= (debt * 101n) / 100n, run: async () => void (await w.send({address: s.stockToken, abi: erc20Abi, functionName: "approve", args: [d.router!, maxUint256]}))},
-        {id: "repay", label: `Repay ${wad(debt, 4)} ${symbol}`, kind: "execute", run: async () => void (await w.send({address: d.router!, abi: lendoraRouterAbi, functionName: "repay", args: [s.stockToken, 0n, maxUint256, w.address, dl]}))},
+        {id: "approve", label: `Approve ${symbol}`, kind: "approve", skip: u.stockAllowance >= (repayAll ? (debt * 101n) / 100n : repayAmt), run: async () => void (await w.send({address: s.stockToken, abi: erc20Abi, functionName: "approve", args: [d.router!, maxUint256]}))},
+        {
+          id: "repay",
+          label: `Repay ${repayAll ? wad(debt, 4) : repayIn.trim()} ${symbol}`,
+          kind: "execute",
+          run: async () => void (await w.send({address: d.router!, abi: lendoraRouterAbi, functionName: "repay", args: repayAll ? [s.stockToken, 0n, maxUint256, w.address, dl] : [s.stockToken, repayAmt, 0n, w.address, dl]})),
+        },
       ],
       add: [
         {id: "approve", label: "Approve USDG", kind: "approve", skip: u.usdgAllowance >= addAmt, run: async () => void (await w.send({address: d.usdg, abi: erc20Abi, functionName: "approve", args: [d.router!, maxUint256]}))},
@@ -109,7 +119,7 @@ export function usePositionFlow(symbol: string) {
 
   const COPY: Record<PositionAction, {pending: string; done: string; failed: string}> = {
     close: {pending: `Closing your ${symbol} position`, done: `Closed your ${symbol} position`, failed: `Couldn't close ${symbol}`},
-    repay: {pending: `Repaying ${symbol}`, done: `Repaid ${wad(debt, 4)} ${symbol}`, failed: `Couldn't repay ${symbol}`},
+    repay: {pending: `Repaying ${symbol}`, done: `Repaid ${repayAll ? wad(debt, 4) : repayIn.trim()} ${symbol}`, failed: `Couldn't repay ${symbol}`},
     add: {pending: `Adding ${add} USDG collateral`, done: `Added ${add} USDG collateral`, failed: "Couldn't add collateral"},
     withdrawCollateral: {pending: "Withdrawing collateral", done: "Withdrew your collateral", failed: "Couldn't withdraw collateral"},
     withdrawLend: {pending: `Withdrawing ${symbol}`, done: `Withdrew your ${symbol}`, failed: `Couldn't withdraw ${symbol}`},
@@ -124,6 +134,7 @@ export function usePositionFlow(symbol: string) {
     if (!l) return false;
     const ok = await steps.run(l[a], COPY[a]);
     if (ok && a === "add") setAdd("");
+    if (ok && a === "repay") setRepay("");
     return ok;
   }
 
@@ -131,7 +142,7 @@ export function usePositionFlow(symbol: string) {
   // No indexed opening event yet (the indexer is behind the chain): unknown, not "everything is profit".
   const accrued = principal.data !== undefined && principal.data > 0 ? Number(formatUnits(debt, 18)) - principal.data : undefined;
   const fees = lendFlows.data !== undefined && lendFlows.data > 0 && u ? Number(formatUnits(u.vaultAssets, 18)) - lendFlows.data : undefined;
-  return {symbol, st, u, debt, price, accrued, fees, add, setAdd, addAmt, plan, confirm, steps, paused: st ? tokenPaused(st.guardReasons) : false, guard: st ? guardReasonList(st.guardReasons) : [], ready: w.ready};
+  return {symbol, st, u, debt, price, accrued, fees, add, setAdd, addAmt, repayIn, setRepay, repayAmt, repayAll, repaying, plan, confirm, steps, paused: st ? tokenPaused(st.guardReasons) : false, guard: st ? guardReasonList(st.guardReasons) : [], ready: w.ready};
 }
 
 export type PositionFlow = ReturnType<typeof usePositionFlow>;

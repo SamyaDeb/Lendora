@@ -27,7 +27,9 @@ export function BorrowCard({f, restricted, active = true}: {f: PositionFlow; res
 
   const REVIEW: Record<PositionAction, {title: string; confirm: string; success: string; body?: string}> = {
     close: {title: `Close your ${symbol} position`, confirm: `Close ${symbol} position`, success: `Closed your ${symbol} position`, body: "Your USDG collateral, minus the buy-back cost, is back in your wallet."},
-    repay: {title: `Repay ${symbol}`, confirm: `Repay ${wad(debt, 4)} ${symbol}`, success: `Repaid ${wad(debt, 4)} ${symbol}`, body: "Your collateral stays in place until you withdraw it."},
+    repay: f.repayAll
+      ? {title: `Repay ${symbol}`, confirm: `Repay ${wad(debt, 4)} ${symbol}`, success: `Repaid ${wad(debt, 4)} ${symbol}`, body: "Your collateral stays in place until you withdraw it."}
+      : {title: `Repay part of your ${symbol} debt`, confirm: `Repay ${f.repayIn.trim()} ${symbol}`, success: `Repaid ${f.repayIn.trim()} ${symbol}`, body: "The rest of the debt stays open; your health factor went up."},
     add: {title: "Add collateral", confirm: `Add ${f.add} USDG`, success: `Added ${f.add} USDG collateral`},
     withdrawCollateral: {title: "Withdraw collateral", confirm: "Withdraw collateral", success: "Withdrew your collateral"},
     withdrawLend: {title: "", confirm: "", success: ""},
@@ -80,12 +82,19 @@ export function BorrowCard({f, restricted, active = true}: {f: PositionFlow; res
             </Button>
           </div>
         )}
+        {debt > 0n && (
+          <div className="flex flex-1 items-end gap-2">
+            <div className="flex-1">
+              <AmountInput label="Repay with stock" value={f.repayIn} onChange={f.setRepay} decimals={18} unit={symbol} max={debt} maxLabel="Debt" usdPrice={f.price || undefined} testId={`repay-amount-${symbol}`} hint="Empty repays everything" error={f.repayAmt > u.stockBalance ? `You hold ${wad(u.stockBalance, 4)} ${symbol}. Close instead to buy it back with USDG.` : undefined} />
+            </div>
+            <Button variant="secondary" className="mb-[22px] h-[62px]" disabled={f.steps.busy || f.repayAmt > u.stockBalance} onClick={() => setAction("repay")} data-testid={`repay-${symbol}`}>
+              {f.repayAll ? `Repay all` : `Repay ${f.repayIn.trim()}`}
+            </Button>
+          </div>
+        )}
         <div className="flex flex-wrap gap-2 md:mb-[22px]">
           {debt > 0n && (
             <>
-              <Button variant="secondary" disabled={f.steps.busy} onClick={() => setAction("repay")} data-testid={`repay-${symbol}`}>
-                Repay with {symbol}
-              </Button>
               <Button variant="borrow" disabled={f.steps.busy} onClick={() => setAction("close")} data-testid={`close-${symbol}`}>
                 Close (buy back with USDG)
               </Button>
@@ -126,7 +135,8 @@ export function BorrowCard({f, restricted, active = true}: {f: PositionFlow; res
               </>
             ) : action === "repay" ? (
               <>
-                <Row label="You repay" value={`${wad(debt, 4)} ${symbol} ($${num(borrowUsd)})`} emphasis />
+                <Row label="You repay" value={`${f.repayAll ? wad(debt, 4) : f.repayIn.trim()} ${symbol} ($${num(Number(formatUnits(f.repaying, 18)) * f.price)})`} emphasis />
+                {!f.repayAll && <Row label="Debt after" value={`${wad(debt - f.repayAmt, 4)} ${symbol}`} />}
                 <Row label="From your wallet" value={`${wad(u.stockBalance, 4)} ${symbol} available`} />
               </>
             ) : (
