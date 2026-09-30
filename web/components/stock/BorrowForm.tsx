@@ -22,6 +22,8 @@ export function BorrowForm({f, price, available}: {f: BorrowFlow; price?: number
   const sheetPv = pv ?? lastPv.current;
   // Existing position's health factor, so the meter shows before → after.
   const before = useMemo(() => (st?.user && st.user.borrowShares > 0n ? preview(st, {collateralIn: 0n, borrowAmount: 0n}).hfNow : undefined), [st]);
+  // Debt already open (stock units): the preview's figures are the position after this action.
+  const sheetDebtBefore = useMemo(() => (st?.user && st.user.borrowShares > 0n ? preview(st, {collateralIn: 0n, borrowAmount: 0n}).borrowed : undefined), [st]);
   const hfTone = f.targetHf >= 1.5 ? "text-success" : f.targetHf >= 1.1 ? "text-caution" : "text-danger";
   return (
     <div className="space-y-4">
@@ -90,7 +92,7 @@ export function BorrowForm({f, price, available}: {f: BorrowFlow; price?: number
         </section>
       )}
 
-      {pv && st ? <PreviewDetails p={pv} symbol={symbol} now={Number(st.now)} mode={f.mode} /> : <p className="text-[13px] text-muted">Enter collateral and an amount to see your health factor and liquidation price.</p>}
+      {pv && st ? <PreviewDetails p={pv} symbol={symbol} now={Number(st.now)} mode={f.mode} total={sheetDebtBefore !== undefined} /> : <p className="text-[13px] text-muted">Enter collateral and an amount to see your health factor and liquidation price.</p>}
 
       <WalletGate>
         <Button size="lg" variant="borrow" className="w-full" disabled={f.disabled} onClick={() => setReview(true)} data-testid="submit">
@@ -111,8 +113,10 @@ export function BorrowForm({f, price, available}: {f: BorrowFlow; price?: number
           risk={{pv: sheetPv, hfBefore: before, requirement: f.requirement, symbol}}
           summary={
             <>
-              <Row label={f.mode === "short" ? "You short" : "You borrow"} value={`${wad(sheetPv.borrowed, 4)} ${symbol} ($${num(sheetPv.borrowedUsd)})`} emphasis />
-              <Row label="Collateral" value={`${num(Number(formatUnits(sheetPv.collateral, 6)))} USDG`} />
+              {/* T36: this action's amounts; with a position already open, the totals after it on their own row. */}
+              <Row label={f.mode === "short" ? "You short" : "You borrow"} value={`${f.amount || wad(sheetPv.borrowed - (sheetDebtBefore ?? 0n), 4)} ${symbol}${price ? ` ($${num(Number(f.amount || 0) * price)})` : ""}`} emphasis testId="rv-amount" />
+              <Row label={sheetDebtBefore ? "Collateral you add" : "Collateral"} value={`${num(Number(formatUnits(sheetDebtBefore ? f.collIn : sheetPv.collateral, 6)))} USDG`} />
+              {sheetDebtBefore !== undefined && <Row label="Position after" value={`${wad(sheetPv.borrowed, 4)} ${symbol} · ${num(Number(formatUnits(sheetPv.collateral, 6)))} USDG collateral`} testId="rv-after" />}
               {sheetPv.swap && <Row label="You receive (min)" value={`${num(Number(formatUnits(sheetPv.swap.minOut, 6)))} USDG · ${pct(sheetPv.swap.priceImpact)} price impact`} />}
             </>
           }
@@ -129,14 +133,14 @@ export function BorrowForm({f, price, available}: {f: BorrowFlow; price?: number
 }
 
 /** 06 §Preview panel, computed by @lendora/sdk. Test ids and data-wad values are read by the e2e suite. */
-function PreviewDetails({p, symbol, now, mode}: {p: Preview; symbol: string; now: number; mode: "short" | "borrow"}) {
+function PreviewDetails({p, symbol, now, mode, total}: {p: Preview; symbol: string; now: number; mode: "short" | "borrow"; total?: boolean}) {
   return (
     <section aria-labelledby="pv" data-testid="preview" className="space-y-2">
       <h3 id="pv" className="text-[13px] font-medium text-dim">
         Preview
       </h3>
       <dl className="divide-y divide-line">
-        <Row label="Borrowed" value={`${wad(p.borrowed, 4)} ${symbol} ($${num(p.borrowedUsd)})`} testId="pv-borrowed" raw={p.borrowed} />
+        <Row label={total ? "Total borrowed after" : "Borrowed"} value={`${wad(p.borrowed, 4)} ${symbol} ($${num(p.borrowedUsd)})`} testId="pv-borrowed" raw={p.borrowed} />
         <Row label="Borrow APR (variable)" value={`${pct(p.borrowAprNow, 2, true)} now · ${pct(p.borrowAprPlus10, 2, true)} at +10% util.`} />
         <Row label="Health factor now" value={<HealthFactor hf={p.hfNow} />} testId="pv-hf-now" />
         {p.closure && <Row label="…at the next close (full buffer)" value={<HealthFactor hf={p.hfAtClose} />} testId="pv-hf-close" />}
