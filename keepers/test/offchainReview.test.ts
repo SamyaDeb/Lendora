@@ -237,7 +237,7 @@ describe("OFF-18…OFF-21 NAV co-signer and DN keepers", () => {
 
   it("T14 a small book (46630: 157.5 USDG) deploys only when the minimum trade fits its sleeves (DN_MIN_TRADE_USDG)", () => {
     const E6n = 10n ** 6n;
-    const sleeve = (id: number) => ({id, active: true, capUsdg: 10n ** 13n, maxLendBps: 9000n, stockToken: "0x1" as const, wrapper: "0x2" as const, rVault: "0x3" as const, unitValue: 200n * E6n, spot: 0n, lent: 0n, wrapped: 0n, loose: 0n, rShares: 0n, short: 0n, others: 0n, guardClear: true});
+    const sleeve = (id: number) => ({id, active: true, capUsdg: 10n ** 13n, maxLendBps: 9000n, stockToken: "0x1" as const, wrapper: "0x2" as const, rVault: "0x3" as const, unitValue: 200n * E6n, spot: 0n, lent: 0n, wrapped: 0n, loose: 0n, rShares: 0n, short: 0n, others: 0n, rIdle: 0n, guardClear: true});
     const s: DnState = {now: 0n, open: true, regular: true, fresh: true, paused: false, nav: 157_500_001n, idle: 157_500_001n, bufferBps: 500n, stratUsdg: 0n, queuedAssets: 0n, headOverdue: false, headPayable: false, margin: {equity: 0n, maintenance: 0n}, pending: 0n, sleeves: [sleeve(0), sleeve(1), sleeve(2)], kill: [false, false, false]};
     // Default $100 minimum: the largest sleeve's target spot is ~$56, so nothing is ever built and venue equity stays 0.
     expect(plan(s, defaultDnParams, false).filter((a) => a.kind === "build")).toEqual([]);

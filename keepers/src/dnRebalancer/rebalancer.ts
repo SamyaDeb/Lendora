@@ -143,6 +143,8 @@ export interface SleeveState {
   short: bigint;
   /** rSTOCK vault assets minus ours (the other lenders), wSTOCK. */
   others: bigint;
+  /** wSTOCK the rSTOCK vault holds idle: all a redeem can return now (no liquidity adapter; T23). */
+  rIdle: bigint;
   guardClear: boolean;
 }
 
@@ -263,7 +265,12 @@ export function plan(s: DnState, p: DnParams, alignNow: boolean): DnAction[] {
     if (!sl.active || reduced.has(sl.id)) continue;
     const worst = (sl.others * p.lendIdleShareBps) / (BPS - p.lendIdleShareBps);
     const cap = min((sl.spot * sl.maxLendBps) / BPS, worst);
-    if (sl.lent > cap + cap / 100n + 1n) out.push({kind: "unlend", sleeve: sl.id, units: sl.lent - cap});
+    // T23: a redeem beyond the rSTOCK vault's idle reverts (its liquidity sits in the market, no liquidity adapter):
+    // unlend what it can pay now; the rest follows as idle returns. Unlending everything failed every tick.
+    if (sl.lent > cap + cap / 100n + 1n) {
+      const units = min(sl.lent - cap, sl.rIdle);
+      if (units > 0n) out.push({kind: "unlend", sleeve: sl.id, units});
+    }
     else if (!s.paused && cap > sl.lent && sl.wrapped > 0n && value(cap - sl.lent, sl.unitValue) >= p.minTradeUsdg) out.push({kind: "lend", sleeve: sl.id, wrapped: min(sl.wrapped, cap - sl.lent)});
   }
 
@@ -355,7 +362,7 @@ export class DnRebalancer {
     const kill: boolean[] = [];
     for (let i = 0; i < Number(n); i++) {
       const sl = await this.rd<{stockToken: `0x${string}`; wrapper: `0x${string}`; rVault: `0x${string}`; oracle: `0x${string}`; perpMarket: Hex; capUsdg: bigint; maxLendBps: number; active: boolean}>(dn.strategy, strategyManagerAbi, "sleeve", [BigInt(i)]);
-      const [unitValue, spot, lent, wrapped, loose, rShares, shortRead, rTotal, reasons] = await Promise.all([
+      const [unitValue, spot, lent, wrapped, loose, rShares, shortRead, rTotal, reasons, rIdle] = await Promise.all([
         this.rd<bigint>(dn.strategy, strategyManagerAbi, "quote", [BigInt(i), UNIT]),
         this.rd<bigint>(dn.strategy, strategyManagerAbi, "spotUnits", [BigInt(i)]),
         this.rd<bigint>(dn.strategy, strategyManagerAbi, "lentUnits", [BigInt(i)]),
@@ -365,13 +372,14 @@ export class DnRebalancer {
         this.rd<readonly [boolean, bigint]>(dn.perpAdapter, perpAdapterAbi, "shortSize", [sl.perpMarket]),
         this.rd<bigint>(sl.rVault, vaultV2FullAbi, "totalAssets"),
         this.rd<bigint>(sl.oracle, [{type: "function", name: "guardReasons", stateMutability: "view", inputs: [], outputs: [{type: "uint256"}]}], "guardReasons"),
+        this.rd<bigint>(sl.wrapper, erc20Abi, "balanceOf", [sl.rVault]),
       ]);
       let short = shortRead[1];
       if (!shortRead[0]) {
         const last = await this.rd<{shortSizes: readonly bigint[]}>(dn.navOracle, navOracleAbi, "lastReport");
         short = last.shortSizes[i] ?? 0n;
       }
-      sleeves.push({id: i, active: sl.active, capUsdg: sl.capUsdg, maxLendBps: BigInt(sl.maxLendBps), stockToken: sl.stockToken, wrapper: sl.wrapper, rVault: sl.rVault, unitValue, spot, lent, wrapped, loose, rShares, short, others: rTotal > lent ? rTotal - lent : 0n, guardClear: reasons === 0n});
+      sleeves.push({id: i, active: sl.active, capUsdg: sl.capUsdg, maxLendBps: BigInt(sl.maxLendBps), stockToken: sl.stockToken, wrapper: sl.wrapper, rVault: sl.rVault, unitValue, spot, lent, wrapped, loose, rShares, short, others: rTotal > lent ? rTotal - lent : 0n, rIdle, guardClear: reasons === 0n});
       const hist = sl.active ? await this.funding.hourly(i, this.p.kill.windowHours + this.p.kill.hours) : [];
       kill.push(sl.active && killSwitch(hist, this.p.kill));
     }

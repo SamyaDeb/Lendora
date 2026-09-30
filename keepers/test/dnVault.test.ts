@@ -176,8 +176,18 @@ describe("DN keepers on anvil (task 15)", () => {
 });
 
 describe("DN planner and sources (pure)", () => {
-  const sleeve = (spot: bigint, short: bigint) => ({id: 0, active: true, capUsdg: 10n ** 13n, maxLendBps: 9000n, stockToken: "0x1" as const, wrapper: "0x2" as const, rVault: "0x3" as const, unitValue: 200n * E6, spot, lent: 0n, wrapped: spot, loose: 0n, rShares: 0n, short, others: 0n, guardClear: true});
+  const sleeve = (spot: bigint, short: bigint) => ({id: 0, active: true, capUsdg: 10n ** 13n, maxLendBps: 9000n, stockToken: "0x1" as const, wrapper: "0x2" as const, rVault: "0x3" as const, unitValue: 200n * E6, spot, lent: 0n, wrapped: spot, loose: 0n, rShares: 0n, short, others: 0n, rIdle: 0n, guardClear: true});
   const base = (o: Partial<DnState> = {}): DnState => ({now: 0n, open: true, regular: true, fresh: true, paused: false, nav: 10n ** 12n, idle: 5n * 10n ** 10n, bufferBps: 500n, stratUsdg: 0n, queuedAssets: 0n, headOverdue: false, headPayable: false, margin: {equity: 10n ** 11n, maintenance: 10n ** 9n}, pending: 0n, sleeves: [sleeve(1000n * E18, 1000n * E18)], kill: [false], ...o});
+
+  it("T23 DN_R8 unlend asks the lending vault for no more than it holds idle (no liquidity adapter)", () => {
+    // 46630: the strategy was the NVDA vault's only lender (others 0, so the DN-R8 cap is 0), 90% of the vault was in
+    // the Morpho market; unlending everything reverted every tick and the rebalancer did nothing else (KEEPER_DOWN).
+    const lent = {...sleeve(1000n * E18, 1000n * E18), lent: 100n * E18, rShares: 100n * E18, others: 0n};
+    const unlend = (rIdle: bigint) => plan(base({sleeves: [{...lent, rIdle}]}), defaultDnParams, false).find((x) => x.kind === "unlend") as {units: bigint} | undefined;
+    expect(unlend(10n * E18)?.units).toBe(10n * E18);
+    expect(unlend(0n)).toBeUndefined();
+    expect(unlend(500n * E18)?.units).toBe(100n * E18); // enough idle: the whole excess
+  });
 
   it("DN_R2 realigns a short outside the band, and exactly once per session", () => {
     expect(plan(base({sleeves: [sleeve(1000n * E18, 970n * E18)]}), defaultDnParams, false).map((x) => x.kind)).toContain("alignShort");
