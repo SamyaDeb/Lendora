@@ -427,6 +427,41 @@ if (has("flows")) {
     if (r) return `refused: ${r.name === "Error" ? String(r.args[0]) : r.name} (residual (e) closed)`;
     return `RESIDUAL (e) confirmed: withdrawing ${Number(amount) / 1e6} of ${Number(p.collateral) / 1e6} USDG would leave Morpho HF 1.03 (HF at t+24h < 1.1); simulated only`;
   });
+  /** Open or recent monitor incidents for `rule` on the tester's position (MON-R26). */
+  const incident = async (rule: string, status: "open" | "resolved") => {
+    const j = (await (await get(`${monitor}/incidents`)).json()) as {open?: {rule: string; subject: string; details: Record<string, unknown>}[]; recent?: {rule: string; subject: string; status: string; details: Record<string, unknown>}[]};
+    const list = status === "open" ? (j.open ?? []) : (j.recent ?? []).filter((x) => x.status === "resolved");
+    return list.find((x) => x.rule === rule && x.subject === `${T}:${me.toLowerCase()}`);
+  };
+  let belowBuffer = 0n;
+  await step(X, "residual (e) live: a direct Morpho withdrawal to HF(t+24h) 1.05 is accepted and the monitor pages COLLATERAL_BELOW_BUFFER (MON-R26, T10)", async () => {
+    if (!borrowed) return {skip: "no position"};
+    if (!monitor) return {skip: "no --monitor URL"};
+    const hf24 = await client.readContract({address: R, abi: stocklineRouterAbi, functionName: "healthFactorAt", args: [s.stockToken, me, (await now()) + 86_400n]});
+    const p = await pos(me);
+    const amount = p.collateral - (p.collateral * 105n * 10n ** 16n + hf24 - 1n) / hf24; // HF is linear in collateral
+    const sim = await revertOf(morphoAbi, d.morpho, "withdrawCollateral", [params, amount, me, me], me);
+    if (sim) throw new Error(`simulation refused: ${sim.name}`);
+    const r = await send(d.morpho, morphoAbi, "withdrawCollateral", [params, amount, me, me]);
+    belowBuffer = amount;
+    const after = await client.readContract({address: R, abi: stocklineRouterAbi, functionName: "healthFactorAt", args: [s.stockToken, me, (await now()) + 86_400n]});
+    for (let i = 0; i < 60; i++) {
+      const hit = await incident("COLLATERAL_BELOW_BUFFER", "open");
+      if (hit) return `withdrew ${Number(amount) / 1e6} clUSDG in ${r.transactionHash} (HF at t+24h ${(Number(after) / 1e18).toFixed(3)}); paged ${hit.subject}, path ${String(hit.details.path)}`;
+      await new Promise((res) => setTimeout(res, 5000));
+    }
+    throw new Error(`no COLLATERAL_BELOW_BUFFER incident within 5 min of ${r.transactionHash}`);
+  });
+  await step(X, "residual (e) live: supplying the collateral back resolves COLLATERAL_BELOW_BUFFER", async () => {
+    if (belowBuffer === 0n) return {skip: "no withdrawal below the buffer"};
+    await send(d.clUSDG!, erc20Abi, "approve", [d.morpho, belowBuffer]);
+    const r = await send(d.morpho, morphoAbi, "supplyCollateral", [params, belowBuffer, me, "0x"]);
+    for (let i = 0; i < 60; i++) {
+      if (!(await incident("COLLATERAL_BELOW_BUFFER", "open")) && (await incident("COLLATERAL_BELOW_BUFFER", "resolved"))) return `resupplied in ${r.transactionHash}; incident resolved`;
+      await new Promise((res) => setTimeout(res, 5000));
+    }
+    throw new Error("COLLATERAL_BELOW_BUFFER still open 5 min after the top-up");
+  });
   await step(X, "residual (d): an attested wallet hands clUSDG to a never-attested wallet through Morpho", async () => {
     if (!borrowed) return {skip: "no position"};
     const gift = 20n * E6;
@@ -449,13 +484,18 @@ if (has("flows")) {
     borrowBlock = r.blockNumber;
     return `RESIDUAL (d) confirmed: a wallet that never passed compliance borrowed ${Number(amount) / 1e18} w${T} in ${r.transactionHash}; detection below`;
   });
-  await step(X, "the monitor pages DIRECT_BORROW for that borrow (MON-R10)", async () => {
+  await step(X, "the monitor pages DIRECT_BORROW for that borrow and names the supplier (MON-R10, T9)", async () => {
     if (!ghostDebt) return {skip: "no direct borrow"};
     if (!monitor) return {skip: "no --monitor URL"};
     for (let i = 0; i < 60; i++) {
-      const j = (await (await get(`${monitor}/incidents`)).json()) as {open?: {rule: string; subject: string}[]};
+      const j = (await (await get(`${monitor}/incidents`)).json()) as {open?: {rule: string; subject: string; details: Record<string, unknown>}[]};
       const hit = j.open?.find((x) => x.rule === "DIRECT_BORROW" && x.subject.includes(ghost.toLowerCase()));
-      if (hit) return `paged: ${hit.subject}`;
+      if (hit) {
+        // T9: the page names who supplied the never-attested wallet's collateral.
+        const suppliers = (hit.details.collateralSuppliers as string[] | undefined) ?? [];
+        if (!suppliers.includes(me.toLowerCase())) throw new Error(`paged ${hit.subject} without the supplier (collateralSuppliers ${JSON.stringify(hit.details.collateralSuppliers)})`);
+        return `paged: ${hit.subject}; collateral supplied by ${suppliers.join(", ")}`;
+      }
       await new Promise((r) => setTimeout(r, 5000));
     }
     throw new Error(`no DIRECT_BORROW incident for ${ghost} within 5 min of block ${borrowBlock}`);

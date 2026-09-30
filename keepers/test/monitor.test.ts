@@ -24,7 +24,7 @@ const call = (abi: readonly unknown[], functionName: string, args: readonly unkn
  * truncated calendar, a stopped indexer process and a real reconciliation diff from a vault donation), plus the weekend
  * log over a full closure. Only the pager is a test double (it records instead of calling PagerDuty).
  */
-describe("ops monitor (MON-R1…R20)", () => {
+describe("ops monitor (MON-R1…R26)", () => {
   let s: Stack;
   let pool: pg.Pool;
   let store: MonitorStore;
@@ -40,6 +40,7 @@ describe("ops monitor (MON-R1…R20)", () => {
   const lender = "0x5700000000000000000000000000000000000a03" as const;
   const spyLender = "0x5700000000000000000000000000000000000a04" as const;
   const carol = "0x5700000000000000000000000000000000000a05" as const; // SPY borrower (utilization)
+  const dave = "0x5700000000000000000000000000000000000a06" as const; // never attested; collateral supplied by alice (T9)
 
   const count = (rule: RuleId, action: "trigger" | "resolve" | "renotify") => pager.of(rule, action).length;
   const tick = async (): Promise<TickResult> => {
@@ -170,6 +171,72 @@ describe("ops monitor (MON-R1…R20)", () => {
     clock.t += 2 * 3600_000;
     await tick();
     expect(count("DIRECT_BORROW", "resolve") - r0).toBe(1);
+  });
+
+  it("MON_R10 DIRECT_BORROW names who supplied the borrower's collateral (T9, residual (d))", async () => {
+    const d = s.config.d;
+    const params = marketParams(d, d.stocks.NVDA);
+    const b0 = count("COLLATERAL_BELOW_BUFFER", "trigger");
+    // alice (attested, router position) moves 1,000 clUSDG out of Morpho and supplies it for dave, who never attested.
+    await s.anvil.send(alice, d.morpho, call(morphoAbi, "withdrawCollateral", [params, 1_000n * E6, alice, alice]));
+    await s.anvil.send(alice, d.clUSDG, call(erc20Abi, "approve", [d.morpho, maxUint256]));
+    await s.anvil.send(alice, d.morpho, call(morphoAbi, "supplyCollateral", [params, 1_000n * E6, dave, "0x"]));
+    await s.anvil.send(dave, d.morpho, call(morphoAbi, "borrow", [params, E18, 0n, dave, dave]));
+    await tick();
+    const p = pager.of("DIRECT_BORROW", "trigger").find((x) => x.subject === `NVDA:${dave}`)!;
+    expect(p).toBeDefined();
+    expect(p.details.collateralSuppliers).toEqual([alice]);
+    expect(p.details.collateralViaRouter).toBe(false);
+    // alice's own router collateral shows as via the router, not as a third-party supplier.
+    // (her MON_R10 incident above auto-resolved, so this borrow pages again)
+    await s.anvil.send(alice, d.morpho, call(morphoAbi, "borrow", [params, E18, 0n, alice, alice]));
+    await tick();
+    const a = pager.of("DIRECT_BORROW", "trigger").filter((x) => x.subject === `NVDA:${alice}`).at(-1)!;
+    expect(a.details.collateralSuppliers).toEqual([]);
+    expect(a.details.collateralViaRouter).toBe(true);
+    // A withdrawal that keeps alice well above the 24h buffer does not page MON-R26.
+    expect(count("COLLATERAL_BELOW_BUFFER", "trigger") - b0).toBe(0);
+  });
+
+  it("MON_R26 COLLATERAL_BELOW_BUFFER (T10, residual (e)): a withdrawal with debt left below HF 1.10 at t + 24h, direct or via the router", async () => {
+    const d = s.config.d;
+    const params = marketParams(d, d.stocks.NVDA);
+    /** clUSDG to withdraw so that HF at t + 24h lands at `target` (HF is linear in collateral). */
+    const toHf24 = async (target: bigint) => {
+      const pos = await s.anvil.client.readContract({address: d.morpho, abi: morphoAbi, functionName: "position", args: [d.stocks.NVDA.marketId, alice]});
+      const hf24 = await s.drv.healthFactor("NVDA", alice, (await s.drv.now()) + 24n * H);
+      return pos.collateral - (pos.collateral * target + hf24 - 1n) / hf24;
+    };
+    const t0 = count("COLLATERAL_BELOW_BUFFER", "trigger");
+    const r0 = count("COLLATERAL_BELOW_BUFFER", "resolve");
+
+    // Direct on Morpho: HF(t + 24h) 1.05 → pages (P2), deduped; topping back up resolves it.
+    const direct = await toHf24(105n * 10n ** 16n);
+    await s.anvil.send(alice, d.morpho, call(morphoAbi, "withdrawCollateral", [params, direct, alice, alice]));
+    await tick();
+    expect(count("COLLATERAL_BELOW_BUFFER", "trigger") - t0).toBe(1);
+    const p = pager.of("COLLATERAL_BELOW_BUFFER", "trigger").at(-1)!;
+    expect(p.subject).toBe(`NVDA:${alice}`);
+    expect(p.severity).toBe("P2");
+    expect(p.runbook).toBe("docs/runbooks/collateral-below-buffer.md");
+    expect(p.details.req).toBe("MON-R26");
+    expect(p.details.path).toBe("direct");
+    expect(BigInt(p.details.hfAt24h as string)).toBeLessThan(11n * 10n ** 17n);
+    await tick();
+    expect(count("COLLATERAL_BELOW_BUFFER", "trigger") - t0, "deduped").toBe(1);
+    await s.anvil.send(alice, d.morpho, call(morphoAbi, "supplyCollateral", [params, direct, alice, "0x"]));
+    await tick();
+    expect(count("COLLATERAL_BELOW_BUFFER", "resolve") - r0).toBe(1);
+
+    // Through the router (CollateralWithdrawn): same rule, path "router"; the rescue top-up resolves it.
+    const viaRouter = await toHf24(105n * 10n ** 16n);
+    await s.drv.withdrawCollateral("NVDA", alice, viaRouter);
+    await tick();
+    expect(count("COLLATERAL_BELOW_BUFFER", "trigger") - t0).toBe(2);
+    expect(pager.of("COLLATERAL_BELOW_BUFFER", "trigger").at(-1)!.details.path).toBe("router");
+    await s.drv.addCollateral("NVDA", alice, viaRouter);
+    await tick();
+    expect(count("COLLATERAL_BELOW_BUFFER", "resolve") - r0).toBe(2);
   });
 
   it("MON_R5 ORACLE_STALE and MON_R7 GUARD_TRIPPED(STALE): no round for heartbeat + 10 min in an open session", async () => {

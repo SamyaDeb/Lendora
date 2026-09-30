@@ -27,6 +27,7 @@ minutes → decision tree → exact commands → who signs → comms → post-mo
 | `DN_NAV_STALE` (MON-R23) | P1 | [dn-nav-stale.md](dn-nav-stale.md) | detection: monitor test; co-signer refusals: `dnVault.test.ts` | – | ⏳ |
 | `DN_QUEUE_OVERDUE` (MON-R24) | P0 | [dn-queue-overdue.md](dn-queue-overdue.md) | detection: monitor test; raise cash and settle: `dnVault.test.ts` | queued withdrawal → settle → claim: fork 46630, 2026-09-29 | ⏳ |
 | `DN_KILL_SWITCH` (MON-R25) | P1 | [dn-kill-switch.md](dn-kill-switch.md) | detection: monitor test; kill + unwind: `dnVault.test.ts` | – | ⏳ |
+| `COLLATERAL_BELOW_BUFFER` (MON-R26) | P2 | [collateral-below-buffer.md](collateral-below-buffer.md) | detection (direct and router withdrawal), resolve on top-up: monitor test | – | tester withdrawal below the buffer, paged and resolved, 2026-09-30 (T10) |
 
 Rehearsals: `pnpm --filter @stockline/devnet test` (runbooks.test.ts, real TimelockController with the calldata from
 the SDK tool) and `pnpm --filter @stockline/keepers test` (monitor.test.ts). **Fork rehearsal (Phase 3 task 11, no "go testnet"):**

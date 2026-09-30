@@ -45,6 +45,8 @@ import {planLiquidation} from "../liquidator/liquidator.js";
 export interface BorrowerSource {
   /** Accounts with `borrowShares > 0`, per ticker. */
   borrowers(): Promise<{address: `0x${string}`; ticker: string}[]>;
+  /** T9: blocks of every Morpho `SupplyCollateral` for `account` in `ticker`'s market (the caller is read from the log). */
+  collateralSupplies?(ticker: string, account: string): Promise<bigint[]>;
 }
 
 /** Borrowers from the indexer's views (SI-R2 `position`). */
@@ -58,6 +60,13 @@ export class IndexerBorrowers implements BorrowerSource {
   async borrowers() {
     const {rows} = await this.pool.query(`select ticker, account from "${this.schema}".position where borrow_shares > 0`);
     return rows.map((r) => ({ticker: String(r.ticker), address: String(r.account) as `0x${string}`}));
+  }
+  async collateralSupplies(ticker: string, account: string): Promise<bigint[]> {
+    const {rows} = await this.pool.query(
+      `select distinct block_number from "${this.schema}".event_feed where ticker = $1 and type = 'supplyCollateral' and lower(account) = lower($2) order by block_number`,
+      [ticker, account],
+    );
+    return rows.map((r) => BigInt(r.block_number));
   }
   /** SI-R3 indexed head (MON-R14). */
   async head(): Promise<bigint | undefined> {
@@ -106,6 +115,9 @@ export interface MonitorOptions {
   /** MON-R22: margin floor, × maintenance (WAD) while open / closed (DN-R3; 08 weekend rule). */
   dnMarginOpenWad: bigint;
   dnMarginClosedWad: bigint;
+  /** MON-R26 (T10): a withdrawal leaving HF at t + `bufferHorizonSec` below this pages (RT-R1's HF_MIN_OPEN). */
+  bufferHfWad: bigint;
+  bufferHorizonSec: bigint;
   /** First run without a cursor scans this many blocks back. */
   eventLookbackBlocks: bigint;
   logChunkBlocks: bigint;
@@ -134,6 +146,8 @@ export const defaultMonitorOptions: MonitorOptions = {
   dnBandBps: 200n,
   dnMarginOpenWad: 2n * 10n ** 18n,
   dnMarginClosedWad: 3n * 10n ** 18n,
+  bufferHfWad: 11n * 10n ** 17n,
+  bufferHorizonSec: 86_400n,
   eventLookbackBlocks: 1000n,
   logChunkBlocks: 5000n,
   now: Date.now,
@@ -148,7 +162,8 @@ export interface TickResult {
 }
 
 const guardChanged = stocklineOracleAbi.find((x) => x.type === "event" && x.name === "GuardChanged")!;
-const morphoLogEvents = morphoEventsAbi.filter((x) => x.type === "event" && (x.name === "Liquidate" || x.name === "Borrow"));
+const morphoLogEvents = morphoEventsAbi.filter((x) => x.type === "event" && (x.name === "Liquidate" || x.name === "Borrow" || x.name === "WithdrawCollateral"));
+const supplyCollateralEvent = morphoEventsAbi.find((x) => x.type === "event" && x.name === "SupplyCollateral")!;
 
 export class Monitor {
   private readonly o: MonitorOptions;
@@ -159,6 +174,8 @@ export class Monitor {
   /** MON-R15: balance samples per watched address over the last day (memory; a restart re-measures). */
   private readonly gasSamples = new Map<string, {at: number; balance: bigint}[]>();
   private readonly governance: GovernanceWatch;
+  /** MON-R26: positions whose collateral was withdrawn since the last tick (subject → the withdrawal). */
+  private readonly withdrawals = new Map<string, Record<string, unknown>>();
 
   constructor(
     private readonly client: PublicClient,
@@ -208,7 +225,10 @@ export class Monitor {
         weekend.push(...(await recordMilestones(this.store, st)).map((k) => `${t}:${k}`));
       });
     }
-    await section("positions", () => this.missedLiquidations(markets, obs));
+    await section("positions", async () => {
+      await this.missedLiquidations(markets, obs);
+      await this.collateralBuffer(markets, obs); // MON-R26
+    });
     await section("clusdg", () => this.clUsdgBacking(obs));
     await section("l2", async () => {
       const g = await this.l2.detect();
@@ -248,14 +268,20 @@ export class Monitor {
       const all = [...morphoLogs, ...guardLogs].sort((a, b) => (a.blockNumber === b.blockNumber ? (a.logIndex ?? 0) - (b.logIndex ?? 0) : a.blockNumber! < b.blockNumber! ? -1 : 1)) as (Log & {eventName: string; args: Record<string, unknown>})[];
       for (const l of all) {
         const where = {tx: l.transactionHash, block: l.blockNumber!.toString(), logIndex: l.logIndex};
-        if (l.eventName === "Liquidate" || l.eventName === "Borrow") {
+        if (l.eventName === "WithdrawCollateral") {
+          const ticker = this.tickerByMarket.get(String(l.args.id).toLowerCase());
+          if (!ticker) continue;
+          const caller = String(l.args.caller).toLowerCase();
+          this.withdrawals.set(`${ticker}:${String(l.args.onBehalf).toLowerCase()}`, {caller, path: caller === this.d.router!.toLowerCase() ? "router" : "direct", withdrawn: String(l.args.assets), ...where});
+        } else if (l.eventName === "Liquidate" || l.eventName === "Borrow") {
           const ticker = this.tickerByMarket.get(String(l.args.id).toLowerCase());
           if (!ticker) continue;
           if (l.eventName === "Liquidate" && (l.args.badDebtAssets as bigint) > 0n) {
             obs.push({rule: "BAD_DEBT", subject: `${ticker}:${l.transactionHash}:${l.logIndex}`, active: true, title: `Bad debt realized in ${ticker}`, details: {ticker, borrower: l.args.borrower, badDebtAssets: String(l.args.badDebtAssets), seizedAssets: String(l.args.seizedAssets), ...where}});
           }
           if (l.eventName === "Borrow" && String(l.args.caller).toLowerCase() !== this.d.router!.toLowerCase()) {
-            obs.push({rule: "DIRECT_BORROW", subject: `${ticker}:${String(l.args.onBehalf).toLowerCase()}`, active: true, title: `Direct Morpho borrow in ${ticker} (not through the router)`, details: {ticker, caller: l.args.caller, onBehalf: l.args.onBehalf, assets: String(l.args.assets), ...where}});
+            const suppliers = await this.collateralSuppliers(ticker, String(l.args.onBehalf));
+            obs.push({rule: "DIRECT_BORROW", subject: `${ticker}:${String(l.args.onBehalf).toLowerCase()}`, active: true, title: `Direct Morpho borrow in ${ticker} (not through the router)`, details: {ticker, caller: l.args.caller, onBehalf: l.args.onBehalf, assets: String(l.args.assets), ...suppliers, ...where}});
           }
         } else {
           const ticker = this.tickerByOracle.get(l.address.toLowerCase())!;
@@ -349,6 +375,66 @@ export class Monitor {
       const hf = borrowed === 0n ? null : healthFactorAt(stockMarketState(st), {collateral: pos.collateral, borrowed}, st.now);
       obs.push({rule: "MISSED_LIQUIDATION", subject: subj, active: hf !== null && hf < WAD, title: `${ticker} position ${address} liquidatable and not liquidated`, details: {ticker, borrower: address, hf: hf?.toString() ?? null, collateral: pos.collateral.toString(), borrowed: borrowed.toString()}});
       if (this.o.quoter) await this.liquidationProfit(subj, ticker, address, hf !== null && hf < WAD, pos, borrowed, obs);
+    }
+  }
+
+  /**
+   * T9 / residual (d): who supplied the borrower's collateral. `collateralSuppliers` are the callers of every Morpho
+   * `SupplyCollateral` for the borrower other than the borrower and the router (an attested router entry is the
+   * borrower's own); a never-attested borrower funded by another address shows that address here. Blocks come from the
+   * indexer, the caller from one single-block `getLogs` each. A failed lookup never drops the page.
+   */
+  private async collateralSuppliers(ticker: string, borrower: string): Promise<Record<string, unknown>> {
+    if (!this.borrowers.collateralSupplies) return {};
+    try {
+      const id = this.d.stocks[ticker].marketId;
+      const router = this.d.router!.toLowerCase();
+      const b = borrower.toLowerCase();
+      const others = new Set<string>();
+      let viaRouter = false;
+      for (const block of await this.borrowers.collateralSupplies(ticker, borrower)) {
+        const logs = await this.client.getLogs({address: this.d.morpho, event: supplyCollateralEvent, args: {id, onBehalf: borrower as `0x${string}`}, fromBlock: block, toBlock: block});
+        for (const log of logs as unknown as {args: {caller: string}}[]) {
+          const caller = log.args.caller.toLowerCase();
+          if (caller === router) viaRouter = true;
+          else if (caller !== b) others.add(caller);
+        }
+      }
+      return {collateralSuppliers: [...others], collateralViaRouter: viaRouter};
+    } catch (e) {
+      return {collateralSuppliersError: safeErrorLine(e, process.env)};
+    }
+  }
+
+  /**
+   * MON-R26 (T10, residual (e)): after a collateral withdrawal, by the router or directly on Morpho, a position that
+   * still has debt must hold HF >= 1.10 at t + 24h (the RT-R1 buffer). Evaluated on the position now (a later top-up
+   * counts); a withdrawal's subject stays watched while its incident is open and resolves when the position recovers.
+   */
+  private async collateralBuffer(markets: MarketChainState[], obs: Observation[]): Promise<void> {
+    const byTicker = new Map(markets.map((m) => [m.ticker, m]));
+    const subjects = new Map(this.withdrawals);
+    this.withdrawals.clear();
+    for (const i of await this.store.openIncidents("COLLATERAL_BELOW_BUFFER")) if (!subjects.has(i.subject)) subjects.set(i.subject, {});
+    for (const [subj, w] of subjects) {
+      const [ticker, address] = subj.split(":") as [string, `0x${string}`];
+      const st = byTicker.get(ticker);
+      if (!st) {
+        this.withdrawals.set(subj, w); // market read failed this tick: retry next tick
+        continue;
+      }
+      const pos = await this.client.readContract({address: this.d.morpho, abi: morphoAbi, functionName: "position", args: [this.d.stocks[ticker].marketId, address]});
+      const borrowed = currentDebt(st, pos.borrowShares);
+      const state = stockMarketState(st);
+      const hf24 = borrowed === 0n ? null : healthFactorAt(state, {collateral: pos.collateral, borrowed}, st.now + this.o.bufferHorizonSec);
+      const hfNow = borrowed === 0n ? null : healthFactorAt(state, {collateral: pos.collateral, borrowed}, st.now);
+      obs.push({
+        rule: "COLLATERAL_BELOW_BUFFER",
+        subject: subj,
+        active: hf24 !== null && hf24 < this.o.bufferHfWad,
+        title: `${ticker} collateral withdrawn below the 24h buffer by ${address}`,
+        details: {ticker, borrower: address, hfNow: hfNow?.toString() ?? null, hfAt24h: hf24?.toString() ?? null, minHf: this.o.bufferHfWad.toString(), collateral: pos.collateral.toString(), borrowed: borrowed.toString(), ...w},
+      });
     }
   }
 

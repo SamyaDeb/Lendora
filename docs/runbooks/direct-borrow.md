@@ -5,8 +5,9 @@ auto-resolves after 1h (A30). This is the accepted soft-gate residual (05 §1): 
 who was attested once (rescue top-up, RT-R8), a debt-free `clUSDG` holder in Morpho, a liquidator holding seized
 `clUSDG`, or **an address that never signed the terms** but received `clUSDG` collateral from an attested borrower
 (`supplyCollateral(onBehalf)`, residual (d)) can borrow directly, without a fresh attestation and beyond the
-per-address cap. For (d), step 2 below finds no terms acceptance: look up who supplied its collateral
-(`SupplyCollateral` logs with `onBehalf` = the address) and treat both addresses together.
+per-address cap. For (d), step 2 below finds no terms acceptance: the page's `collateralSuppliers` lists who supplied
+its collateral (callers of `SupplyCollateral` with `onBehalf` = the address, other than the borrower and the router;
+`collateralViaRouter` = some came through an attested router entry). Treat the borrower and every supplier together.
 
 **Impact.** Bounded by the liquidity the allocator placed in the market (vault caps, idle reserve, pulls). The
 compliance risk is a geo-blocked or sanctioned address borrowing; the market risk is one address exceeding the
@@ -14,7 +15,7 @@ per-address cap sized for liquidation depth (D8).
 
 ## First 5 minutes
 
-1. Who: `onBehalf` and `caller` from the page; position size: `cast call $MORPHO "position(bytes32,address)(uint256,uint128,uint128)" $MARKET_ID <onBehalf>`.
+1. Who: `onBehalf`, `caller` and `collateralSuppliers` from the page; position size: `cast call $MORPHO "position(bytes32,address)(uint256,uint128,uint128)" $MARKET_ID <onBehalf>`.
 2. Was this address attested? Compliance DB (terms acceptance), and whether it is on the sanctions provider now.
 3. Debt in USD vs the market's per-address cap (`cast call $ROUTER "capOf(address,address)(uint256)" <addr> $STOCK`).
 4. Several direct borrowers at once, or a size near the market's free liquidity → guardian `trip(MANUAL)` + pull.

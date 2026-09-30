@@ -1,7 +1,7 @@
 import type {Severity} from "./pager.js";
 
 /**
- * The operator alert rules of docs/prd/10 "Monitoring and paging", one requirement ID each (MON-R1…R20). State rules
+ * The operator alert rules of docs/prd/10 "Monitoring and paging", one requirement ID each (MON-R1…R26). State rules
  * fire while their condition holds (after `forBlocks` / `forSec` if set) and resolve when it stops; event rules
  * (a log was seen) fire once per subject and resolve after `autoResolveSec` (the page stays in the provider's history;
  * the runbook drives the follow-up).
@@ -33,7 +33,8 @@ export type RuleId =
   | "DN_MARGIN_LOW"
   | "DN_NAV_STALE"
   | "DN_QUEUE_OVERDUE"
-  | "DN_KILL_SWITCH";
+  | "DN_KILL_SWITCH"
+  | "COLLATERAL_BELOW_BUFFER";
 
 export interface RuleMeta {
   req: string;
@@ -84,6 +85,9 @@ export const RULES: Record<RuleId, RuleMeta> = {
   DN_NAV_STALE: {req: "MON-R23", severity: "P1", runbook: rb("dn-nav-stale.md"), forSec: 300n},
   DN_QUEUE_OVERDUE: {req: "MON-R24", severity: "P0", runbook: rb("dn-queue-overdue.md")},
   DN_KILL_SWITCH: {req: "MON-R25", severity: "P1", runbook: rb("dn-kill-switch.md")},
+  // T10 / residual (e): a collateral withdrawal (router or Morpho-direct) left a position with debt below the 24h
+  // buffer (HF at t + 24h < 1.10). State rule: resolves when the position is back above it or the debt is gone.
+  COLLATERAL_BELOW_BUFFER: {req: "MON-R26", severity: "P2", runbook: rb("collateral-below-buffer.md")},
 };
 
 /** Oracle guard reason bits (StocklineOracleBase), by name. */

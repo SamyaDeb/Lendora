@@ -78,7 +78,7 @@ anvil from real chain conditions).
 | MON-R7 | `GUARD_TRIPPED` | Any `GuardChanged(tripped = true)` or reason live; resolves on clear (a trip and clear between ticks still pages) | P1 | [guard-tripped](../runbooks/guard-tripped.md) |
 | MON-R8 | `L2_GAP` | Consecutive block timestamps ≥ N min apart (the guard keeper's detector, shared) | P1 | [sequencer-l2-gap](../runbooks/sequencer-l2-gap.md) |
 | MON-R9 | `KEEPER_DOWN` | Allocator/guard/liquidator/alerts `/health` not 200 (the allocator's turns 503 after 5 min without a run, LM-R33) | P1 | [keeper-down](../runbooks/keeper-down.md) |
-| MON-R10 | `DIRECT_BORROW` | Morpho `Borrow` on a Stockline market whose `caller` is not the router (05 §1 residual, RT-R8) | P1 | [direct-borrow](../runbooks/direct-borrow.md) |
+| MON-R10 | `DIRECT_BORROW` | Morpho `Borrow` on a Stockline market whose `caller` is not the router (05 §1 residual, RT-R8); the page names who supplied the borrower's collateral (`collateralSuppliers`, residual (d), T9) | P1 | [direct-borrow](../runbooks/direct-borrow.md) |
 | MON-R11 | `PULL_NOT_EFFECTIVE` | Guard tripped and vault free market liquidity > dust (the allocator's 1e15 minimum move) after 2 blocks (LM-R31) | P1 | [guard-tripped](../runbooks/guard-tripped.md) |
 | MON-R12 | `UTILIZATION_HIGH` | Vault-level utilization > 95% for 1h | P2 | – |
 | MON-R13 | `CALENDAR_RUNWAY` | < 7 days of sessions stored, or an earnings window within 30 days not pushed | P2 | [calendar-push](../runbooks/calendar-push.md) |
@@ -94,6 +94,7 @@ anvil from real chain conditions).
 | MON-R23 | `DN_NAV_STALE` | The vault NAV can't mint or burn for 5 min while it holds deposits (DN-R5, DN-R14) | P1 | [dn-nav-stale](../runbooks/dn-nav-stale.md) |
 | MON-R24 | `DN_QUEUE_OVERDUE` | The oldest withdrawal request is past its promised settlement (DN-R1) | P0 | [dn-queue-overdue](../runbooks/dn-queue-overdue.md) |
 | MON-R25 | `DN_KILL_SWITCH` | A killed sleeve still holds spot or a short: unwind in progress (DN-R7) | P1 | [dn-kill-switch](../runbooks/dn-kill-switch.md) |
+| MON-R26 | `COLLATERAL_BELOW_BUFFER` | *(T10, residual (e) of 05 §1)* A collateral withdrawal (router `CollateralWithdrawn` or Morpho-direct `WithdrawCollateral`) leaves a position with debt at HF < 1.10 at t + 24h; resolves when the position recovers or the debt is repaid | P2 | [collateral-below-buffer](../runbooks/collateral-below-buffer.md) |
 
 **Weekend log.** For every closure ≥ 24h and every market the monitor records, once, the ramp-in start, full buffer,
 close, first fresh round and ramp-out, plus guard trips/clears from the ramp start to 24h after the reopen, and serves
