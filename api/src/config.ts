@@ -29,6 +29,7 @@ export interface ApiConfig {
   siweDomain: string;
   /** WS fan-out poll interval (SI-R11: pushes within 2 s of the block). */
   streamPollMs: number;
+  dnLiveCacheMs?: number;
 }
 
 /** OFF-5: a numeric env var with bounds; a bad value fails startup with the variable's name (before: `NaN`). */
@@ -65,5 +66,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     trustedProxyHops: num(env, "TRUSTED_PROXY_HOPS", 1, 1, 10),
     siweDomain: env.SIWE_DOMAIN ?? "localhost",
     streamPollMs: num(env, "STREAM_POLL_MS", 200, 50, 60_000),
+    // T37: minimum age of the vault's live chain reads (0 = per block, as on anvil); 3000 on the 46630 stack.
+    dnLiveCacheMs: num(env, "DN_LIVE_CACHE_MS", 0, 0, 60_000),
   };
 }

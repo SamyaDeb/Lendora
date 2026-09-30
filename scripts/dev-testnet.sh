@@ -150,7 +150,7 @@ else
 fi
 start indexer indexer "${COMMON[@]}" RPC_URL="$IDX_RPC" RPC_URL_ARCHIVE="$IDX_ARCHIVE" PONDER_POLLING_MS="${PONDER_POLLING_MS:-1000}" \
   -- "$ROOT/scripts/lib/supervise.sh" "$(bin indexer ponder)" start --schema lendora_46630 --views-schema "$INDEXER_VIEWS" --port 42069
-start api api "${COMMON[@]}" INDEXER_SCHEMA="$INDEXER_VIEWS" API_SCHEMA=lendora_api_testnet PORT=42070 SIWE_DOMAIN=localhost:3000 \
+start api api "${COMMON[@]}" INDEXER_SCHEMA="$INDEXER_VIEWS" API_SCHEMA=lendora_api_testnet PORT=42070 SIWE_DOMAIN=localhost:3000 DN_LIVE_CACHE_MS=3000 \
   -- "$TSX" src/index.ts
 if [ "$READ_ONLY" = 0 ]; then
 start compliance compliance "${COMMON[@]}" COMPLIANCE_SCHEMA=lendora_compliance_testnet PORT=42071 TRUST_PROXY=true \

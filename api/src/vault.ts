@@ -46,9 +46,14 @@ export interface DnLive {
 export class DnReader {
   private cache?: {at: number; v: DnLive};
   private inflight?: {block: bigint; p: Promise<DnLive>};
+  /**
+   * `minAgeMs` (DN_LIVE_CACHE_MS): reuse a read for at least this long even when the head moved. On 46630 (~4 blocks/s)
+   * a per-block cache re-read ~30 values per request and throttled the shared RPC (T37). 0 (tests on anvil): per block.
+   */
   constructor(
     private readonly client: PublicClient,
     private readonly d: ChainDeployment,
+    private readonly minAgeMs = 0,
   ) {}
 
   private rd<T>(address: `0x${string}`, abi: readonly unknown[], functionName: string, args: readonly unknown[] = [], blockNumber?: bigint): Promise<T> {
@@ -57,6 +62,7 @@ export class DnReader {
 
   async live(): Promise<DnLive> {
     // Cached per head block (a chain that jumps in time, like anvil in tests, never serves a stale timestamp).
+    if (this.cache && this.minAgeMs > 0 && Date.now() - this.cache.at < this.minAgeMs) return this.cache.v;
     const head = await this.client.getBlockNumber({cacheTime: 0});
     if (this.cache && this.cache.v.block === head) return this.cache.v;
     // OFF-22: concurrent requests at a new block share one set of chain reads (no RPC fan-out per request).
@@ -225,8 +231,8 @@ type Helpers = {
 };
 
 /** Registers the vault and receipt-market routes. */
-export function registerVaultRoutes(app: OpenAPIHono<never>, db: IndexerDb, client: PublicClient, d: ChainDeployment, h: Helpers) {
-  const reader = d.dnVault ? new DnReader(client, d) : undefined;
+export function registerVaultRoutes(app: OpenAPIHono<never>, db: IndexerDb, client: PublicClient, d: ChainDeployment, h: Helpers, liveCacheMs = 0) {
+  const reader = d.dnVault ? new DnReader(client, d, liveCacheMs) : undefined;
   const need = () => {
     if (!reader) throw new HttpError(404, "no delta-neutral vault on this network");
     return reader;

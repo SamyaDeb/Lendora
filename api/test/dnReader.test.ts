@@ -36,4 +36,27 @@ describe("OFF-22 DnReader single flight", () => {
     await expect(r.live()).rejects.toThrow("rpc down");
     await expect(r.live()).resolves.toMatchObject({block: 7n});
   });
+
+  it("T37 with a minimum age (DN_LIVE_CACHE_MS) a read is reused across new blocks until it is that old (46630: ~4 blocks/s)", async () => {
+    let head = 10n;
+    let now = 1_000_000;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    const client = {getBlockNumber: vi.fn(async () => head)} as unknown as PublicClient;
+    const r = new DnReader(client, {} as ChainDeployment, 3000);
+    const read = vi.spyOn(r as unknown as {read: (b: bigint) => Promise<unknown>}, "read").mockImplementation(async (b) => {
+      const v = {block: b};
+      (r as unknown as {cache: unknown}).cache = {at: Date.now(), v};
+      return v;
+    });
+    await r.live();
+    head = 12n;
+    now += 2_000;
+    await r.live(); // two blocks later, 2 s old: reused, and no head lookup
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(client.getBlockNumber).toHaveBeenCalledTimes(1);
+    now += 1_500;
+    await expect(r.live()).resolves.toMatchObject({block: 12n});
+    expect(read).toHaveBeenCalledTimes(2);
+    vi.restoreAllMocks();
+  });
 });

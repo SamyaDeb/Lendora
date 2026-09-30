@@ -23,7 +23,7 @@ import {registerVaultRoutes} from "./vault.js";
 export type AppConfig = Pick<
   ApiConfig,
   "chainId" | "key" | "d" | "freeRpm" | "keyedRpm" | "trustProxy" | "siweDomain" | "freeWs" | "keyedWs"
-> & {trustedProxyHops?: number};
+> & {trustedProxyHops?: number; dnLiveCacheMs?: number};
 
 export interface AppDeps {
   db: IndexerDb;
@@ -427,7 +427,7 @@ export function createApp(deps: AppDeps) {
 
   // ---------------------------------------------------------------- USDG Earn (DN-R11) and receipt markets (A3)
 
-  registerVaultRoutes(app as never, db, chain.client, d, {json, errors, asOfHeaders: asOfHeaders as never});
+  registerVaultRoutes(app as never, db, chain.client, d, {json, errors, asOfHeaders: asOfHeaders as never}, config.dnLiveCacheMs ?? 0);
 
   app.openapi(createRoute({method: "get", path: "/v1/terms", tags: ["status"], summary: "Data terms of use (SI-R14)", responses: {200: json(S.TermsResponse, "Terms")}}), (c) =>
     c.json(TERMS, 200),
