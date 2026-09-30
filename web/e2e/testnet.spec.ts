@@ -48,24 +48,25 @@ async function connect(p: Page, w: TestnetWallet) {
 
 /** The review sheet's steps all done, none failed (the failure text is the assertion message). */
 async function stepsDone(p: Page, timeout = 180_000) {
-  const steps = p.getByRole("dialog").getByTestId("steps").first();
+  const steps = p.getByRole("dialog").last().getByTestId("steps").first();
   await expect(steps).toBeVisible();
   // A run (or a retry) is over once Confirm no longer waits on the wallet.
-  await expect(p.getByRole("dialog").getByRole("button", {name: "Confirm in your wallet…"})).toHaveCount(0, {timeout});
+  await expect(p.getByRole("dialog").last().getByRole("button", {name: "Confirm in your wallet…"})).toHaveCount(0, {timeout});
   await expect(steps.locator('li[data-status="active"], li[data-status="pending"]')).toHaveCount(0, {timeout});
   const failed = steps.locator('li[data-status="failed"]');
-  if (await failed.count()) throw new Error(`step failed: ${await p.getByRole("dialog").innerText()}`);
+  if (await failed.count()) throw new Error(`step failed: ${await p.getByRole("dialog").last().innerText()}`);
 }
 
 /** Confirm in the open review sheet, wait for every step, check the success state, close it. */
 async function confirmReview(p: Page, success?: RegExp | string) {
-  const dialog = p.getByRole("dialog");
+  const dialog = p.getByRole("dialog").last();
   await expect(dialog).toBeVisible();
   await dialog.getByTestId("confirm").click();
   await stepsDone(p);
   if (success) await expect(dialog.getByRole("heading").first()).toContainText(success);
+  const open = await p.getByRole("dialog").count();
   await dialog.getByRole("button", {name: "Done"}).click();
-  await expect(dialog).toBeHidden();
+  await expect(p.getByRole("dialog")).toHaveCount(open - 1); // the review closed (a sheet under it may stay)
 }
 
 const bal = (token: `0x${string}`, who: `0x${string}`) => (w: TestnetWallet) => w.pc.readContract({address: token, abi: erc20Abi, functionName: "balanceOf", args: [who]});
@@ -1092,25 +1093,32 @@ test.describe.serial("46630 restricted region: exits still work", () => {
     await expect(p.getByTestId("restricted")).toBeVisible();
     await p.goto("/portfolio");
     await expect(p.getByText("You can still repay, close and withdraw")).toBeVisible();
-    w.label = "geo US partial repay AAPL";
-    await p.getByTestId("repay-amount-AAPL").fill("0.01");
-    await (await portfolioControl(p, "repay-AAPL")).click();
-    await confirmReview(p, /Repaid 0.01 AAPL/);
-    w.label = "geo US repay all AAPL";
-    await (await portfolioControl(p, "repay-AAPL")).click();
-    await confirmReview(p, /Repaid/);
-    w.label = "geo US withdraw collateral AAPL";
-    await (await portfolioControl(p, "withdraw-collateral-AAPL")).click();
-    await confirmReview(p, /Withdrew your collateral/);
+    // Each exit runs if its position is still there (a rerun after an RPC burst picks up where it stopped).
+    if ((await position(w, "AAPL")).borrowShares > 0n) {
+      w.label = "geo US partial repay AAPL";
+      await (await portfolioControl(p, "repay-amount-AAPL")).fill("0.01");
+      await p.getByTestId("repay-AAPL").click();
+      await confirmReview(p, /Repaid 0.01 AAPL/);
+      w.label = "geo US repay all AAPL";
+      await (await portfolioControl(p, "repay-AAPL")).click();
+      await confirmReview(p, /Repaid/);
+    }
+    if ((await position(w, "AAPL")).collateral > 0n) {
+      w.label = "geo US withdraw collateral AAPL";
+      await (await portfolioControl(p, "withdraw-collateral-AAPL")).click();
+      await confirmReview(p, /Withdrew your collateral/);
+    }
     expect((await position(w, "AAPL")).collateral).toBe(0n);
-    w.label = "geo US close NVDA";
-    await (await portfolioControl(p, "close-NVDA")).click();
-    await confirmReview(p, /Closed your NVDA position/);
+    if ((await position(w, "NVDA")).borrowShares > 0n) {
+      w.label = "geo US close NVDA";
+      await (await portfolioControl(p, "close-NVDA")).click();
+      await confirmReview(p, /Closed your NVDA position/);
+    }
     expect((await position(w, "NVDA")).borrowShares).toBe(0n);
     w.label = "geo US vault withdraw 1";
     await p.getByTestId("vault-withdraw-open").click();
-    await p.getByRole("dialog").getByTestId("withdraw-amount").fill("1");
-    await p.getByRole("dialog").getByTestId("withdraw-submit").click();
+    await p.getByRole("dialog").last().getByTestId("withdraw-amount").fill("1");
+    await p.getByRole("dialog").last().getByTestId("withdraw-submit").click();
     await confirmReview(p, /Withdrew 1 USDG/);
     await shot(p, "geo-us-exits");
   });
