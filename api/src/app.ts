@@ -9,7 +9,7 @@ import type {IndexerDb, EventCursor} from "./db.js";
 import type {Limiter} from "./limits.js";
 import {clientKey, ipFromForwardedFor} from "./limits.js";
 import type {ApiKeys} from "./keys.js";
-import {HttpError, errorStatus} from "./errors.js";
+import {HttpError, RPC_RETRY_AFTER, errorStatus} from "./errors.js";
 import type {ChainReader} from "./chain.js";
 import {envelope, eventView, historyView, iso, marketView, positionView, wad, type Envelope} from "./model.js";
 import * as S from "./schemas.js";
@@ -84,7 +84,8 @@ export function createApp(deps: AppDeps) {
 
   app.onError((err, c) => {
     const r = errorStatus(err);
-    if (r.status === 500) console.error(`[api] ${c.req.method} ${c.req.path}: ${safeErrorLine(err, process.env)}`); // OFF-1
+    // OFF-1; RPC outages (503) are logged too, so a throttled provider shows in the log (T26).
+    if (r.status === 500 || r.retryAfter === RPC_RETRY_AFTER) console.error(`[api] ${c.req.method} ${c.req.path}: ${safeErrorLine(err, process.env)}`);
     if (r.retryAfter) c.header("Retry-After", String(r.retryAfter));
     return c.json({error: r.error}, r.status);
   });
