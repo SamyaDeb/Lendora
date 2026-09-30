@@ -126,6 +126,9 @@ export function useBorrowFlow(symbol: string, mode: BorrowMode) {
   }
 
   const overBalance = u ? collIn > u.usdgBalance : false;
+  // T35: Morpho lends only what the market holds; more fails at the simulation ("not enough available stock").
+  const liquidity = st ? st.market.totalSupplyAssets - st.market.totalBorrowAssets : undefined;
+  const overLiquidity = liquidity !== undefined && borrowAmt > liquidity;
   /** Why the review can't open yet, in plain words (undefined = ready). */
   const blocker = !w.address
     ? "Connect a wallet to borrow."
@@ -137,10 +140,12 @@ export function useBorrowFlow(symbol: string, mode: BorrowMode) {
           ? "That's more USDG than you hold."
           : pv && !pv.opensOk
             ? "Not enough collateral: the health factor 24 hours from now would be below 1.10. Add collateral or borrow less."
+            : overLiquidity
+            ? `Only ${formatUnits(liquidity!, 18).replace(/(\.\d{4})\d+$/, "$1")} ${symbol} can be borrowed right now. Borrow less, or wait for lenders or the allocator to add more.`
             : mode === "short" && !pv?.swap
               ? "Getting a swap quote…"
               : undefined;
-  const disabled = !w.ready || tripped || !pv || borrowAmt === 0n || !pv.opensOk || (mode === "short" && !pv.swap) || steps.busy || overBalance;
+  const disabled = !w.ready || tripped || !pv || borrowAmt === 0n || !pv.opensOk || (mode === "short" && !pv.swap) || steps.busy || overBalance || overLiquidity;
 
   return {symbol, mode, verb, collateral, setCollateral, amount, setAmount, targetHf, applyTarget, compound, setCompound, st, u, pv, quote, requirement, collIn, borrowAmt, tripped, guardReasons, disabled, blocker, ready: w.ready, address: w.address, plan, steps, confirm, loading: chainQ.isPending};
 }
