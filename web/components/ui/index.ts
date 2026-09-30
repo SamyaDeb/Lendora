@@ -21,3 +21,4 @@ export {ApyHero, type ApyWindow} from "./ApyHero";
 export {YieldSplitBar} from "./YieldSplitBar";
 export {EarnEstimate} from "./EarnEstimate";
 export {CountdownBadge} from "./CountdownBadge";
+export {DataDelayed} from "./DataDelayed";

@@ -6,7 +6,7 @@ import type {HistoryPoint, Market} from "@/lib/api";
 import {availableToBorrow, borrowEase, totals, U_MAX} from "@/lib/market";
 import {num, usd} from "@/lib/format";
 import {cn} from "@/lib/cn";
-import {AssetIcon, Button, ButtonLink, EaseBadge, EmptyState, Icon, NumberTicker, Segmented, Skeleton, Sparkline, Stat, UtilBar} from "@/components/ui";
+import {AssetIcon, Button, DataDelayed, ButtonLink, EaseBadge, EmptyState, Icon, NumberTicker, Segmented, Skeleton, Sparkline, Stat, UtilBar} from "@/components/ui";
 
 type Key = "symbol" | "price" | "available" | "utilization" | "supplyApy" | "borrowApr";
 type Filter = "all" | "borrowable" | "paused";
@@ -52,6 +52,7 @@ export function MarketsBoardView({markets, histories, asOf, error, onRetry, earn
 
   return (
     <div className="space-y-6">
+      <DataDelayed asOfTime={asOf?.time} />
       <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div className="max-w-xl">
           <h1 className="t-display">Stock lending markets</h1>

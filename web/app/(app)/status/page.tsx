@@ -1,5 +1,5 @@
 import {safe, serverApi} from "@/lib/api";
-import {Notice, StatusBadge} from "@/components/ui";
+import {DataDelayed, Notice, StatusBadge} from "@/components/ui";
 import {guardCodeText} from "@/lib/guard";
 
 export const metadata = {title: "Status"};
@@ -12,8 +12,9 @@ export default async function StatusPage() {
   return (
     <div className="space-y-4">
       <h1 className="t-display">Status</h1>
+      <DataDelayed asOfTime={s.asOfTime} />
       <p className="text-[15px] text-muted">
-        Chain {d.chainId}. Indexer at block {d.indexer.headBlock}
+        Chain {d.chainId}. Indexer at block {d.indexer.headBlock} (block time {s.asOfTime.slice(11, 19)} UTC)
         {d.indexer.lagBlocks !== null ? `, ${d.indexer.lagBlocks} blocks behind the chain` : ""}. Final up to block {d.indexer.finalizedBlock}.
       </p>
       <div className="panel overflow-x-auto">

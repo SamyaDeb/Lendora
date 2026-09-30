@@ -7,7 +7,7 @@ import {browserApi, type HistoryPoint, type MarketDetail} from "@/lib/api";
 import {availableToBorrow, borrowEase} from "@/lib/market";
 import {et, num, pct, usd} from "@/lib/format";
 import {cn} from "@/lib/cn";
-import {Address, AssetIcon, Button, EaseBadge, EmptyState, Icon, Notice, NumberTicker, Skeleton, Stat, StatusBadge, UtilBar, useMediaQuery} from "@/components/ui";
+import {Address, AssetIcon, Button, DataDelayed, EaseBadge, EmptyState, Icon, Notice, NumberTicker, Skeleton, Stat, StatusBadge, UtilBar, useMediaQuery} from "@/components/ui";
 import {MarketCharts} from "@/components/charts/MarketCharts";
 import {ActionPanel, type ActionTab} from "./ActionPanel";
 
@@ -42,6 +42,7 @@ export function StockView({symbol, initial, hourly, daily, initialTab}: {symbol:
         </Link>{" "}
         / <span className="text-dim">{symbol}</span>
       </nav>
+      <DataDelayed asOfTime={q.data?.asOfTime} />
 
       <header className="flex flex-wrap items-center gap-x-5 gap-y-3">
         <AssetIcon ticker={symbol} size="lg" />
