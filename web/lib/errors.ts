@@ -165,6 +165,9 @@ export function explainError(e: unknown): string {
   }
   const msg = (err?.shortMessage ?? err?.message ?? String(e)).toString();
   if (/User rejected|User denied|rejected the request/i.test(msg)) return "You cancelled the request in your wallet.";
+  // T38: JSON-RPC failures from the node or the wallet (not a revert): say so, and that nothing went out.
+  if (/^(Missing or invalid parameters|An internal error was received|An unknown RPC error occurred|Internal JSON-RPC error|HTTP request failed|The request took too long|Requested resource not available)/i.test(msg))
+    return `The network or your wallet couldn't process the request, so nothing was sent. Try again in a moment (${msg.replace(/\.$/, "").toLowerCase()}).`;
   const reason = /reverted with reason:?\s*(.*)$/im.exec(msg)?.[1] ?? /reason:\s*"?([^"\n]+)"?/i.exec(msg)?.[1];
   if (reason) return explainString(reason.trim().replace(/\.$/, ""));
   return msg.split("\n")[0];

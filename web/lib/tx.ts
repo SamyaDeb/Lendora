@@ -106,7 +106,16 @@ export async function simulateAndSend(pc: PublicClient, wc: WalletClient, accoun
   const withHeadroom = (estimate * (100n + GAS_HEADROOM_PCT)) / 100n;
   const gas = minGas !== undefined && minGas > withHeadroom ? minGas : withHeadroom;
   const hash = await wc.writeContract(Object.assign({}, request, {gas}) as never);
-  const receipt = await pc.waitForTransactionReceipt({hash, pollingInterval: 250});
+  // T38: once sent, ride out short RPC errors while waiting; if the network still doesn't answer, say it was sent.
+  let receipt: Awaited<ReturnType<PublicClient["waitForTransactionReceipt"]>> | undefined;
+  for (let i = 0; !receipt; i++) {
+    try {
+      receipt = await pc.waitForTransactionReceipt({hash, pollingInterval: 250});
+    } catch {
+      if (i >= 3) throw new Error(`Your transaction was sent (${hash.slice(0, 10)}…) but the network didn't report its result. Check your portfolio before trying again.`);
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+  }
   if (receipt.status !== "success") {
     if (receipt.gasUsed * 100n >= gas * 97n) throw new Error("The transaction ran out of gas: the market changed while it was pending (liquidity moved, or the network fee rose). Nothing was lost but the fee; retry.");
     // Re-simulate at the latest state to surface the reason.

@@ -64,4 +64,10 @@ describe("APP-R3 revert reasons in plain language", () => {
     expect(explainError(mismatch)).toMatch(/^Your wallet is on another network/);
   });
 
+  it("T38 a generic RPC or wallet error (-32602, -32603, unknown) says nothing was sent and to retry, in words", () => {
+    for (const [code, m] of [[-32602, "Missing or invalid parameters."], [-32603, "An internal error was received."], [-32000, "An unknown RPC error occurred."]] as const) {
+      const e = Object.assign(new Error(m), {code, shortMessage: m});
+      expect(explainError(e), m).toMatch(/^The network or your wallet couldn't process the request, so nothing was sent\. Try again in a moment/);
+    }
+  });
 });

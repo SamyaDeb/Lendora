@@ -55,5 +55,15 @@ describe("gas headroom for the L1 data fee (Arbitrum Orbit)", () => {
     await expect(simulateAndSend(pc, wc, account, call)).rejects.toThrow(/ran out of gas: the market changed while it was pending/i);
   });
 
+  it("T38 the network failing after the send says it was sent (check before retrying), not 'nothing was sent'", async () => {
+    const {pc, wc} = clients(300_000n, {status: "success", gasUsed: 1n});
+    (pc.waitForTransactionReceipt as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("HTTP request failed."));
+    await expect(simulateAndSend(pc, wc, account, call)).rejects.toThrow(/was sent \(0xhash/);
+  }, 15_000);
 
+  it("T38 a short RPC error while waiting for the receipt is ridden out (46630 row 13: withdraw sent, one poll failed)", async () => {
+    const {pc, wc} = clients(300_000n, {status: "success", gasUsed: 1n});
+    (pc.waitForTransactionReceipt as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("HTTP request failed.")).mockResolvedValueOnce({status: "success", gasUsed: 1n});
+    await expect(simulateAndSend(pc, wc, account, call)).resolves.toBe("0xhash");
+  });
 });
