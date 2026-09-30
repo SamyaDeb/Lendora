@@ -5,10 +5,27 @@ import {cn} from "@/lib/cn";
 import {num} from "@/lib/format";
 import {AssetIcon} from "./AssetIcon";
 
+/**
+ * The amount as typed or pasted, normalized (T27): spaces dropped; "1,000" and "12,345.6" use commas as thousands
+ * separators; a lone comma followed by other than three digits ("12,5") is a decimal comma. Undefined for anything
+ * else, and for more decimals than the token has (never rounded).
+ */
+export function normalizeAmount(s: string): string | undefined {
+  let t = s.replace(/[\s\u00a0\u202f]/g, "");
+  if (t.includes(",")) {
+    if (/^\d{1,3}(,\d{3})+(\.\d*)?$/.test(t)) t = t.replace(/,/g, "");
+    else if (/^\d*,\d*$/.test(t)) t = t.replace(",", ".");
+    else return undefined;
+  }
+  if (t === "" || t === "." || !/^\d*\.?\d*$/.test(t)) return undefined;
+  return t;
+}
+
 export function parseAmount(s: string, decimals: number): bigint | undefined {
-  if (!/^\d*\.?\d*$/.test(s.trim()) || s.trim() === "" || s.trim() === ".") return undefined;
+  const t = normalizeAmount(s);
+  if (t === undefined || (t.split(".")[1] ?? "").length > decimals) return undefined;
   try {
-    return parseUnits(s.trim(), decimals);
+    return parseUnits(t, decimals);
   } catch {
     return undefined;
   }
@@ -37,7 +54,9 @@ export function AmountInput(p: {
   const parsed = parseAmount(p.value, p.decimals);
   const over = parsed !== undefined && p.max !== undefined && parsed > p.max;
   const bad = p.value !== "" && parsed === undefined;
-  const error = p.error ?? (bad ? "Enter a number, like 12.5." : over ? `That's more than your ${(p.maxLabel ?? "balance").toLowerCase()}.` : undefined);
+  const norm = normalizeAmount(p.value);
+  const tooPrecise = bad && norm !== undefined && (norm.split(".")[1] ?? "").length > p.decimals;
+  const error = p.error ?? (tooPrecise ? `${p.unit} has ${p.decimals} decimal places. Use fewer digits after the point.` : bad ? "Enter a number, like 1,000 or 12.5." : over ? `That's more than your ${(p.maxLabel ?? "balance").toLowerCase()}.` : undefined);
   const usd = parsed !== undefined && p.usdPrice ? Number(formatUnits(parsed, p.decimals)) * p.usdPrice : undefined;
   const maxText = p.max !== undefined ? Number(formatUnits(p.max, p.decimals)).toLocaleString("en-US", {maximumFractionDigits: 4}) : undefined;
   const describedBy = [p.hint ? `${id}-hint` : "", error ? `${id}-err` : ""].filter(Boolean).join(" ") || undefined;
@@ -70,7 +89,7 @@ export function AmountInput(p: {
             placeholder="0.00"
             value={p.value}
             disabled={p.disabled}
-            onChange={(e) => p.onChange(e.target.value.replace(",", "."))}
+            onChange={(e) => p.onChange(e.target.value)}
             aria-invalid={Boolean(error)}
             aria-describedby={describedBy}
             data-testid={p.testId}
