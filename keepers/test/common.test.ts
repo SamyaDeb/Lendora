@@ -4,7 +4,7 @@ import {anvil} from "viem/chains";
 import {loadConfig} from "../src/common/config.js";
 import {Health} from "../src/common/health.js";
 import {DryRunSender, envKeySender} from "../src/common/signer.js";
-import {runLoop} from "../src/common/loop.js";
+import {runLoop, runService} from "../src/common/loop.js";
 import {chainFor} from "../src/common/chain.js";
 import {assertMirrorAllowed} from "../src/feedMirror/mirror.js";
 import {liquidatorRecipient} from "../src/liquidator/liquidator.js";
@@ -91,6 +91,23 @@ describe("keeper plumbing", () => {
     );
     expect(n).toBe(3);
     expect(errors).toHaveLength(1);
+  });
+
+  it("SIGTERM ends the loop, runs cleanup and exits (the /health server no longer keeps the process alive)", async () => {
+    const {EventEmitter} = await import("node:events");
+    const proc = new EventEmitter();
+    const order: string[] = [];
+    let n = 0;
+    await runService(
+      async () => {
+        n++;
+        if (n === 2) proc.emit("SIGTERM");
+      },
+      1,
+      {proc, cleanup: async () => void order.push("cleanup"), exit: (code) => void order.push(`exit ${code}`)},
+    );
+    expect(n).toBe(2);
+    expect(order).toEqual(["cleanup", "exit 0"]);
   });
 });
 

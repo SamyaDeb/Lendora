@@ -3,7 +3,7 @@ import type {Server} from "node:http";
 import {serve} from "@hono/node-server";
 import pg from "pg";
 import {createPublicClient, http, type PublicClient} from "viem";
-import {resolveDeployment, restrictedListFromEnv, TERMS_VERSION, type Address} from "@stockline/sdk";
+import {logPoolErrors, resolveDeployment, restrictedListFromEnv, TERMS_VERSION, type Address} from "@stockline/sdk";
 import {envKeyTypedDataSigner, remoteTypedDataSigner, type TypedDataSigner} from "@stockline/keepers/signer";
 import {createComplianceApp} from "./app.js";
 import {StaticRangeReputation, type IpReputation, type SanctionsScreen} from "./checks.js";
@@ -77,7 +77,7 @@ export async function startCompliance(env: NodeJS.ProcessEnv = process.env, o: C
   const sanctions = o.sanctions ?? sanctionsFromEnv(env);
   console.log(`[compliance] network ${raw} · sanctions provider ${sanctions.name ?? "custom"}`); // CP-R3: the provider in the startup log, never the key
   const client = createPublicClient({transport: http(env.RPC_URL ?? "http://127.0.0.1:8545")}) as PublicClient;
-  const pool = new pg.Pool({connectionString: env.DATABASE_URL, max: 5});
+  const pool = logPoolErrors(new pg.Pool({connectionString: env.DATABASE_URL, max: 5}), "compliance", env);
   const store = new TermsStore(pool, env.COMPLIANCE_SCHEMA ?? "stockline_compliance");
   await store.migrate();
   const terms = loadTerms(env.TERMS_VERSION ?? TERMS_VERSION);

@@ -23,3 +23,32 @@ export async function runLoop(
     });
   }
 }
+
+/**
+ * A keeper's main loop until SIGINT/SIGTERM: the current tick finishes, `cleanup` runs, then the process exits. Without
+ * the explicit exit the `/health` server (and pg pools) kept the process alive after the loop ended, so
+ * `dev-testnet.sh --stop` and platform restarts had to SIGKILL every keeper after their grace period.
+ */
+export async function runService(
+  tick: () => Promise<void>,
+  intervalMs: number,
+  o: {
+    cleanup?: () => Promise<void>;
+    proc?: {on(event: "SIGINT" | "SIGTERM", listener: () => void): unknown};
+    exit?: (code: number) => void;
+  } = {},
+): Promise<void> {
+  const abort = new AbortController();
+  const proc = o.proc ?? process;
+  proc.on("SIGINT", () => abort.abort());
+  proc.on("SIGTERM", () => abort.abort());
+  await runLoop(tick, intervalMs, abort.signal);
+  let code = 0;
+  try {
+    await o.cleanup?.();
+  } catch (e) {
+    console.error(safeErrorLine(e, process.env));
+    code = 1;
+  }
+  (o.exit ?? process.exit)(code);
+}

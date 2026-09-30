@@ -4,8 +4,8 @@ import {reconcile} from "@stockline/indexer/reconcile";
 import {loadConfig} from "../common/config.js";
 import {publicClient} from "../common/chain.js";
 import {Health} from "../common/health.js";
-import {runLoop} from "../common/loop.js";
-import {getExternal, isRobinhoodMainnet} from "@stockline/sdk";
+import {runService} from "../common/loop.js";
+import {getExternal, isRobinhoodMainnet, logPoolErrors} from "@stockline/sdk";
 import {IndexerBorrowers, Monitor} from "./monitor.js";
 import {mockAggregatorQuoter, uniswapQuoter} from "./quoter.js";
 import {pagersFromEnv} from "./pager.js";
@@ -22,7 +22,7 @@ import {MonitorStore} from "./store.js";
  */
 const cfg = loadConfig();
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
-const pool = new pg.Pool({connectionString: process.env.DATABASE_URL, max: 5});
+const pool = logPoolErrors(new pg.Pool({connectionString: process.env.DATABASE_URL, max: 5}), "monitor", process.env);
 const store = new MonitorStore(pool, process.env.MONITOR_SCHEMA ?? "stockline_monitor");
 await store.migrate();
 const client = publicClient(cfg.rpcUrl, cfg.deploymentKey, cfg.archiveRpcUrl);
@@ -68,10 +68,6 @@ const monitor = new Monitor(
   health,
 );
 serve({fetch: monitorApp(store, health, Object.keys(cfg.deployment.stocks), pagers).fetch, port: Number(process.env.PORT ?? 42073), hostname: process.env.HOST ?? "0.0.0.0"});
-const abort = new AbortController();
-process.on("SIGINT", () => abort.abort());
-process.on("SIGTERM", () => abort.abort());
 const every = Number(process.env.MONITOR_INTERVAL_MS ?? 2000);
 console.log(`[monitor] read-only on ${String(cfg.deploymentKey)}, every ${every} ms, pagers: ${pagers.map((p) => p.name).join(", ")}`);
-await runLoop(() => monitor.tick().then(() => undefined), every, abort.signal);
-await pool.end();
+await runService(() => monitor.tick().then(() => undefined), every, {cleanup: () => pool.end()});

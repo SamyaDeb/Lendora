@@ -3,7 +3,7 @@ import {loadConfig} from "../common/config.js";
 import {chainFor, publicClient} from "../common/chain.js";
 import {senderFromConfig} from "../common/signer.js";
 import {Health} from "../common/health.js";
-import {runLoop} from "../common/loop.js";
+import {runService} from "../common/loop.js";
 import {defaultFeeConverterOptions, FeeConverterBot, mockDexSellBuilder, universalRouterSellBuilder} from "./feeConverter.js";
 
 /** FE-R4 fee-converter keeper. Dry run by default; `/health` per stock (MON-R9 `KEEPER_DOWN`: FEE_CONVERTER). */
@@ -29,8 +29,5 @@ const interval = Number(env.INTERVAL_MS ?? 3_600_000);
 const health = new Health(Math.max(cfg.maxStaleMs, 3 * interval));
 health.serve(cfg.healthPort);
 const bot = new FeeConverterBot(client, sender, d, sell, opts, health);
-const abort = new AbortController();
-process.on("SIGINT", () => abort.abort());
-process.on("SIGTERM", () => abort.abort());
 console.log(`[fee-converter] ${cfg.dryRun ? "DRY RUN" : "LIVE"} on ${String(cfg.deploymentKey)} (${sender.kind}), every ${interval} ms`);
-await runLoop(() => bot.tick().then(() => undefined), interval, abort.signal);
+await runService(() => bot.tick().then(() => undefined), interval);

@@ -3,7 +3,7 @@ import {loadConfig} from "../common/config.js";
 import {chainFor, publicClient} from "../common/chain.js";
 import {senderFromConfig, typedDataSignerFromEnv} from "../common/signer.js";
 import {Health} from "../common/health.js";
-import {runLoop} from "../common/loop.js";
+import {runService} from "../common/loop.js";
 import {loadNavEnv} from "../common/dnEnv.js";
 import {cosignerApp} from "./server.js";
 import {HttpCosigner, LighterAccountSource, MockVenueSource, NavCosigner, NavReporter, sleeveMarkets, type EquitySource} from "./navReporter.js";
@@ -41,9 +41,6 @@ if (nav.NAV_MODE === "cosigner") {
   // NAV_REPORT_EVERY_MS is bounded to 14 minutes: under the oracle's 15-minute max age (DN-R5).
   const opts = {everyMs: nav.NAV_REPORT_EVERY_MS, moveBps: BigInt(nav.NAV_REPORT_MOVE_BPS)};
   const bot = new NavReporter(client, sender, signer, d, source, chain.id, cosigner, opts, health);
-  const abort = new AbortController();
-  process.on("SIGINT", () => abort.abort());
-  process.on("SIGTERM", () => abort.abort());
   console.log(`[nav-reporter] ${cfg.dryRun ? "DRY RUN" : "LIVE"} on ${String(cfg.deploymentKey)}, signer ${signer.address} (${signer.kind}), source ${source.name}, cosigner ${cosigner ? "on" : "off"}`);
-  await runLoop(() => bot.tick().then(() => undefined), nav.INTERVAL_MS, abort.signal);
+  await runService(() => bot.tick().then(() => undefined), nav.INTERVAL_MS);
 }

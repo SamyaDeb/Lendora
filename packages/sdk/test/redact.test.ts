@@ -29,3 +29,18 @@ describe("OFF-1 redactSecrets: no secret in logs, errors or /health", () => {
     expect(safeErrorLine("x".repeat(1000), {}, 50)).toHaveLength(51);
   });
 });
+
+describe("logPoolErrors: an idle pg client's error never kills the service", () => {
+  it("attaches an 'error' listener that logs one redacted line instead of throwing", async () => {
+    const {EventEmitter} = await import("node:events");
+    const {logPoolErrors} = await import("../src/redact.js");
+    const pool = new EventEmitter();
+    const lines: string[] = [];
+    expect(logPoolErrors(pool, "alerts", {DATABASE_URL: "postgres://app:hunter2hunter2@db:5432/x"}, (l) => lines.push(l))).toBe(pool);
+    // Without a listener, EventEmitter throws on 'error' (the crash seen on 46630: "Connection terminated unexpectedly").
+    expect(() => pool.emit("error", new Error("Connection terminated unexpectedly to postgres://app:hunter2hunter2@db:5432/x"))).not.toThrow();
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/^\[alerts\] postgres idle client error: Error: Connection terminated unexpectedly/);
+    expect(lines[0]).not.toContain("hunter2");
+  });
+});

@@ -3,7 +3,7 @@ import {loadConfig} from "../common/config.js";
 import {chainFor, publicClient} from "../common/chain.js";
 import {senderFromConfig, type TxSender} from "../common/signer.js";
 import {Health} from "../common/health.js";
-import {runLoop} from "../common/loop.js";
+import {runService} from "../common/loop.js";
 import {LiquidatorBot, liquidatorRecipient, mockDexBuilder, universalRouterBuilder} from "./liquidator.js";
 
 const cfg = loadConfig();
@@ -23,8 +23,5 @@ const bot = new LiquidatorBot(client, sender, cfg.deployment, swap, recipient, {
   minProfit: BigInt(process.env.LIQUIDATOR_MIN_PROFIT ?? 1_000_000),
   fromBlock: BigInt(process.env.LIQUIDATOR_FROM_BLOCK ?? 0),
 }, health);
-const abort = new AbortController();
-process.on("SIGINT", () => abort.abort());
-process.on("SIGTERM", () => abort.abort());
 console.log(`[liquidator] ${cfg.dryRun ? "DRY RUN" : "LIVE"} on ${String(cfg.deploymentKey)}, every ${cfg.intervalMs} ms`);
-await runLoop(() => bot.tick().then(() => undefined), cfg.intervalMs, abort.signal);
+await runService(() => bot.tick().then(() => undefined), cfg.intervalMs);

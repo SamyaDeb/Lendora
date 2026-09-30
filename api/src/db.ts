@@ -1,4 +1,5 @@
 import pg from "pg";
+import {logPoolErrors} from "@stockline/sdk";
 
 /**
  * Read-only access to the indexer's tables (through the `--views-schema` views in production) plus the API's own
@@ -29,7 +30,7 @@ export class IndexerDb {
   private readonly a: string;
 
   constructor(databaseUrl: string, indexerSchema: string, apiSchema: string, max = 20) {
-    this.pool = new pg.Pool({connectionString: databaseUrl, max});
+    this.pool = logPoolErrors(new pg.Pool({connectionString: databaseUrl, max}), "api", process.env);
     this.s = ident(indexerSchema);
     this.a = ident(apiSchema);
   }

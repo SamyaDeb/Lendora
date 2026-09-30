@@ -32,3 +32,19 @@ export function safeErrorLine(e: unknown, env: Record<string, string | undefined
     .join(" | ");
   return first.length > max ? `${first.slice(0, max)}…` : first;
 }
+
+/**
+ * A `pg.Pool` emits `'error'` when an idle client's connection drops (Postgres restart, network blip); with no listener
+ * Node throws it and the whole service dies (46630, 2026-09-30: alerts, "Connection terminated unexpectedly"). The pool
+ * discards that client and opens a new one on the next query, so logging is enough. Typed structurally so the SDK does
+ * not depend on `pg`.
+ */
+export function logPoolErrors<P extends {on(event: "error", listener: (e: Error) => void): unknown}>(
+  pool: P,
+  tag: string,
+  env: Record<string, string | undefined> = {},
+  log: (line: string) => void = console.error,
+): P {
+  pool.on("error", (e) => log(`[${tag}] postgres idle client error: ${safeErrorLine(e, env)}`));
+  return pool;
+}
