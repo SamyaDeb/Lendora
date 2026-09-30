@@ -40,4 +40,8 @@ describe("T27 amounts as people type and paste them", () => {
     fireEvent.change(input, {target: {value: "0.0000005"}});
     expect(screen.getByRole("alert").textContent).toMatch(/6 decimal places/);
   });
+  it("T40 over the max reads once: \"more than your balance\" (was \"your your balance\")", () => {
+    render(<AmountInput label="Amount" value="5" onChange={() => {}} decimals={6} unit="USDG" max={1_000_000n} maxLabel="Your balance" />);
+    expect(screen.getAllByRole("alert").map((a) => a.textContent)).toContain("That's more than your balance.");
+  });
 });

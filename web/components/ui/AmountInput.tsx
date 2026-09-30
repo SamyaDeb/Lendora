@@ -56,7 +56,7 @@ export function AmountInput(p: {
   const bad = p.value !== "" && parsed === undefined;
   const norm = normalizeAmount(p.value);
   const tooPrecise = bad && norm !== undefined && (norm.split(".")[1] ?? "").length > p.decimals;
-  const error = p.error ?? (tooPrecise ? `${p.unit} has ${p.decimals} decimal places. Use fewer digits after the point.` : bad ? "Enter a number, like 1,000 or 12.5." : over ? `That's more than your ${(p.maxLabel ?? "balance").toLowerCase()}.` : undefined);
+  const error = p.error ?? (tooPrecise ? `${p.unit} has ${p.decimals} decimal places. Use fewer digits after the point.` : bad ? "Enter a number, like 1,000 or 12.5." : over ? `That's more than your ${(p.maxLabel ?? "balance").toLowerCase().replace(/^your /, "")}.` : undefined);
   const usd = parsed !== undefined && p.usdPrice ? Number(formatUnits(parsed, p.decimals)) * p.usdPrice : undefined;
   const maxText = p.max !== undefined ? Number(formatUnits(p.max, p.decimals)).toLocaleString("en-US", {maximumFractionDigits: 4}) : undefined;
   const describedBy = [p.hint ? `${id}-hint` : "", error ? `${id}-err` : ""].filter(Boolean).join(" ") || undefined;
