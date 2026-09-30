@@ -1,5 +1,5 @@
 "use client";
-import {useEffect, useState, type ReactNode} from "react";
+import {useEffect, useRef, useState, type ReactNode} from "react";
 import {formatUnits} from "viem";
 import type {Preview} from "@/lib/preview";
 import type {StepState} from "@/lib/tx";
@@ -59,6 +59,10 @@ export function ReviewSheet({
 }) {
   const [done, setDone] = useState(false);
   const [started, setStarted] = useState(false);
+  // T32: set synchronously on the first click. A flow's `busy` only turns on after its first await (e.g. the lend
+  // flow's previewDeposit read), so a double click used to start it twice: two sends for one intent.
+  const running = useRef(false);
+  const [starting, setStarting] = useState(false);
   // The flow clears its inputs on success, so the success copy is captured when Confirm is pressed.
   const [snap, setSnap] = useState<{title: string; body?: ReactNode}>({title: successTitle});
   useEffect(() => {
@@ -71,7 +75,7 @@ export function ReviewSheet({
   const liqClose = risk ? liq(risk.pv.liqPriceAtClose) : undefined;
   const missingLiq = requireLiquidationPrice && liqNow === undefined;
   const shown = started && steps.length ? steps : plan;
-  const canConfirm = !busy && !done && !missingLiq && !blocker;
+  const canConfirm = !busy && !starting && !done && !missingLiq && !blocker;
 
   return (
     <Sheet
@@ -99,13 +103,21 @@ export function ReviewSheet({
               className="w-full"
               disabled={!canConfirm}
               onClick={async () => {
+                if (running.current) return;
+                running.current = true;
+                setStarting(true);
                 setStarted(true);
                 setSnap({title: successTitle, body: successBody});
-                if (await onConfirm()) setDone(true);
+                try {
+                  if (await onConfirm()) setDone(true);
+                } finally {
+                  running.current = false;
+                  setStarting(false);
+                }
               }}
               data-testid="confirm"
             >
-              {busy ? "Confirm in your wallet…" : error ? `Try again: ${confirmLabel}` : confirmLabel}
+              {busy || starting ? "Confirm in your wallet…" : error ? `Try again: ${confirmLabel}` : confirmLabel}
             </Button>
           </div>
         )
@@ -177,7 +189,7 @@ export function ReviewSheet({
             <StepList steps={shown} />
           </section>
         )}
-        {error && !busy && <Notice tone="danger" title="That didn't go through">{error}</Notice>}
+        {error && !busy && !starting && <Notice tone="danger" title="That didn't go through">{error}</Notice>}
       </div>
     </Sheet>
   );
