@@ -1,5 +1,5 @@
 "use client";
-import {useCallback, useState} from "react";
+import {useCallback, useRef, useState} from "react";
 import type {Abi, PublicClient, WalletClient} from "viem";
 import {explainError} from "./errors";
 import {track} from "./analytics";
@@ -32,11 +32,16 @@ export function useSteps(funnel: string) {
   const [states, setStates] = useState<StepState[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  // T29: approvals and authorizations that went through in a failed run; "Try again" resumes after them instead of
+  // asking for them again (the allowance read may not have refreshed yet). Cleared on success and on reset.
+  const doneRef = useRef(new Set<string>());
 
   const run = useCallback(
-    async (steps: Step[]): Promise<boolean> => {
+    async (input: Step[]): Promise<boolean> => {
       setBusy(true);
       setError(undefined);
+      // Keyed by id and label: one card runs several actions whose approvals are for different tokens.
+      const steps = input.map((s) => (doneRef.current.has(`${s.id}:${s.label}`) && (s.kind === "approve" || s.kind === "authorize") ? {...s, skip: true} : s));
       const st: StepState[] = steps.map((s) => ({id: s.id, label: s.label, kind: s.kind, status: s.skip ? "skipped" : "pending"}));
       setStates([...st]);
       track("sign", {funnel});
@@ -48,6 +53,7 @@ export function useSteps(funnel: string) {
           try {
             await steps[i].run();
             st[i] = {...st[i], status: "done"};
+            doneRef.current.add(`${steps[i].id}:${steps[i].label}`);
           } catch (e) {
             const msg = explainError(e);
             st[i] = {...st[i], status: "failed", detail: msg};
@@ -58,6 +64,7 @@ export function useSteps(funnel: string) {
           setStates([...st]);
         }
         track("confirmed", {funnel});
+        doneRef.current.clear();
         return true;
       } finally {
         setBusy(false);
@@ -66,7 +73,7 @@ export function useSteps(funnel: string) {
     [funnel],
   );
 
-  return {states, busy, error, run, reset: () => (setStates([]), setError(undefined))};
+  return {states, busy, error, run, reset: () => (doneRef.current.clear(), setStates([]), setError(undefined))};
 }
 
 export interface Call {
