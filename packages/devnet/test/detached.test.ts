@@ -42,4 +42,30 @@ describe("detached services (scripts/lib/detached.sh)", () => {
     expect(alive(child)).toBe(false);
     expect(bash("detached_alive svc && echo yes || echo no", env).trim()).toBe("no");
   });
+
+  it("supervise restarts a service that exits and redacts URL paths (RPC keys) from its output (T16, T17)", () => {
+    const SUP = resolve(__dirname, "../../../scripts/lib/supervise.sh");
+    const dir = mkdtempSync(join(tmpdir(), "supervise-"));
+    const env = {RUN: dir, LOGS: dir, ROOT: "/", SUPERVISE_DELAY_SEC: "0.2"};
+    // Ponder prints the failing RPC URL with its key, then exits on an unhandled rejection (46630, DNS outage).
+    const svc = `echo run >> "${dir}/runs"; echo "URL: https://rpc.example.com/v2/SECRETKEY123 failed"; [ "$(wc -l < "${dir}/runs")" -ge 3 ] && exec sleep 300; exit 1`;
+    bash(`detached_start svc tmp X=1 -- "${SUP}" sh -c '${svc.replace(/'/g, "'\\''")}'`, env);
+    let runs = 0;
+    for (let i = 0; i < 100 && runs < 3; i++) {
+      try {
+        runs = readFileSync(join(dir, "runs"), "utf8").trim().split("\n").length;
+      } catch {
+        /* not started yet */
+      }
+      execFileSync("sleep", ["0.1"]);
+    }
+    expect(runs, "restarted after each exit").toBe(3);
+    const log = readFileSync(join(dir, "svc.log"), "utf8");
+    expect(log).not.toContain("SECRETKEY123");
+    expect(log).toContain("https://rpc.example.com/[redacted]");
+    expect(log).toMatch(/\[supervise\] exited \(1\), restarting/);
+    bash("detached_stop svc", env);
+    expect(bash("detached_alive svc && echo yes || echo no", env).trim()).toBe("no");
+  });
 });
+

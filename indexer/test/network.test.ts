@@ -11,4 +11,12 @@ describe("indexer network (MN-R6)", () => {
     expect(n.dexKind).toBe("uniswap");
     expect(networkConfig({STOCKLINE_NETWORK: "46630", RPC_URL: "http://x"}).dexKind).toBe("mock");
   });
+  it("T3 INDEXER_RPC_URL gives the indexer its own RPC; the archive fallback for pinned reads is kept", () => {
+    const shared = networkConfig({STOCKLINE_NETWORK: "46630", RPC_URL: "http://shared", RPC_URL_ARCHIVE: "http://archive"});
+    expect(shared.rpcUrl).toBe("http://shared");
+    const own = networkConfig({STOCKLINE_NETWORK: "46630", RPC_URL: "http://shared", INDEXER_RPC_URL: "http://indexer", RPC_URL_ARCHIVE: "http://archive"});
+    expect(own.rpcUrl).toBe("http://indexer");
+    expect(own.archiveRpcUrl).toBe("http://archive");
+    expect(networkConfig({STOCKLINE_NETWORK: "46630", RPC_URL: "http://shared", INDEXER_RPC_URL: ""}).rpcUrl).toBe("http://shared");
+  });
 });

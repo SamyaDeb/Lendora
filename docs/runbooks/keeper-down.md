@@ -34,7 +34,12 @@ difference between indexed and onchain values.
   `Unable to find available JSON-RPC provider … rate_limit=[3…]` in the log is Ponder's adaptive limiter stuck at its
   3 req/s floor after a 429 burst (seen on 46630 after an overnight outage: the catch-up hit 429s, then ~1 block/s
   indexed against ~4–5 produced). A restart resets the limiter; the lasting fix is an RPC for the indexer that is not
-  shared with the keepers (or a paid plan). While the views are rebuilt the API answers 503 with Retry-After, not 500.
+  shared with the keepers: set `INDEXER_RPC_URL` (T3; `scripts/dev-testnet.sh` and the indexer config read it, pinned
+  reads keep the archive fallback). While the views are rebuilt the API answers 503 with Retry-After, not 500.
+- Indexer **process gone** (`/ready` refused, no Ponder in `ps`): Ponder exits on an unhandled rejection when every
+  RPC fails (host DNS outage, 46630). Locally it runs under `scripts/lib/supervise.sh`, which restarts it with backoff
+  (`[supervise] exited …` in its log); on a platform, the service's restart policy must be "always". It resumes from
+  its checkpoint.
   Reconciliation diff → read the diff
   (`INDEXER_LAG:reconcile` details): known cause A29 (a donation to a vault moves idle without an event) is display-only;
   anything else → resync the indexer into a new schema and switch the API's `INDEXER_SCHEMA`.

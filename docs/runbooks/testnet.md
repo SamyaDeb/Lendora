@@ -91,6 +91,16 @@ blocks, which breaks the indexer, the monitor and the DN keepers); reads pinned 
 NAV co-signer's checks) fall back to `ROBINHOOD_TESTNET_RPC_URL` through `RPC_URL_ARCHIVE`, since the public endpoint
 keeps no historical state (A24). Smoke from a plain tester wallet: [testnet-smoke.md](testnet-smoke.md).
 
+**Indexer RPC (T3, 2026-09-30).** Set `INDEXER_RPC_URL` (a 46630 endpoint used only by the indexer: dedicated or a
+paid plan, never the keepers' endpoint) so a catch-up after an outage does not compete with the keepers for the shared
+endpoint's rate limit. The script checks it is chain 46630, and pinned reads still fall back to `ROBINHOOD_TESTNET_RPC_URL`
+(A24). Unset, the indexer shares the services' RPC and the start log says so. The indexer runs under
+`scripts/lib/supervise.sh`: it is restarted when Ponder exits (it does when every RPC fails for a while) and RPC URL
+paths are redacted from its log (T16, T17). Drill on the shared public RPC, 2026-09-30: 30 min stopped (9,214 blocks),
+back under 20 blocks within 2 min of the restart and held at 3–16 for the samples taken; a host DNS outage then killed
+Ponder (50,347 blocks behind, which is what T16 fixes); after the restart it closed 50k blocks in about 6 min, and a
+killed Ponder was restarted by the supervisor in 5 s ([testnet-issues.md](testnet-issues.md) T3).
+
 **Phase 3–4 contracts on the existing deployment** (each after the owner's go; the deployer needs ~0.0007 ETH at
 0.02 gwei for both):
 

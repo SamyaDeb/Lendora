@@ -16,7 +16,8 @@
 # `dnVault`): NAV_COSIGNER_KEY (the second NAV signer, testnet-only key) and COSIGNER_TOKEN (>= 32 chars).
 # Optional: STOCKLINE_SERVICES_RPC_URL (the services' RPC; default ROBINHOOD_TESTNET_RPC_URL — a free-tier provider
 # that caps eth_getLogs, e.g. Alchemy's 10 blocks, breaks the indexer, monitor and DN keepers: use the public endpoint
-# https://rpc.testnet.chain.robinhood.com or a paid plan), GEO_STATIC_COUNTRY (web, default DE), STOCKLINE_WEB_RPC_URL (browser RPC, default the public endpoint),
+# https://rpc.testnet.chain.robinhood.com or a paid plan), INDEXER_RPC_URL (the indexer's own 46630 RPC, T3; default the
+# services' RPC), GEO_STATIC_COUNTRY (web, default DE), STOCKLINE_WEB_RPC_URL (browser RPC, default the public endpoint),
 # SANCTIONS_DENY_LIST (default: the `sanctioned` test user in .dev/testnet-users.json), GAS_BURN_WEI_PER_DAY.
 set -euo pipefail
 
@@ -134,8 +135,21 @@ ARCHIVE=""; [ "$RPC" = "$ROBINHOOD_TESTNET_RPC_URL" ] || ARCHIVE="$ROBINHOOD_TES
 COMMON=(STOCKLINE_NETWORK=46630 DEPLOYMENT_KEY=46630 RPC_URL="$RPC" RPC_URL_ARCHIVE="$ARCHIVE" DATABASE_URL="$DATABASE_URL" REDIS_URL="$REDIS_URL")
 INDEXER_VIEWS=stockline_testnet
 
-start indexer indexer "${COMMON[@]}" PONDER_POLLING_MS="${PONDER_POLLING_MS:-1000}" \
-  -- "$(bin indexer ponder)" start --schema stockline_46630 --views-schema "$INDEXER_VIEWS" --port 42069
+# T3: INDEXER_RPC_URL (optional) is the indexer's own RPC budget, not shared with the keepers: a catch-up after an
+# outage on the shared endpoint hits 429s and Ponder's limiter pins at 3 req/s. Pinned reads still fall back to the
+# archive endpoint (ROBINHOOD_TESTNET_RPC_URL) when the indexer's RPC is another one (A24).
+# T16/T17: under scripts/lib/supervise.sh, restarted when Ponder exits (it does when every RPC fails) and with RPC URL
+# paths redacted from its log (Ponder prints the URL with its key).
+IDX_RPC="${INDEXER_RPC_URL:-$RPC}"
+IDX_ARCHIVE=""; [ "$IDX_RPC" = "$ROBINHOOD_TESTNET_RPC_URL" ] || IDX_ARCHIVE="$ROBINHOOD_TESTNET_RPC_URL"
+if [ -n "${INDEXER_RPC_URL:-}" ]; then
+  [ "$(cast chain-id --rpc-url "$INDEXER_RPC_URL")" = 46630 ] || { echo "[dev] INDEXER_RPC_URL is not chain 46630; refusing" >&2; exit 1; }
+  echo "[dev] indexer on its own RPC (INDEXER_RPC_URL)"
+else
+  echo "[dev] indexer shares the services' RPC (INDEXER_RPC_URL unset; see docs/runbooks/testnet.md §2)"
+fi
+start indexer indexer "${COMMON[@]}" RPC_URL="$IDX_RPC" RPC_URL_ARCHIVE="$IDX_ARCHIVE" PONDER_POLLING_MS="${PONDER_POLLING_MS:-1000}" \
+  -- "$ROOT/scripts/lib/supervise.sh" "$(bin indexer ponder)" start --schema stockline_46630 --views-schema "$INDEXER_VIEWS" --port 42069
 start api api "${COMMON[@]}" INDEXER_SCHEMA="$INDEXER_VIEWS" API_SCHEMA=stockline_api_testnet PORT=42070 SIWE_DOMAIN=localhost:3000 \
   -- "$TSX" src/index.ts
 if [ "$READ_ONLY" = 0 ]; then

@@ -8,6 +8,7 @@ import {getExternal, isRobinhoodMainnet, resolveDeployment, type Address, type C
 export interface NetworkConfig {
   key: DeploymentKey;
   chainId: number;
+  /** `INDEXER_RPC_URL` when set (T3: the indexer's own RPC budget), else `RPC_URL`. */
   rpcUrl: string;
   /** Archive RPC for reads pinned to old blocks (`RPC_URL_ARCHIVE`, optional): tried after `rpcUrl` fails, e.g. the
    * public 46630 endpoint (no archive state, A24) + a free-tier archive provider that caps `eth_getLogs` ranges. */
@@ -72,7 +73,9 @@ export function networkConfig(env: NodeJS.ProcessEnv = process.env): NetworkConf
   return {
     key,
     chainId,
-    rpcUrl: env.RPC_URL ?? (key === 31337 ? "http://127.0.0.1:8545" : ""),
+    // T3: `INDEXER_RPC_URL` gives the indexer an RPC budget not shared with the keepers (its catch-up after an outage
+    // otherwise hits the shared endpoint's rate limit and Ponder's limiter pins at 3 req/s).
+    rpcUrl: env.INDEXER_RPC_URL || env.RPC_URL || (key === 31337 ? "http://127.0.0.1:8545" : ""),
     archiveRpcUrl: env.RPC_URL_ARCHIVE || undefined,
     wsUrl: env.WS_URL,
     d,
