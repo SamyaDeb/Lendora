@@ -59,7 +59,10 @@ SERVICES=(
   "web|http://127.0.0.1:3000/restricted"
 )
 
-alive() { [ -f "$RUN/$1.pid" ] && kill -0 "$(cat "$RUN/$1.pid")" 2>/dev/null; }
+LOGS="$DEV/logs"
+# shellcheck disable=SC1091
+. "$ROOT/scripts/lib/detached.sh"
+alive() { detached_alive "$1"; }
 code() { curl -s -o /dev/null -m 3 -w '%{http_code}' "$1" 2>/dev/null || true; }
 
 status() {
@@ -72,17 +75,7 @@ status() {
 }
 
 stop() {
-  for s in "${SERVICES[@]}"; do
-    local n="${s%%|*}"
-    if alive "$n"; then
-      local pid; pid="$(cat "$RUN/$n.pid")"
-      kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
-      for _ in $(seq 1 50); do kill -0 "$pid" 2>/dev/null || break; sleep 0.2; done
-      kill -KILL -- "-$pid" 2>/dev/null || true
-      echo "[dev] stopped $n"
-    fi
-    rm -f "$RUN/$n.pid"
-  done
+  for s in "${SERVICES[@]}"; do detached_stop "${s%%|*}"; done
 }
 
 case "$MODE" in
@@ -127,17 +120,8 @@ fi
 dev_infra
 
 # ---------------------------------------------------------------- services
-# start <name> <dir> [NAME=value ...] -- <cmd...>: detached in its own process group (perl setpgrp) with that env.
-start() {
-  local n="$1" dir="$2"; shift 2
-  local vars=()
-  while [ "$1" != -- ]; do vars+=("$1"); shift; done
-  shift
-  if alive "$n"; then echo "[dev] $n already running (pid $(cat "$RUN/$n.pid"))"; return; fi
-  # `export` is a builtin: values (the keeper key) never appear in a process argv.
-  (cd "$ROOT/$dir" && export "${vars[@]}" && nohup perl -e 'setpgrp(0,0); exec @ARGV or die "exec: $!"' "$@" >>"$DEV/logs/$n.log" 2>&1 & echo $! >"$RUN/$n.pid")
-  echo "[dev] $n → .dev/logs/$n.log"
-}
+# start <name> <dir> [NAME=value ...] -- <cmd...>: detached in its own process group (scripts/lib/detached.sh).
+start() { detached_start "$@"; }
 TSX="$ROOT/node_modules/.bin/tsx"
 [ -x "$TSX" ] || TSX="$ROOT/keepers/node_modules/.bin/tsx"
 # pnpm hoists the binaries to the root; a package-local .bin is used when it exists.
