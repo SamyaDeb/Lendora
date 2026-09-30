@@ -26,3 +26,24 @@ describe("T20 wrong-network prompt (APP-R1, 46630 browser pass row 24)", () => {
     expect(renderHook(() => useWrongNetwork()).result.current).toBe(false);
   });
 });
+
+describe("T24 rejecting the network switch while connecting says why (APP-R1)", () => {
+  it("wallet connected on another chain after a rejected switch → 'Switch to <chain> to continue'", async () => {
+    const {connectFailure} = await import("../components/shell/ConnectButton");
+    const rejected = Object.assign(new Error("User rejected the request."), {code: 4001});
+    const r = connectFailure(rejected, {accounts: ["0x8571B0664e409f4bB06f71B5dfb1D5Ea45D78282"], chainId: 1});
+    expect(r.title).toBe(`Switch to ${chain.name} to continue`);
+    expect(r.body).toMatch(/another network/);
+  });
+  it("the connection itself cancelled → 'cancelled', not the switch text", async () => {
+    const {connectFailure} = await import("../components/shell/ConnectButton");
+    const r = connectFailure(Object.assign(new Error("User rejected the request."), {code: 4001}), {accounts: [], chainId: 1});
+    expect(r.title).toMatch(/cancelled/i);
+  });
+  it("no wallet in the browser → try another option; anything else → its first line, never empty", async () => {
+    const {connectFailure} = await import("../components/shell/ConnectButton");
+    expect(connectFailure(new Error("ProviderNotFoundError: Provider not found.")).body).toMatch(/isn't available in this browser/);
+    const r = connectFailure(new Error("Something odd\nstack…"));
+    expect(r.body).toBe("Something odd");
+  });
+});

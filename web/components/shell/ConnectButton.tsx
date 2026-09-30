@@ -6,7 +6,7 @@ import {chain, explorer} from "@/lib/env";
 import {short} from "@/lib/format";
 import {track} from "@/lib/analytics";
 import {cn} from "@/lib/cn";
-import {Icon, Skeleton} from "@/components/ui";
+import {Icon, Skeleton, useToast} from "@/components/ui";
 
 const menuCls = "z-50 min-w-[240px] rounded-sm bg-overlay p-1.5 shadow-[var(--shadow-pop),inset_0_0_0_1px_var(--border-strong)]";
 const itemCls = "flex w-full cursor-pointer items-center gap-2.5 rounded-[7px] px-3 py-2.5 text-[14px] text-dim outline-none data-[highlighted]:bg-white/[0.07] data-[highlighted]:text-fg";
@@ -21,6 +21,19 @@ export function useWrongNetwork() {
   return Boolean(isConnected && connector && chainId !== undefined && chainId !== chain.id);
 }
 
+/**
+ * Why a connection attempt failed, in words (T24). Connecting also asks the wallet to switch to the app's chain; if the
+ * user rejects that, the wallet has granted accounts but stays on another chain, and wagmi reports a plain rejection.
+ */
+export function connectFailure(err: unknown, wallet?: {accounts: readonly string[]; chainId?: number}): {title: string; body: string} {
+  const msg = String((err as Error)?.message ?? err);
+  if (wallet && wallet.accounts.length > 0 && wallet.chainId !== undefined && wallet.chainId !== chain.id)
+    return {title: `Switch to ${chain.name} to continue`, body: `Your wallet is on another network, so it didn't connect. Connect again and approve the switch to ${chain.name} in your wallet.`};
+  if ((err as {code?: number})?.code === 4001 || /rejected|denied/i.test(msg)) return {title: "Connection cancelled", body: "You cancelled the request in your wallet. Nothing was connected."};
+  if (/not found|No provider|ProviderNotFound/i.test(msg)) return {title: "Wallet not found", body: "This wallet isn't available in this browser. Try another option."};
+  return {title: "Couldn't connect", body: msg.split("\n")[0]};
+}
+
 /** APP-R1: connect (injected, WalletConnect, Coinbase Wallet); wrong network → one-click switch; "unsupported wallet". */
 export function ConnectButton() {
   const {address, isConnected} = useAccount();
@@ -28,6 +41,7 @@ export function ConnectButton() {
   const {disconnect} = useDisconnect();
   const {switchChain, isPending: switching} = useSwitchChain();
   const wrong = useWrongNetwork();
+  const toast = useToast();
   const [mounted, setMounted] = useState(false);
   const [copied, setCopied] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -94,8 +108,12 @@ export function ConnectButton() {
                 try {
                   await connectAsync({connector: c, chainId: chain.id});
                   track("connect");
-                } catch {
-                  /* shown below on the next open */
+                } catch (e) {
+                  // T24: the menu has closed, so say why here (a rejected network switch used to look like nothing).
+                  const p = (await c.getProvider().catch(() => undefined)) as {request?: (a: {method: string}) => Promise<unknown>} | undefined;
+                  const accounts = ((await p?.request?.({method: "eth_accounts"}).catch(() => [])) ?? []) as string[];
+                  const cid = await p?.request?.({method: "eth_chainId"}).catch(() => undefined);
+                  toast.push({status: "error", ...connectFailure(e, {accounts, chainId: cid === undefined ? undefined : Number(cid)})});
                 }
               }}
             >
