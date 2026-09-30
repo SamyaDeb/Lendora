@@ -28,6 +28,13 @@ export interface Fees {
   maxPriorityFeePerGas: bigint;
 }
 
+/**
+ * Gas headroom over the node's estimate, for every sender. On Robinhood Chain (Arbitrum Orbit) the gas limit also pays
+ * the L1 data fee, which moves before inclusion: a bare estimate ran out of gas on 46630 (326,005 of 332,112).
+ */
+export const GAS_HEADROOM_PCT = 30n;
+const withHeadroom = (gas: bigint) => (gas * (100n + GAS_HEADROOM_PCT)) / 100n;
+
 /** OFF-2: the node's fee estimate is above `MAX_FEE_PER_GAS_GWEI`; the tick is skipped, nothing is sent. */
 export class GasPriceTooHigh extends Error {
   constructor(
@@ -74,7 +81,7 @@ class ClientSender implements TxSender {
 /** Account unlocked on the node (anvil `anvil_impersonateAccount` or default accounts). Tests only. */
 export function rpcUnlockedSender(client: PublicClient, rpcUrl: string, chain: Chain, address: `0x${string}`, maxFeePerGas?: bigint): TxSender {
   const wallet = createWalletClient({chain, transport: http(rpcUrl)});
-  return new ClientSender("rpc-unlocked", address, (to, data, fees) => wallet.sendTransaction({account: address, to, data, chain, ...fees}), client, maxFeePerGas);
+  return new ClientSender("rpc-unlocked", address, async (to, data, fees) => wallet.sendTransaction({account: address, to, data, chain, ...fees, gas: withHeadroom(await client.estimateGas({account: address, to, data}))}), client, maxFeePerGas);
 }
 
 /** Key from `KEEPER_PRIVATE_KEY` (a secret manager should inject it). */
@@ -83,7 +90,7 @@ export function envKeySender(client: PublicClient, rpcUrl: string, chain: Chain,
   if (!pk) throw new Error("KEEPER_PRIVATE_KEY is not set");
   const account = privateKeyToAccount(pk);
   const wallet = createWalletClient({account, chain, transport: http(rpcUrl)});
-  return new ClientSender("env-key", account.address, (to, data, fees) => wallet.sendTransaction({account, to, data, chain, ...fees}), client, maxFeePerGas);
+  return new ClientSender("env-key", account.address, async (to, data, fees) => wallet.sendTransaction({account, to, data, chain, ...fees, gas: withHeadroom(await client.estimateGas({account, to, data}))}), client, maxFeePerGas);
 }
 
 /**
@@ -104,7 +111,7 @@ export function remoteTxSender(
 ): TxSender {
   const sendRaw = async (to: `0x${string}`, data: Hex, fees: Fees): Promise<Hex> => {
     const [nonce, gas] = await Promise.all([client.getTransactionCount({address, blockTag: "pending"}), client.estimateGas({account: address, to, data})]);
-    const unsigned: TransactionSerializableEIP1559 = {type: "eip1559", chainId: chain.id, nonce, to, data, value: 0n, gas: (gas * 12n) / 10n, maxFeePerGas: fees.maxFeePerGas, maxPriorityFeePerGas: fees.maxPriorityFeePerGas};
+    const unsigned: TransactionSerializableEIP1559 = {type: "eip1559", chainId: chain.id, nonce, to, data, value: 0n, gas: withHeadroom(gas), maxFeePerGas: fees.maxFeePerGas, maxPriorityFeePerGas: fees.maxPriorityFeePerGas};
     const r = await fetchImpl(url, {
       method: "POST",
       headers: {"content-type": "application/json", ...(auth ? {authorization: auth} : {})},

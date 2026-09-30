@@ -77,11 +77,20 @@ export interface Call {
 }
 
 /** Simulate (`eth_call`), then send and wait. Throws decoded-able viem errors. */
+/**
+ * Gas headroom over the estimate. On Robinhood Chain (Arbitrum Orbit) the gas limit also pays the L1 data fee, which
+ * moves between estimation and inclusion: a bare estimate ran out of gas on 46630 (326,005 of 332,112).
+ */
+export const GAS_HEADROOM_PCT = 30n;
+
 export async function simulateAndSend(pc: PublicClient, wc: WalletClient, account: `0x${string}`, call: Call): Promise<`0x${string}`> {
   const {request} = await pc.simulateContract(Object.assign({}, call, {account}) as never);
-  const hash = await wc.writeContract(request as never);
+  const estimate = await pc.estimateContractGas(Object.assign({}, call, {account}) as never);
+  const gas = (estimate * (100n + GAS_HEADROOM_PCT)) / 100n;
+  const hash = await wc.writeContract(Object.assign({}, request, {gas}) as never);
   const receipt = await pc.waitForTransactionReceipt({hash, pollingInterval: 250});
   if (receipt.status !== "success") {
+    if (receipt.gasUsed * 100n >= gas * 97n) throw new Error("The transaction ran out of gas (the network fee moved while it was pending). Nothing was lost but the fee; retry.");
     // Re-simulate at the latest state to surface the reason.
     await pc.simulateContract(Object.assign({}, call, {account}) as never);
     throw new Error("transaction reverted");

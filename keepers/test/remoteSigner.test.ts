@@ -5,7 +5,7 @@ import {anvil as anvilChain} from "viem/chains";
 import {erc20Abi} from "@stockline/sdk";
 import {startAnvil, type Anvil} from "./anvil.js";
 import {loadConfig} from "../src/common/config.js";
-import {remoteTxSender, senderFromConfig} from "../src/common/signer.js";
+import {GAS_HEADROOM_PCT, envKeySender, remoteTxSender, senderFromConfig} from "../src/common/signer.js";
 
 /** A fake KMS bridge: signs whatever it is sent with `key`, optionally tampering with the payload first. */
 function fakeKms(key: Hex, tamper?: (tx: ReturnType<typeof parseTransaction>) => ReturnType<typeof parseTransaction>): typeof fetch {
@@ -39,6 +39,17 @@ describe("remote transaction signer (keepers, KMS bridge)", () => {
     const tx = await a.client.getTransaction({hash: hash!});
     expect(tx.from.toLowerCase()).toBe(addr.toLowerCase());
     expect(tx.input).toBe(data);
+  });
+
+  it("every sender adds gas headroom for Arbitrum Orbit's L1 data fee (a bare estimate ran out of gas on 46630)", async () => {
+    const est = await a.client.estimateGas({account: addr, to: a.d.usdg, data});
+    const want = (est * (100n + GAS_HEADROOM_PCT)) / 100n;
+    const env = envKeySender(a.client, a.url, anvilChain, {KEEPER_PRIVATE_KEY: key});
+    const remote = remoteTxSender(a.client, anvilChain, "https://kms.example/sign", addr, undefined, fakeKms(key));
+    for (const s of [env, remote]) {
+      const tx = await a.client.getTransaction({hash: (await s.send(a.d.usdg, data, "approve"))!});
+      expect(tx.gas, s.kind).toBe(want);
+    }
   });
 
   it("refuses a signature from another key and a swapped payload", async () => {

@@ -189,7 +189,10 @@ export async function connectWallet(url: string, privateKey: Hex): Promise<Anvil
       let hash: Hex | undefined;
       for (let attempt = 1; !hash; attempt++) {
         try {
-          hash = await wallet.sendTransaction({account, to, data, chain});
+          // +30%: the gas limit also pays Arbitrum Orbit's L1 data fee, which moves before inclusion (a bare
+          // estimate ran out of gas on 46630, as web/lib/tx.ts GAS_HEADROOM_PCT).
+          const estimate = await client.estimateGas({account, to, data});
+          hash = await wallet.sendTransaction({account, to, data, chain, gas: (estimate * 130n) / 100n});
         } catch (e) {
           if (attempt >= 4) throw new Error(`tx would revert: ${await revertReason(client, account.address, to, data)}`, {cause: e});
           await new Promise((res) => setTimeout(res, 2000));
