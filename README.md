@@ -2,7 +2,7 @@
 
 Stock lending on Robinhood Chain, built on unmodified Morpho Blue and Morpho Vault V2.
 
-[![ci](https://github.com/SamyaDeb/lendora/actions/workflows/ci.yml/badge.svg)](https://github.com/SamyaDeb/lendora/actions/workflows/ci.yml)
+[![ci](https://github.com/SamyaDeb/Lendora/actions/workflows/ci.yml/badge.svg)](https://github.com/SamyaDeb/Lendora/actions/workflows/ci.yml)
 ![license](https://img.shields.io/badge/license-UNLICENSED-lightgrey)
 ![solidity](https://img.shields.io/badge/solidity-0.8.26-363636)
 ![foundry](https://img.shields.io/badge/built%20with-Foundry-orange)
@@ -170,7 +170,7 @@ checked against the same test vectors.
 ### Install
 
 ```sh
-git clone https://github.com/SamyaDeb/lendora.git && cd lendora
+git clone https://github.com/SamyaDeb/Lendora.git && cd Lendora
 git submodule update --init contracts/lib/forge-std contracts/lib/openzeppelin-contracts \
   contracts/lib/morpho-blue contracts/lib/metamorpho-v1.1 contracts/lib/vault-v2
 git -C contracts/lib/metamorpho-v1.1 submodule update --init lib/openzeppelin-contracts lib/morpho-blue
