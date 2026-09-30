@@ -1,3 +1,5 @@
+import {readBody, tooLarge} from "@/lib/bodyLimit";
+
 /**
  * APP-R11: aggregate page and funnel counters. The request body carries only {event, funnel, path}; nothing about the
  * wallet, and the IP is never read or logged here. Counts are per process (the platform's log drain aggregates the
@@ -9,7 +11,15 @@ const counts = new Map<string, number>();
 export const MAX_KEYS = 2_000;
 
 export async function POST(req: Request) {
-  const b = (await req.json().catch(() => null)) as {event?: string; funnel?: string | null; path?: string} | null;
+  const raw = await readBody(req);
+  if (raw === null) return tooLarge(); // OFF-15
+  const b = ((): {event?: string; funnel?: string | null; path?: string} | null => {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  })();
   if (!b || !EVENTS.has(b.event ?? "")) return new Response(null, {status: 204});
   const funnel = typeof b.funnel === "string" ? b.funnel.slice(0, 32) : "";
   const path = typeof b.path === "string" ? b.path.replace(/0x[0-9a-fA-F]{40}/g, ":address").slice(0, 64) : "";

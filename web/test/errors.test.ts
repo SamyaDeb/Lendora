@@ -1,7 +1,11 @@
 import {describe, expect, it} from "vitest";
-import {BaseError, encodeErrorResult, encodeAbiParameters} from "viem";
-import {stocklineRouterAbi} from "@stockline/sdk";
+import {BaseError, encodeErrorResult, encodeAbiParameters, zeroAddress} from "viem";
+import {collateralTokenAbi, stocklineRouterAbi} from "@stockline/sdk";
 import {explainError} from "@/lib/errors";
+import {faucetAbi} from "@/lib/network";
+
+const erc20ErrorsAbi = [{type: "error", name: "ERC20InvalidReceiver", inputs: [{name: "receiver", type: "address"}]}] as const;
+const panicAbi = [{type: "error", name: "Panic", inputs: [{name: "code", type: "uint256"}]}] as const;
 
 class Wrapped extends BaseError {
   constructor(readonly data: `0x${string}`) {
@@ -21,6 +25,30 @@ describe("APP-R3 revert reasons in plain language", () => {
   it("RT-R8: NoDebtPosition explains that adding collateral is a rescue top-up", () => {
     const e = new Wrapped(encodeErrorResult({abi: stocklineRouterAbi, errorName: "NoDebtPosition", args: ["0x0000000000000000000000000000000000000001"]}));
     expect(explainError(e)).toMatch(/only for positions with an open borrow.*open a borrow or short/);
+  });
+
+  it("APP_R3 a second faucet claim inside 24h says when the next claim opens (was: 'unknown reason')", () => {
+    const next = 1_790_870_400n; // 2026-10-01T16:00:00Z
+    const e = new Wrapped(encodeErrorResult({abi: faucetAbi, errorName: "TooSoon", args: [next]}));
+    expect(explainError(e)).toMatch(/already claimed.*2026-10-01 16:00 UTC/);
+  });
+
+  it("APP_R3 no Stockline revert reaches the user as a bare error name (found by testnetBreak on 46630)", () => {
+    const one = "0x0000000000000000000000000000000000000001" as const;
+    const cases: [string, `0x${string}`, RegExp][] = [
+      ["ZeroAmount", encodeErrorResult({abi: stocklineRouterAbi, errorName: "ZeroAmount"}), /greater than zero/],
+      ["ZeroAddress", encodeErrorResult({abi: stocklineRouterAbi, errorName: "ZeroAddress"}), /recipient.*empty/],
+      ["ERC20InvalidReceiver", encodeErrorResult({abi: erc20ErrorsAbi, errorName: "ERC20InvalidReceiver", args: [zeroAddress]}), /recipient.*empty/],
+      ["NotOwner", encodeErrorResult({abi: stocklineRouterAbi, errorName: "NotOwner"}), /reserved to a Stockline role/],
+      ["NotRouter", encodeErrorResult({abi: collateralTokenAbi, errorName: "NotRouter"}), /only through the Stockline router/],
+      ["TransferNotAllowed", encodeErrorResult({abi: collateralTokenAbi, errorName: "TransferNotAllowed", args: [one, one]}), /only through the Stockline router/],
+      ["Panic 0x11", encodeErrorResult({abi: panicAbi, errorName: "Panic", args: [0x11n]}), /more than you hold/],
+    ];
+    for (const [name, data, want] of cases) {
+      const msg = explainError(new Wrapped(data));
+      expect(msg, name).toMatch(want);
+      expect(msg, name).not.toMatch(/would fail \(/);
+    }
   });
 
   it("maps Morpho's string errors and wallet rejections", () => {

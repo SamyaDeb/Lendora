@@ -1,4 +1,5 @@
 import type {NextRequest} from "next/server";
+import {readBody, tooLarge} from "@/lib/bodyLimit";
 import {complianceProxyHeaders, geoPlatform, staticGeo} from "@/lib/complianceProxy";
 
 /**
@@ -16,7 +17,9 @@ async function forward(req: NextRequest, path: string[]) {
   req.nextUrl.searchParams.forEach((v, k) => url.searchParams.set(k, v));
   const platform = geoPlatform(process.env.GEO_PLATFORM);
   const headers = complianceProxyHeaders(req.headers, platform, process.env.PROXY_SECRET, platform === "static" ? staticGeo() : undefined);
-  const r = await fetch(url, {method: req.method, headers, body: req.method === "POST" ? await req.text() : undefined, cache: "no-store"});
+  const body = req.method === "POST" ? await readBody(req) : undefined;
+  if (body === null) return tooLarge(); // OFF-15
+  const r = await fetch(url, {method: req.method, headers, body, cache: "no-store"});
   return new Response(await r.text(), {status: r.status, headers: {"content-type": "application/json", "cache-control": "no-store"}});
 }
 

@@ -18,6 +18,7 @@ import {
   vaultV2FullAbi,
 } from "@stockline/sdk";
 import {guardReasonText} from "./guard";
+import {faucetAbi} from "./network";
 
 /**
  * APP-R3: every simulation or transaction failure is shown in plain language. Custom errors are decoded against every
@@ -41,6 +42,7 @@ export const abis = [
   mockStockTokenAbi,
   erc20Abi,
   morphoAbi,
+  faucetAbi,
 ];
 
 const MORPHO_STRINGS: Record<string, string> = {
@@ -86,8 +88,24 @@ function fromName(name: string, args: readonly unknown[] = []): string {
     case "RelativeCapExceeded":
     case "AbsoluteCapExceeded":
       return "The vault is at its supply cap.";
+    case "ZeroAmount":
+      return "Enter an amount greater than zero.";
+    case "ZeroAddress":
+    case "ERC20InvalidReceiver":
+      return "The recipient address is empty (0x0). Send to your own wallet address.";
+    case "NotRouter":
+    case "TransferNotAllowed":
+      return "clUSDG collateral moves only through the Stockline router (or Morpho); it can't be minted or sent wallet to wallet.";
+    case "Panic":
+      return BigInt(String(args[0] ?? 0)) === 0x11n
+        ? "That amount is more than you hold in this position. Use a smaller amount or Max."
+        : "The transaction would fail on an out-of-range amount. Check the amount and retry.";
     case "Unauthorized":
     case "OwnableUnauthorizedAccount":
+    case "NotOwner":
+    case "NotGuardian":
+    case "NotOperator":
+    case "NotStrategy":
     case "NotKeeper":
       return "This action is reserved to a Stockline role (owner, guardian or keeper); your wallet cannot run it.";
     case "SlippageTooLoose":
@@ -107,6 +125,8 @@ function fromName(name: string, args: readonly unknown[] = []): string {
       return "That's more than the vault's cash buffer holds right now. Request a withdrawal for the rest; it's paid within 72 hours or at the next US market open.";
     case "NotClaimable":
       return "That withdrawal request isn't ready to claim yet.";
+    case "TooSoon":
+      return `You already claimed test tokens in the last 24 hours. The next claim opens ${new Date(Number(args[0] ?? 0) * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC.`;
     case "QueueOverdue":
     case "BufferBreached":
       return "The vault keeps its cash for withdrawals first; the strategy can't take it now.";

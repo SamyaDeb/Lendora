@@ -1,14 +1,17 @@
 import type {NextRequest} from "next/server";
+import {readBody, tooLarge} from "@/lib/bodyLimit";
 
 /** Proxy to the alerts service (APP-R8, keepers/alerts): settings are saved with a signed message. */
 const ALERTS_URL = process.env.ALERTS_URL ?? "http://127.0.0.1:42072";
 
 async function forward(req: NextRequest, path: string[]) {
   if (!/^settings(\/0x[0-9a-fA-F]{40})?$/.test(path.join("/"))) return Response.json({error: "not found"}, {status: 404});
+  const body = req.method === "POST" ? await readBody(req) : undefined;
+  if (body === null) return tooLarge(); // OFF-15
   const r = await fetch(`${ALERTS_URL}/v1/alerts/${path.join("/")}`, {
     method: req.method,
     headers: {"content-type": "application/json"},
-    body: req.method === "POST" ? await req.text() : undefined,
+    body,
     cache: "no-store",
   }).catch(() => undefined);
   if (!r) return Response.json({error: "the alerts service is unavailable"}, {status: 503});

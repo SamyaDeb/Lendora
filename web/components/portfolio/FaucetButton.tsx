@@ -5,10 +5,8 @@ import {encodeFunctionData, parseUnits} from "viem";
 import {mockStockTokenAbi, mockUsdgAbi} from "@stockline/sdk";
 import {CHAIN_ID, RPC_URL, TICKERS, deployment} from "@/lib/env";
 import {useTrackedWriter, useTxRunner} from "@/lib/flows/common";
-import {faucetKind} from "@/lib/network";
+import {faucetAbi, faucetKind} from "@/lib/network";
 import {Button, Icon, Notice, StepList, useToast} from "@/components/ui";
-
-const faucetAbi = [{type: "function", name: "claim", stateMutability: "nonpayable", inputs: [{name: "to", type: "address"}], outputs: []}] as const;
 
 /** anvil's default account #0: DeployLocal's deployer, owner of the mock tokens (unlocked on anvil only). */
 const ANVIL_DEPLOYER = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";

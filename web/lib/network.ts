@@ -11,6 +11,12 @@ export function webDeployment(chainId: number, lookup?: (k: DeploymentKey) => Ch
 
 export type FaucetKind = "testnet" | "local" | null;
 
+/** The testnet StocklineFaucet (contracts/testnet): `claim(to)`, once per address per cooldown (`TooSoon`). */
+export const faucetAbi = [
+  {type: "function", name: "claim", stateMutability: "nonpayable", inputs: [{name: "to", type: "address"}], outputs: []},
+  {type: "error", name: "TooSoon", inputs: [{name: "nextClaimAt", type: "uint256"}]},
+] as const;
+
 /** Test funds: the testnet faucet contract, anvil's unlocked deployer, or nothing (always nothing on 4663). */
 export function faucetKind(chainId: number, d: ChainDeployment, rpcUrl?: string): FaucetKind {
   if (chainId === 4663) return null;
