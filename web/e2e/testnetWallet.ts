@@ -78,7 +78,8 @@ export class TestnetWallet {
   private ctx?: BrowserContext;
 
   constructor(key: Hex, extraKeys: Hex[] = []) {
-    this.pc = createPublicClient({chain, transport: http(RPC)}) as PublicClient;
+    // The shared public RPC has bursts of failures: the suite's own reads retry harder than the app's.
+    this.pc = createPublicClient({chain, transport: http(RPC, {retryCount: 6, retryDelay: 500, timeout: 20_000})}) as PublicClient;
     this.accounts = [privateKeyToAccount(key), ...extraKeys.map((k) => privateKeyToAccount(k))];
     this.wcs = this.accounts.map((account) => createWalletClient({account, chain, transport: http(RPC)}));
     this.allowed = deploymentAddresses();
