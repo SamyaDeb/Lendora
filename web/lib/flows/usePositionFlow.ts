@@ -6,7 +6,7 @@ import {useAccount, usePublicClient} from "wagmi";
 import {erc20Abi, lendoraRouterAbi} from "@lendora/sdk";
 import {deployment, TICKERS} from "@/lib/env";
 import {browserApi} from "@/lib/api";
-import {deadline, useChainMarket} from "@/lib/hooks";
+import {CHAIN_READ_RETRY, deadline, useChainMarket} from "@/lib/hooks";
 import {readMarket, type MarketChainState} from "@/lib/chain";
 import {currentDebt, preview} from "@/lib/preview";
 import {WITHDRAW_LEND_MIN_GAS, type Step} from "@/lib/tx";
@@ -23,7 +23,7 @@ export function useAllPositions() {
   const pc = usePublicClient();
   const {address} = useAccount();
   const qs = useQueries({
-    queries: TICKERS.map((t) => ({queryKey: ["chain", t, address ?? null], queryFn: () => readMarket(pc as PublicClient, deployment(), t, address), enabled: Boolean(pc), refetchInterval: 5000})),
+    queries: TICKERS.map((t) => ({queryKey: ["chain", t, address ?? null], queryFn: () => readMarket(pc as PublicClient, deployment(), t, address), enabled: Boolean(pc), refetchInterval: 5000, retry: CHAIN_READ_RETRY})),
   });
   return TICKERS.map((t, i) => ({symbol: t, st: qs[i].data as MarketChainState | undefined, error: qs[i].isError && !qs[i].data}));
 }

@@ -8,10 +8,12 @@ import {ReviewSheet} from "@/components/review/ReviewSheet";
 import {NeedFunds, WalletGate} from "./WalletGate";
 import {ReceiptMarketPanel} from "./ReceiptMarket";
 import {FEATURES} from "@/lib/features";
+import {useSlow} from "@/lib/hooks";
 
 /** Lend tab: deposit Stock Tokens into rSTOCK, or withdraw. The yield source is always spelled out. */
 export function LendForm({f}: {f: LendFlow}) {
   const [review, setReview] = useState(false);
+  const slowRead = useSlow(Boolean(f.address && !f.u));
   const {symbol, market, u, st} = f;
   const apy = market?.supplyApy;
   const amountNum = f.parsed ? Number(f.parsed) / 1e18 : 0;
@@ -86,7 +88,7 @@ export function LendForm({f}: {f: LendFlow}) {
         </Button>
         {f.address && !f.u && (
           <p className="mt-2 text-[12.5px] text-muted" data-testid="lend-loading">
-            Reading your balance from the chain…
+            {slowRead ? "Reading your balance from the chain is slow; it appears as soon as the network answers." : "Reading your balance from the chain…"}
           </p>
         )}
       </WalletGate>

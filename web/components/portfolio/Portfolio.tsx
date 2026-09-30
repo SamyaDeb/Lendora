@@ -15,6 +15,7 @@ import {BorrowCard, LendCard} from "./PositionCards";
 import {FaucetButton} from "./FaucetButton";
 import {VaultPortfolioSection} from "@/components/vault/VaultPortfolio";
 import {useVaultUser} from "@/lib/vault/hooks";
+import {useSlow} from "@/lib/hooks";
 
 /**
  * 06 `/portfolio`: every Lendora position of the wallet, from the chain (APP-R5), refreshed every 5 s and after
@@ -56,6 +57,7 @@ function Positions({address, restricted}: {address: `0x${string}`; restricted: b
   const collateral = borrows.reduce((a, r) => a + Number(formatUnits(r.st!.user!.collateral, 6)), 0);
   const lowest = borrows.find((r) => r.hf !== undefined)?.hf;
   const errors = all.filter((p) => p.error).map((p) => p.symbol);
+  const slow = useSlow(loading);
   const vault = useVaultUser({enabled: FEATURES.vault}).data;
   const vaultActive = Boolean(vault && (vault.shares > 0 || vault.requests.some((r) => r.status !== "claimed")));
   // Symbols that had a position this visit, riskiest current ones first, then any just closed.
@@ -76,6 +78,11 @@ function Positions({address, restricted}: {address: `0x${string}`; restricted: b
         <Stat label="Lowest health factor" size="lg" value={loading ? <Skeleton className="h-7 w-14" /> : lowest !== undefined ? <HealthFactor hf={lowest} /> : "–"} hint="Liquidation at 1.00" />
       </dl>
 
+      {slow && (
+        <Notice tone="info" title="Reading your positions from the chain is slow">
+          The network is answering slowly. Your positions haven&apos;t changed; they appear as soon as the reads come back.
+        </Notice>
+      )}
       {errors.length > 0 && (
         <Notice tone="danger" title={`Couldn't read ${errors.join(", ")} from the chain`}>
           The network didn&apos;t respond. Positions reappear when it does; nothing about them has changed.

@@ -1,4 +1,5 @@
 "use client";
+import {useEffect, useState} from "react";
 import {useQuery, useQueryClient} from "@tanstack/react-query";
 import {useAccount, usePublicClient, useWalletClient} from "wagmi";
 import type {PublicClient} from "viem";
@@ -16,7 +17,22 @@ export function useChainMarket(ticker: string) {
     queryFn: () => readMarket(pc as PublicClient, deployment(), ticker, address),
     enabled: Boolean(pc),
     refetchInterval: 5000,
+    retry: CHAIN_READ_RETRY,
   });
+}
+
+/** T39: one retry for chain reads (viem already retries each request); the 5 s refetch keeps trying after an error. */
+export const CHAIN_READ_RETRY = 1;
+
+/** True once `loading` has lasted `ms` (T39: say that a chain read is slow instead of a silent skeleton). */
+export function useSlow(loading: boolean, ms = 15_000) {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!loading) return setSlow(false);
+    const t = setTimeout(() => setSlow(true), ms);
+    return () => clearTimeout(t);
+  }, [loading, ms]);
+  return loading && slow;
 }
 
 export function useWriter() {

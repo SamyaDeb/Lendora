@@ -18,7 +18,8 @@ const connectors = E2E
 export const wagmiConfig = createConfig({
   chains: [chain],
   connectors,
-  transports: {[chain.id]: http(RPC_URL, {batch: {wait: 16}})},
+  // T39: fail a hung read in ~16 s (8 s timeout, one retry) instead of ~40 s, so the page can say so and retry.
+  transports: {[chain.id]: http(RPC_URL, {batch: {wait: 16}, timeout: 8_000, retryCount: 1})},
   pollingInterval: 1000,
   ssr: true,
 });
