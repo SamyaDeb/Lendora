@@ -1,6 +1,6 @@
 import {describe, expect, it, vi} from "vitest";
 import type {PublicClient, WalletClient} from "viem";
-import {GAS_HEADROOM_PCT, simulateAndSend} from "@/lib/tx";
+import {GAS_HEADROOM_PCT, WITHDRAW_LEND_MIN_GAS, simulateAndSend} from "@/lib/tx";
 
 /**
  * Found by testnetBreak on 46630: a router `lend` sent with the bare gas estimate ran out of gas on-chain (326,005 of
@@ -35,4 +35,25 @@ describe("gas headroom for the L1 data fee (Arbitrum Orbit)", () => {
     const {pc, wc} = clients(300_000n, {status: "reverted", gasUsed: limit - 100n});
     await expect(simulateAndSend(pc, wc, account, call)).rejects.toThrow(/ran out of gas.*retry/i);
   });
+
+  it("T33 a call whose path can change before inclusion carries a gas floor (withdrawLend: idle → deallocation)", async () => {
+    // 46630: estimated on the idle path (215,630), mined after the allocator moved the idle into Morpho: the
+    // deallocation path needed > 276,432 of the 280,320 limit (tx 0x0b882ead…). That path measures 372,545.
+    const {pc, wc} = clients(215_630n, {status: "success", gasUsed: 372_545n});
+    await simulateAndSend(pc, wc, account, {...(call as object), minGas: WITHDRAW_LEND_MIN_GAS} as never);
+    expect((wc.writeContract as ReturnType<typeof vi.fn>).mock.calls[0][0].gas).toBe(WITHDRAW_LEND_MIN_GAS);
+    expect(WITHDRAW_LEND_MIN_GAS * 10n).toBeGreaterThanOrEqual(372_545n * 13n);
+    // A floor never lowers a larger estimate's headroom.
+    const big = clients(600_000n, {status: "success", gasUsed: 590_000n});
+    await simulateAndSend(big.pc, big.wc, account, {...(call as object), minGas: WITHDRAW_LEND_MIN_GAS} as never);
+    expect((big.wc.writeContract as ReturnType<typeof vi.fn>).mock.calls[0][0].gas).toBe((600_000n * (100n + GAS_HEADROOM_PCT)) / 100n);
+  });
+
+  it("T33 out of gas is explained without blaming the fee alone (the state can change too)", async () => {
+    const limit = (300_000n * (100n + GAS_HEADROOM_PCT)) / 100n;
+    const {pc, wc} = clients(300_000n, {status: "reverted", gasUsed: limit - 100n});
+    await expect(simulateAndSend(pc, wc, account, call)).rejects.toThrow(/ran out of gas: the market changed while it was pending/i);
+  });
+
+
 });

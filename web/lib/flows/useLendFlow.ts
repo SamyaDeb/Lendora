@@ -6,7 +6,7 @@ import {erc20Abi, lendoraRouterAbi, vaultV2FullAbi, withdrawableAssets} from "@l
 import {deployment} from "@/lib/env";
 import {browserApi} from "@/lib/api";
 import {deadline, useChainMarket} from "@/lib/hooks";
-import type {Step} from "@/lib/tx";
+import {WITHDRAW_LEND_MIN_GAS, type Step} from "@/lib/tx";
 import {tokenPaused} from "@/lib/guard";
 import {parseAmount} from "@/components/ui";
 import {amt, planned, useTrackedWriter, useTxRunner} from "./common";
@@ -72,7 +72,7 @@ export function useLendFlow(symbol: string) {
     const minAssets = (parsed * 999n) / 1000n;
     return [
       {id: "approve", label: `Approve r${symbol}`, kind: "approve", skip: u.vaultAllowance >= shares, run: async () => void (await w.send({address: s.vault, abi: erc20Abi, functionName: "approve", args: [d.router!, maxUint256]}))},
-      {id: "withdraw", label: `Withdraw ${amount} ${symbol}`, kind: "execute", run: async () => void (await w.send({address: d.router!, abi: lendoraRouterAbi, functionName: "withdrawLend", args: [s.stockToken, shares, minAssets, w.address, dl]}))},
+      {id: "withdraw", label: `Withdraw ${amount} ${symbol}`, kind: "execute", run: async () => void (await w.send({address: d.router!, abi: lendoraRouterAbi, functionName: "withdrawLend", args: [s.stockToken, shares, minAssets, w.address, dl], minGas: WITHDRAW_LEND_MIN_GAS}))},
     ];
   }
 

@@ -81,6 +81,8 @@ export interface Call {
   abi: Abi | readonly unknown[];
   functionName: string;
   args?: readonly unknown[];
+  /** Gas limit floor for calls whose path can change before inclusion (T33). */
+  minGas?: bigint;
 }
 
 /** Simulate (`eth_call`), then send and wait. Throws decoded-able viem errors. */
@@ -90,16 +92,25 @@ export interface Call {
  */
 export const GAS_HEADROOM_PCT = 30n;
 
+/**
+ * T33: `withdrawLend` estimated while the vault holds the stock idle is cheap (~216k); if the allocator keeper moves
+ * that idle into Morpho before inclusion, the withdrawal takes the deallocation path (372,545 measured on 46630) and a
+ * 30% headroom runs out (tx 0x0b882ead…: 276,432 of 280,320). The floor is that path × 1.3; unused gas isn't charged.
+ */
+export const WITHDRAW_LEND_MIN_GAS = 500_000n;
+
 export async function simulateAndSend(pc: PublicClient, wc: WalletClient, account: `0x${string}`, call: Call): Promise<`0x${string}`> {
-  const {request} = await pc.simulateContract(Object.assign({}, call, {account}) as never);
-  const estimate = await pc.estimateContractGas(Object.assign({}, call, {account}) as never);
-  const gas = (estimate * (100n + GAS_HEADROOM_PCT)) / 100n;
+  const {minGas, ...c} = call;
+  const {request} = await pc.simulateContract(Object.assign({}, c, {account}) as never);
+  const estimate = await pc.estimateContractGas(Object.assign({}, c, {account}) as never);
+  const withHeadroom = (estimate * (100n + GAS_HEADROOM_PCT)) / 100n;
+  const gas = minGas !== undefined && minGas > withHeadroom ? minGas : withHeadroom;
   const hash = await wc.writeContract(Object.assign({}, request, {gas}) as never);
   const receipt = await pc.waitForTransactionReceipt({hash, pollingInterval: 250});
   if (receipt.status !== "success") {
-    if (receipt.gasUsed * 100n >= gas * 97n) throw new Error("The transaction ran out of gas (the network fee moved while it was pending). Nothing was lost but the fee; retry.");
+    if (receipt.gasUsed * 100n >= gas * 97n) throw new Error("The transaction ran out of gas: the market changed while it was pending (liquidity moved, or the network fee rose). Nothing was lost but the fee; retry.");
     // Re-simulate at the latest state to surface the reason.
-    await pc.simulateContract(Object.assign({}, call, {account}) as never);
+    await pc.simulateContract(Object.assign({}, c, {account}) as never);
     throw new Error("transaction reverted");
   }
   return hash;

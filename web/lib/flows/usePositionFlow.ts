@@ -9,7 +9,7 @@ import {browserApi} from "@/lib/api";
 import {deadline, useChainMarket} from "@/lib/hooks";
 import {readMarket, type MarketChainState} from "@/lib/chain";
 import {currentDebt, preview} from "@/lib/preview";
-import type {Step} from "@/lib/tx";
+import {WITHDRAW_LEND_MIN_GAS, type Step} from "@/lib/tx";
 import {buildSwap} from "@/lib/swap";
 import {guardReasonList, tokenPaused} from "@/lib/guard";
 import {wad} from "@/lib/format";
@@ -112,7 +112,7 @@ export function usePositionFlow(symbol: string) {
       withdrawCollateral: [{id: "withdraw", label: "Withdraw all collateral", kind: "execute", run: async () => void (await w.send({address: d.router!, abi: lendoraRouterAbi, functionName: "withdrawCollateral", args: [s.stockToken, maxUint256, w.address, dl]}))}],
       withdrawLend: [
         {id: "approve", label: `Approve r${symbol}`, kind: "approve", skip: u.vaultAllowance >= u.vaultShares, run: async () => void (await w.send({address: s.vault, abi: erc20Abi, functionName: "approve", args: [d.router!, maxUint256]}))},
-        {id: "withdraw", label: `Withdraw all ${symbol}`, kind: "execute", run: async () => void (await w.send({address: d.router!, abi: lendoraRouterAbi, functionName: "withdrawLend", args: [s.stockToken, u.vaultShares, 0n, w.address, dl]}))},
+        {id: "withdraw", label: `Withdraw all ${symbol}`, kind: "execute", run: async () => void (await w.send({address: d.router!, abi: lendoraRouterAbi, functionName: "withdrawLend", args: [s.stockToken, u.vaultShares, 0n, w.address, dl], minGas: WITHDRAW_LEND_MIN_GAS}))},
       ],
     };
   }
