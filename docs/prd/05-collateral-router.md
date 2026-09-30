@@ -23,6 +23,14 @@ USDG, Stockline could not enforce per-user limits or pause new positions. With `
   borrow again directly on Morpho without a fresh attestation.
 - (c) A liquidator that seized `clUSDG` may supply it to Morpho (a transfer to Morpho is allowed, CL-R3) and borrow
   against it without an attestation.
+- (d) *(found on 46630, 2026-09-30)* An attested borrower may withdraw `clUSDG` collateral from Morpho directly and
+  supply it for **any** address (`supplyCollateral(onBehalf)`), which then borrows directly on Morpho without ever
+  signing the terms or being attested (for example a restricted-region or sanctioned address). Proven end to end by
+  `web/scripts/testnetBreak.ts` (X group); the monitor paged `DIRECT_BORROW` for the new address.
+- (e) *(found on 46630, 2026-09-30)* `withdrawCollateral` is an exit, so it has no RT-R1 check: a borrower with debt can
+  withdraw down to Morpho's LLTV at today's price, below the 24h weekend/earnings buffer (HF at t+24h < 1.1). Morpho
+  allows the same directly, so a router check alone would not close it. The web app only offers "Withdraw collateral"
+  when the debt is 0. No alert fires until the position is liquidatable (MISSED_LIQUIDATION covers a failure to act).
 
 The hard limits are the vault caps, the idle reserve and the allocator's liquidity pulls ([03 §4](03-lending-markets.md)):
 no path can borrow more than the liquidity the allocator has placed in the market. Mitigation is detection (the

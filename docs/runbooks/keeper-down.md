@@ -30,7 +30,12 @@ difference between indexed and onchain values.
 
 - Crash loop on a code error → roll back to the previous image; open an incident on the bug.
 - RPC provider outage → switch `RPC_URL` to the backup provider for all keepers.
-- Indexer lag → restart; Ponder resumes from its checkpoint on the same schema. Reconciliation diff → read the diff
+- Indexer lag → restart; Ponder resumes from its checkpoint on the same schema. Lag that **grows** at the head with
+  `Unable to find available JSON-RPC provider … rate_limit=[3…]` in the log is Ponder's adaptive limiter stuck at its
+  3 req/s floor after a 429 burst (seen on 46630 after an overnight outage: the catch-up hit 429s, then ~1 block/s
+  indexed against ~4–5 produced). A restart resets the limiter; the lasting fix is an RPC for the indexer that is not
+  shared with the keepers (or a paid plan). While the views are rebuilt the API answers 503 with Retry-After, not 500.
+  Reconciliation diff → read the diff
   (`INDEXER_LAG:reconcile` details): known cause A29 (a donation to a vault moves idle without an event) is display-only;
   anything else → resync the indexer into a new schema and switch the API's `INDEXER_SCHEMA`.
 

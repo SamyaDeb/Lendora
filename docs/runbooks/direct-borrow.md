@@ -2,8 +2,11 @@
 
 **Trigger.** A Morpho `Borrow` on a Stockline market whose `caller` is not the router. Subject `<ticker>:<onBehalf>`;
 auto-resolves after 1h (A30). This is the accepted soft-gate residual (05 §1): Morpho is permissionless, so a borrower
-who was attested once (rescue top-up, RT-R8), a debt-free `clUSDG` holder in Morpho, or a liquidator holding seized
-`clUSDG` can borrow directly, without a fresh attestation and beyond the per-address cap.
+who was attested once (rescue top-up, RT-R8), a debt-free `clUSDG` holder in Morpho, a liquidator holding seized
+`clUSDG`, or **an address that never signed the terms** but received `clUSDG` collateral from an attested borrower
+(`supplyCollateral(onBehalf)`, residual (d)) can borrow directly, without a fresh attestation and beyond the
+per-address cap. For (d), step 2 below finds no terms acceptance: look up who supplied its collateral
+(`SupplyCollateral` logs with `onBehalf` = the address) and treat both addresses together.
 
 **Impact.** Bounded by the liquidity the allocator placed in the market (vault caps, idle reserve, pulls). The
 compliance risk is a geo-blocked or sanctioned address borrowing; the market risk is one address exceeding the
@@ -37,7 +40,8 @@ pnpm --filter @stockline/sdk timelock router.setCapOverride user=<addr> ticker=N
 ```
 
 Rehearsed on anvil: detection (`monitor.test.ts`), global cap through the timelock stops router entries
-(`runbooks.test.ts`).
+(`runbooks.test.ts`). Live on 46630 (2026-09-30): residual (d) by a never-attested wallet, paged within minutes
+(`web/scripts/testnetBreak.ts`, X group).
 
 **Who signs.** Guardian 2-of-4 (trip, cap decrease); owner via timelock (global cap, overrides). Compliance owns the
 address review.

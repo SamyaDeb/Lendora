@@ -31,7 +31,7 @@ import {
   stocklineRouterAbi,
   strategyManagerAbi,
 } from "@stockline/sdk";
-import {ChainDriver, complianceAttestationProvider, connectWallet, smokeFlows} from "@stockline/devnet";
+import {ChainDriver, complianceAttestationProvider, connectWallet, smokeFlows, waitForLiquidity} from "@stockline/devnet";
 
 const arg = (n: string, d = "") => {
   const i = process.argv.indexOf(`--${n}`);
@@ -284,15 +284,27 @@ if (has("flows")) {
     return `${JSON.stringify(p.data).slice(0, 120)}`;
   });
 
-  // Edge cases that need an attestation or a position.
+  // Edge cases that need an attestation or a position. The router checks health, the swap target and the output only
+  // after Morpho lent the stock, so the market needs liquidity: the flows above withdrew their lend and on testnet
+  // nobody else supplies stock ("insufficient liquidity" from Morpho first). Lend 1 NVDA for them, withdraw after.
+  let lent = false;
+  await step(G_E, `lend 1 ${T} and wait for the allocator keeper to supply the market (liquidity for the checks below)`, async () => {
+    if (!open) return {skip: "feed session closed: entries refuse by design"};
+    const r = await drv.lend(T, me, 10n ** 18n);
+    lent = true;
+    await waitForLiquidity(drv, T, 5n * 10n ** 17n, () => {}, 180_000);
+    return `lent in ${r.transactionHash}; market has ≥ 0.5 ${T} free`;
+  });
   await step(G_E, "borrow inside Morpho's LLTV but under the router's buffered health → HealthTooLow (RT-R1)", async () => {
     const att = await attest(me);
-    // 100 USDG collateral, debt worth 76.5% of it: Morpho (LLTV 77%) would allow it, the router's buffered check
-    // (next-close price + the buffer) must not.
-    const collateral = 100n * 10n ** 6n;
+    // Morpho checks LLTV at price() (the buffer now); the router wants HF ≥ 1.1 at priceAt(now + 24h), whose buffer is
+    // at least today's. A debt at Morpho HF 1.04 is inside that band: Morpho lends it, the router must refuse it.
+    // Sized from the feed price instead, Morpho refused first ("insufficient collateral").
+    const collateral = 100n * 10n ** 6n; // USDG → clUSDG 1:1, both 6 dp
     if ((await bal(d.usdg)) < collateral) return {skip: "under 100 USDG"};
-    const price = drv.prices[T]; // 8 dp, synced from the feed
-    const amount = (collateral * 765n * 10n ** 20n) / (1000n * price); // USDG 6dp → stock 18dp
+    const {lltv} = (await client.readContract({address: R, abi: stocklineRouterAbi, functionName: "market", args: [s.stockToken]})).params;
+    const price = await client.readContract({address: s.oracle, abi: stocklineOracleAbi, functionName: "price"});
+    const amount = (((collateral * price) / 10n ** 36n) * lltv * 100n) / (10n ** 18n * 104n);
     return refuses(stocklineRouterAbi, R, "borrow", [s.stockToken, collateral, amount, me, att, await deadline()], me, /HealthTooLow|GuardTripped|MarketClosed/);
   });
   await step(G_E, "openShort through a swap target that isn't allowlisted → SwapTargetNotAllowed (RT-R3)", async () => {
@@ -313,6 +325,11 @@ if (has("flows")) {
   await step(G_E, "repay with no debt → refused or no-op", async () => {
     const r = await client.simulateContract({address: R, abi: stocklineRouterAbi, functionName: "repay", args: [s.stockToken, 0n, maxUint256, me, await deadline()], account: me}).catch((e: Error) => ({result: `reverts (${e.message.split("\n")[0].slice(0, 60)})`}));
     return `repay(all) with no debt → ${String((r as {result: unknown}).result)}`;
+  });
+  await step(G_E, `withdraw the 1 ${T} lent for the checks above (forceDeallocate when idle is short, LM-R22)`, async () => {
+    if (!lent) return {skip: "nothing lent"};
+    const r = await drv.withdrawLend(T, me);
+    return `withdrawn in ${r.transactionHash}`;
   });
 
   if (d.dnVault) {
