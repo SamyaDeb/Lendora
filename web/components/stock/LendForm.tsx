@@ -84,6 +84,11 @@ export function LendForm({f}: {f: LendFlow}) {
         >
           {f.mode === "deposit" ? `Review lend` : "Review withdrawal"}
         </Button>
+        {f.address && !f.u && (
+          <p className="mt-2 text-[12.5px] text-muted" data-testid="lend-loading">
+            Reading your balance from the chain…
+          </p>
+        )}
       </WalletGate>
 
       {u && (

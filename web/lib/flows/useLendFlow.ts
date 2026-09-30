@@ -47,7 +47,8 @@ export function useLendFlow(symbol: string) {
   const value = u ? Number(u.vaultAssets) / 1e18 : 0;
   const earnings = flows.data !== undefined && flows.data > 0 && u ? value - flows.data : undefined; // unknown until the deposit is indexed
   const max = mode === "deposit" ? u?.stockBalance : withdrawable;
-  const invalid = !parsed || parsed === 0n || (max !== undefined && parsed > max);
+  // T30: until the chain read lands there is no balance to check against, and nothing to build the steps from.
+  const invalid = !parsed || parsed === 0n || max === undefined || parsed > max;
 
   const setMode = (m: LendMode) => {
     setModeRaw(m);
