@@ -3,25 +3,56 @@ import type {FundingSource} from "./rebalancer.js";
 
 const applied = parseAbiItem("event FundingApplied(bytes32 indexed market, int256 rateWad, int256 payment)");
 
-/** The mock venue's funding periods (`FundingApplied`), bucketed per hour of chain time (anvil, testnet). */
+/**
+ * The mock venue's funding periods (`FundingApplied`), bucketed per hour of chain time (anvil, testnet). The history is
+ * scanned once in chunks of `maxRange` blocks, then only the new blocks each tick; each log's block time is read once.
+ * Before (46630, 2026-09-30): every tick asked for every log since the start block (1.24M blocks) and a block per log,
+ * per sleeve; when the public RPC was slow the fallback provider refused the range and every tick failed (T26).
+ */
 export class MockVenueFunding implements FundingSource {
+  private scanned: bigint;
+  private readonly periods: {market: string; ts: number; rate: number}[] = [];
+
   constructor(
     private readonly client: PublicClient,
     private readonly venue: `0x${string}`,
     private readonly markets: Hex[],
-    private readonly fromBlock = 0n,
-  ) {}
+    fromBlock = 0n,
+    private readonly maxRange = 50_000n,
+  ) {
+    this.scanned = fromBlock - 1n;
+  }
+
+  /** Scans (scanned, head] chunk by chunk; the cursor moves only past chunks that were read. */
+  private async sync(head: bigint) {
+    const times = new Map<bigint, number>();
+    while (this.scanned < head) {
+      const from = this.scanned + 1n;
+      const to = from + this.maxRange - 1n < head ? from + this.maxRange - 1n : head;
+      const logs = await this.client.getLogs({address: this.venue, event: applied, fromBlock: from, toBlock: to});
+      const found: typeof this.periods = [];
+      for (const l of logs) {
+        const n = l.blockNumber!;
+        if (!times.has(n)) times.set(n, Number((await this.client.getBlock({blockNumber: n})).timestamp));
+        found.push({market: l.args.market!.toLowerCase(), ts: times.get(n)!, rate: Number(l.args.rateWad!) / 1e18});
+      }
+      this.periods.push(...found);
+      this.scanned = to;
+    }
+  }
+
   async hourly(sleeve: number, hours: number): Promise<number[]> {
     const head = await this.client.getBlock();
+    await this.sync(head.number);
     const start = Number(head.timestamp) - hours * 3600;
-    const logs = await this.client.getLogs({address: this.venue, event: applied, args: {market: this.markets[sleeve]}, fromBlock: this.fromBlock, toBlock: head.number});
+    const market = this.markets[sleeve].toLowerCase();
     const buckets = new Array<number>(hours).fill(0);
     let seen = false;
-    for (const l of logs) {
-      const b = await this.client.getBlock({blockNumber: l.blockNumber!});
-      const h = Math.floor((Number(b.timestamp) - start) / 3600);
+    for (const p of this.periods) {
+      if (p.market !== market) continue;
+      const h = Math.floor((p.ts - start) / 3600);
       if (h < 0 || h >= hours) continue;
-      buckets[h] += Number(l.args.rateWad!) / 1e18;
+      buckets[h] += p.rate;
       seen = true;
     }
     // No history at all (a fresh venue) is "insufficient history", never a kill.
