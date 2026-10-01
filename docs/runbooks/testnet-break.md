@@ -1,6 +1,6 @@
 # Break-the-product run on chain 46630
 
-Run 2026-09-30T16:40:04.579Z by `web/scripts/testnetBreak.ts` (325 s): web http://127.0.0.1:3000, API http://127.0.0.1:42070, compliance http://127.0.0.1:42071, monitor http://127.0.0.1:42073.
+Run 2026-10-01T00:01:13.463Z by `web/scripts/testnetBreak.ts` (296 s): web http://127.0.0.1:3000, API http://127.0.0.1:42070, compliance http://127.0.0.1:42071, monitor http://127.0.0.1:42073.
 Feed session open. With real bypass transactions (tester key).
 **Nothing broke** (124 ok, 0 skipped).
 
@@ -17,18 +17,18 @@ Feed session open. With real bypass transactions (tester key).
 | W · web | no open redirect: //evil.example/ | ok | 308 → /evil.example/ |
 | W · web | a 16 KB path is refused cleanly | ok | 431 |
 | W · web | compliance proxy: a non-JSON body is a 4xx | ok | 400 |
-| W · web | compliance proxy: a 12 MB body is refused before it is buffered and forwarded | ok | 413 in 179 ms |
+| W · web | compliance proxy: a 12 MB body is refused before it is buffered and forwarded | ok | 413 in 93 ms |
 | W · web | compliance terms proxy: a non-JSON body is a 4xx | ok | 400 |
-| W · web | compliance terms proxy: a 12 MB body is refused before it is buffered and forwarded | ok | 413 in 44 ms |
+| W · web | compliance terms proxy: a 12 MB body is refused before it is buffered and forwarded | ok | 413 in 61 ms |
 | W · web | alerts proxy: a non-JSON body is a 4xx | ok | 404 |
-| W · web | alerts proxy: a 12 MB body is refused before it is buffered and forwarded | ok | 413 in 44 ms |
+| W · web | alerts proxy: a 12 MB body is refused before it is buffered and forwarded | ok | 413 in 45 ms |
 | W · web | analytics proxy: a non-JSON body is a 4xx | ok | 204 |
-| W · web | analytics proxy: a 12 MB body is refused before it is buffered and forwarded | ok | 413 in 43 ms |
+| W · web | analytics proxy: a 12 MB body is refused before it is buffered and forwarded | ok | 413 in 41 ms |
 | W · web | the web app still serves pages after the oversized bodies | ok | 200 |
 | W · web | proxy path escape refused: /api/compliance/%2e%2e/health | ok | 404 |
 | W · web | proxy path escape refused: /api/compliance/..%252f..%252fhealth | ok | 404 |
 | W · web | proxy path escape refused: /api/compliance/terms/0xZZ | ok | 404 |
-| W · web | proxy path escape refused: /api/compliance/terms/0x76Fb190F8c273c1aFAB5a1B9646e4f94d0E13d85/../../health | ok | 404 |
+| W · web | proxy path escape refused: /api/compliance/terms/0x1e0193C43B323490512C126beB22e425E6DE8C11/../../health | ok | 404 |
 | W · web | proxy path escape refused: /api/compliance/attest%00 | ok | 404 |
 | W · web | proxy path escape refused: /api/alerts/..%2fhealth | ok | 404 |
 | W · web | proxy path escape refused: /api/alerts/settings/../../admin | ok | 404 |
@@ -60,14 +60,14 @@ Feed session open. With real bypass transactions (tester key).
 | P · API | hostile input /v1/markets/NVDA/events?limit=999999999 | ok | 400 |
 | P · API | hostile input /v1/protocol/revenue?from=abc | ok | 400 |
 | P · API | hostile input /v1/protocol/revenue?from=5&to=1 | ok | 400 |
-| P · API | hostile input /v1/positions/0x76fb190f8c273c1afab5a1b9646e4f94d0e13d85 | ok | 200 |
-| P · API | hostile input /v1/positions/0x76FB190F8C273C1AFAB5A1B9646E4F94D0E13D85 | ok | 200 |
+| P · API | hostile input /v1/positions/0x1e0193c43b323490512c126beb22e425e6de8c11 | ok | 200 |
+| P · API | hostile input /v1/positions/0x1E0193C43B323490512C126BEB22E425E6DE8C11 | ok | 200 |
 | P · API | hostile input /v1/markets/nvda | ok | 200 |
 | P · API | hostile input /v1/markets/%F0%9F%92%A9 | ok | 400 |
 | P · API | hostile input /v1/markets/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA | ok | 400 |
 | P · API | hostile input /v1/vault/account/0x0000000000000000000000000000000000000000 | ok | 200 |
 | P · API | hostile input /v1/definitely-not-a-route | ok | 404 |
-| P · API | history CSV is CSV (SI-R12) | ok | text/csv; charset=utf-8, 62 lines |
+| P · API | history CSV is CSV (SI-R12) | ok | text/csv; charset=utf-8, 69 lines |
 | P · API | POST on a read route → 404/405 | ok | 404 |
 | P · API | CORS never reflects an arbitrary origin with credentials | ok | allow-origin *, credentials no |
 | P · API | WebSocket: welcome, a push on a new block, message flood closes it (OFF-11), one free socket per IP (SI-R10) | ok | 22 messages; second socket → 0; flood → close 1008 |
@@ -81,16 +81,16 @@ Feed session open. With real bypass transactions (tester key).
 | K · compliance | a sanctioned address (deny-list) is never attested | ok | 403 {"code":"SANCTIONED","error":"this wallet cannot open positions"} |
 | K · compliance | compliance direct: forged proxy secret is not trusted (CP-R8) | ok | 403 {"code":"GEO_UNKNOWN","error":"your location could not be de |
 | K · compliance | compliance direct: a 12 MB body is refused | ok | 403 |
-| R · router (simulated) | router.listMarket from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper…" |
-| R · router (simulated) | router.delistMarket from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper…" |
-| R · router (simulated) | router.setCapOverride from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper…" |
-| R · router (simulated) | router.setGlobalCap from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper…" |
-| R · router (simulated) | router.setAttestationSigner from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper…" |
-| R · router (simulated) | router.setSwapTarget from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper…" |
-| R · router (simulated) | router.transferOwnership from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper…" |
-| R · router (simulated) | router.upgradeToAndCall from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper…" |
-| R · router (simulated) | clUSDG.mint outside the router → NotRouter (CL-R2) | ok | reverted: NotRouter → "clUSDG collateral moves only through the Lendora router (or Morpho);…" |
-| R · router (simulated) | clUSDG wallet-to-wallet transfer → TransferNotAllowed (CL-R3) | ok | reverted: TransferNotAllowed → "clUSDG collateral moves only through the Lendora router (or Morpho);…" |
+| R · router (simulated) | router.listMarket from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper);…" |
+| R · router (simulated) | router.delistMarket from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper);…" |
+| R · router (simulated) | router.setCapOverride from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper);…" |
+| R · router (simulated) | router.setGlobalCap from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper);…" |
+| R · router (simulated) | router.setAttestationSigner from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper);…" |
+| R · router (simulated) | router.setSwapTarget from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper);…" |
+| R · router (simulated) | router.transferOwnership from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper);…" |
+| R · router (simulated) | router.upgradeToAndCall from a stranger → NotOwner | ok | reverted: NotOwner → "This action is reserved to a Lendora role (owner, guardian or keeper);…" |
+| R · router (simulated) | clUSDG.mint outside the router → NotRouter (CL-R2) | ok | reverted: NotRouter → "clUSDG collateral moves only through the Lendora router (or Morpho); i…" |
+| R · router (simulated) | clUSDG wallet-to-wallet transfer → TransferNotAllowed (CL-R3) | ok | reverted: TransferNotAllowed → "clUSDG collateral moves only through the Lendora router (or Morpho); i…" |
 | R · router (simulated) | lend to the zero address is refused (shares would be lost) | ok | reverted: ZeroAddress → "The recipient address is empty (0x0). Send to your own wallet address.…" |
 | R · router (simulated) | lend more than the balance → ERC20InsufficientBalance | ok | reverted: Your balance is too low for this amount. The contract function "lend" reverted w → "Your balance is too low for this amount.…" |
 | R · router (simulated) | lend with minShares above the preview → InsufficientOutput | ok | reverted: InsufficientOutput → "The swap returned less than your minimum (price moved beyond your slip…" |
@@ -108,25 +108,25 @@ Feed session open. With real bypass transactions (tester key).
 | R · router (simulated) | faucet: a second claim inside 24h → TooSoon (decoded) | ok | reverted: TooSoon → "You already claimed test tokens in the last 24 hours. The next claim o…" |
 | R · router (simulated) | faucet: anyone can claim for any fresh address (sybil, testnet only) | ok | allowed: one wallet can drip for unlimited fresh addresses (mock tokens only; P3) |
 | R · router (simulated) | vault: requestRedeem 0 → ZeroAmount; to the zero address → ZeroAddress; for someone else without allowance → refused | ok | reverted: ERC20InsufficientAllowance → "The approval is too low. Approve again.…" |
-| R · router (simulated) | vault: a dust deposit (1 USDG unit) mints shares or reverts ZeroAmount, never 0 shares for your USDG | ok | 1 unit → 999935400383 shares |
+| R · router (simulated) | vault: a dust deposit (1 USDG unit) mints shares or reverts ZeroAmount, never 0 shares for your USDG | ok | 1 unit → 999910280583 shares |
 | R · router (simulated) | vault: deposit to the zero address is refused | ok | reverted: ERC20InvalidReceiver → "The recipient address is empty (0x0). Send to your own wallet address.…" |
 | R · router (simulated) | vault: guardian and fee setters from a stranger are refused | ok | setDepositsPaused: NotGuardian, setTotalCap: OwnableUnauthorizedAccount, setBufferBps: OwnableUnauthorizedAccount, setFeeRecipient: OwnableUnauthorizedAccount |
-| X · bypass (real txs) | setup: lend 1 NVDA and wait for the allocator to supply the market | ok | lent in 0xfc6493a203233b15c40cefd35232337392a6084260428bd2848c6d89c7bc9875 |
-| X · bypass (real txs) | setup: an attested borrow at Morpho health 1.6 (router HF at t+24h ≥ 1.1) | ok | borrowed 0.41745193779119466 NVDA in 0x11d99fd63da373308d1bb650408eb3ca1c400295fa9691d37b8982690a6c61a4; HF at t+24h 1.600 |
+| X · bypass (real txs) | setup: lend 1 NVDA and wait for the allocator to supply the market | ok | lent in 0x5e307ed9d70284e9636bfec10529f902f3187d78ab9ca987434b9bdee44f8477 |
+| X · bypass (real txs) | setup: an attested borrow at Morpho health 1.6 (router HF at t+24h ≥ 1.1) | ok | borrowed 0.41984852069227535 NVDA in 0xe1c09e669ced63af3da6bdb4718242600b8ffb2140568bf09cf9d72991d9929d; HF at t+24h 1.600 |
 | X · bypass (real txs) | residual (e): router.withdrawCollateral with debt can go below the 24h buffer, down to Morpho's LLTV (05 §1 (e); the app only offers it with no debt) | ok | RESIDUAL (e) confirmed: withdrawing 71.25 of 200 USDG would leave Morpho HF 1.03 (HF at t+24h < 1.1); simulated only |
-| X · bypass (real txs) | residual (e) live: a direct Morpho withdrawal to HF(t+24h) 1.05 is accepted and the monitor pages COLLATERAL_BELOW_BUFFER (MON-R26, T10) | ok | withdrew 68.749999 clUSDG in 0xda85680376b62bb061a7b08e72ccb9c1f1abf22ffd54a2b2bbd9d798a4e7d4cb (HF at t+24h 1.050); paged NVDA:0x8571b0664e409f4bb06f71b5dfb1d5ea45d78282, path direct |
-| X · bypass (real txs) | residual (e) live: supplying the collateral back resolves COLLATERAL_BELOW_BUFFER | ok | resupplied in 0x1c510e310a3b836f085c5eddf84e2916251af4a7b44f7e30819b36eb8254e01b; incident resolved |
-| X · bypass (real txs) | residual (d): an attested wallet hands clUSDG to a never-attested wallet through Morpho | ok | withdrew 20 clUSDG from Morpho and supplied it for 0x91933d00106F682e034C97a7739B31ea0657008d in 0x825f1aaed06f78e919e65654dca0a77fc6bb315118f7cd641087a33972e35d28 |
-| X · bypass (real txs) | residual (d): the never-attested wallet borrows on Morpho directly (no terms, no attestation, no cap; 05 §1 (d)) | ok | RESIDUAL (d) confirmed: a wallet that never passed compliance borrowed 0.001 wNVDA in 0xf66d464a0858fa686e9613c0fbcd80cea245f93f1bb1a71256b665660ae5a554; detection below |
-| X · bypass (real txs) | the monitor pages DIRECT_BORROW for that borrow and names the supplier (MON-R10, T9) | ok | paged: NVDA:0x91933d00106f682e034c97a7739b31ea0657008d; collateral supplied by 0x8571b0664e409f4bb06f71b5dfb1d5ea45d78282 |
-| X · bypass (real txs) | unwind: repay the ghost's debt through the router (anyone may repay anyone), its collateral back to USDG | ok | ghost debt 0, 20 clUSDG unwrapped to USDG for the tester in 0x894668c1a60475c0e9d613c338a8d2ee9f2f138c985a044ed8866d58951d0349 |
+| X · bypass (real txs) | residual (e) live: a direct Morpho withdrawal to HF(t+24h) 1.05 is accepted and the monitor pages COLLATERAL_BELOW_BUFFER (MON-R26, T10) | ok | withdrew 68.749999 clUSDG in 0xcc682a6601cccd24d5141f6ae1ea4e47eb501756f6f9471abf7535bf938814ee (HF at t+24h 1.050); paged NVDA:0x8571b0664e409f4bb06f71b5dfb1d5ea45d78282, path direct |
+| X · bypass (real txs) | residual (e) live: supplying the collateral back resolves COLLATERAL_BELOW_BUFFER | ok | resupplied in 0xd00afd0150e1ce684c393fe01747e834c210d46bcaac2b75ba08de59634b82df; incident resolved |
+| X · bypass (real txs) | residual (d): an attested wallet hands clUSDG to a never-attested wallet through Morpho | ok | withdrew 20 clUSDG from Morpho and supplied it for 0x1c9582D1D914c300BcF9e652ce6055F90D386034 in 0xb5c746dcdc4df86e5a198b5701517db8af27991bb8e576dc55c92685d3ef9e87 |
+| X · bypass (real txs) | residual (d): the never-attested wallet borrows on Morpho directly (no terms, no attestation, no cap; 05 §1 (d)) | ok | RESIDUAL (d) confirmed: a wallet that never passed compliance borrowed 0.001 wNVDA in 0x76b954a53b837610cf086a54fe0737afbbb243eea068a1af6ab5cd204cfc0755; detection below |
+| X · bypass (real txs) | the monitor pages DIRECT_BORROW for that borrow and names the supplier (MON-R10, T9) | ok | paged: NVDA:0x1c9582d1d914c300bcf9e652ce6055f90d386034; collateral supplied by 0x8571b0664e409f4bb06f71b5dfb1d5ea45d78282 |
+| X · bypass (real txs) | unwind: repay the ghost's debt through the router (anyone may repay anyone), its collateral back to USDG | ok | ghost debt 0, 20 clUSDG unwrapped to USDG for the tester in 0x48670a70021c5180000090efce21e189b87526f777f2ea0ba0c0cc9653d1e0fc |
 | X · bypass (real txs) | rescue top-up by a third party for a position with debt (RT-R8: anyone may top up anyone) | ok | collateral 180 → 185 USDG |
-| X · bypass (real txs) | repay more than the debt refunds the excess (RT-R4) | ok | debt 0.4174519690306282, spent 0.4174519735885458 |
-| X · bypass (real txs) | unwind: withdraw all collateral and the lend | ok | withdrawn in 0x3d9b05d57b4d6a3478c313cb778244f697f821ffbd4724dbdf378657570ef075 |
-| X · bypass (real txs) | vault: a 1-share withdrawal request goes through the queue and claims 0 without breaking the API | ok | request 16 claimed (0xaa4389b2ee1a5ef185e36c81288bedf95959ccdef5986d5ba4b484ccb80707cf); a second claim → NotClaimable; API: claimed |
+| X · bypass (real txs) | repay more than the debt refunds the excess (RT-R4) | ok | debt 0.4198485353636699, spent 0.4198485376596791 |
+| X · bypass (real txs) | unwind: withdraw all collateral and the lend | ok | withdrawn in 0x2248e8cd9a601af76e1d37906b52515de33ddbb99e9bfff28a3e95e39054ae3d |
+| X · bypass (real txs) | vault: a 1-share withdrawal request goes through the queue and claims 0 without breaking the API | ok | request 21 claimed (0x2d74fe0686c8c5f16345a4e55d1223b020fec80a85d8b5154b41f3ef85bc058b); a second claim → NotClaimable; API: claimed |
 | S · invariants | the router holds no tokens between transactions | ok | 8 tokens, all 0 |
 | S · invariants | clUSDG backing ≥ supply (CL-R6); each wrapper's backing ≥ supply | ok | clUSDG 0, AAPL ok, NVDA ok, SPY ok |
-| S · invariants | API positions equal Morpho at the API's block | ok | at 126774662: AAPL 0/0, NVDA 0/0, SPY 0/0 |
-| Z · abuse | API burst without a key: 429 with Retry-After after the free budget (SI-R10), keyed still served | ok | 30/90 limited, Retry-After 58s; keyed → 200 |
+| S · invariants | API positions equal Morpho at the API's block | ok | at 126889033: AAPL 0/0, NVDA 0/0, SPY 0/0 |
+| Z · abuse | API burst without a key: 429 with Retry-After after the free budget (SI-R10), keyed still served | ok | 30/90 limited, Retry-After 49s; keyed → 200 |
 | Z · abuse | pages keep rendering real data while this IP's API budget is exhausted (server-side calls share the web server's IP) | ok | 24/24 rendered |
 | Z · abuse | compliance attestation flood for one fresh wallet → 429 (per-wallet / per-IP limit) | ok | 5/25 → 429 (others 403); waited out the 60 s window |
