@@ -148,7 +148,10 @@ if [ -n "${INDEXER_RPC_URL:-}" ]; then
 else
   echo "[dev] indexer shares the services' RPC (INDEXER_RPC_URL unset; see docs/runbooks/testnet.md §2)"
 fi
+# T41: also restarted when it is > 3000 blocks behind and not catching up for 10 minutes (a realtime backlog on a
+# throttled RPC never closes; the restart's ranged catch-up does).
 start indexer indexer "${COMMON[@]}" RPC_URL="$IDX_RPC" RPC_URL_ARCHIVE="$IDX_ARCHIVE" PONDER_POLLING_MS="${PONDER_POLLING_MS:-1000}" \
+  SUPERVISE_CHECK="$ROOT/scripts/lib/indexer-lag-check.sh" INDEXER_LAG_STATE="$RUN/indexer-lag.state" \
   -- "$ROOT/scripts/lib/supervise.sh" "$(bin indexer ponder)" start --schema lendora_46630 --views-schema "$INDEXER_VIEWS" --port 42069
 start api api "${COMMON[@]}" INDEXER_SCHEMA="$INDEXER_VIEWS" API_SCHEMA=lendora_api_testnet PORT=42070 SIWE_DOMAIN=localhost:3000 DN_LIVE_CACHE_MS=3000 \
   -- "$TSX" src/index.ts

@@ -67,5 +67,28 @@ describe("detached services (scripts/lib/detached.sh)", () => {
     bash("detached_stop svc", env);
     expect(bash("detached_alive svc && echo yes || echo no", env).trim()).toBe("no");
   });
-});
 
+  it("T41 supervise restarts a service whose health check keeps failing (46630: the indexer drifted 151k blocks behind while running)", () => {
+    const SUP = resolve(__dirname, "../../../scripts/lib/supervise.sh");
+    const dir = mkdtempSync(join(tmpdir(), "supervise-check-"));
+    // The service never exits; the check fails until the second start, then passes.
+    const env = {RUN: dir, LOGS: dir, ROOT: "/", SUPERVISE_DELAY_SEC: "0.2", SUPERVISE_CHECK: `[ "$(wc -l < "${dir}/runs")" -ge 2 ]`, SUPERVISE_CHECK_EVERY_SEC: "0.2", SUPERVISE_CHECK_FAILS: "3"};
+    const svc = `echo run >> "${dir}/runs"; exec sleep 300`;
+    bash(`detached_start svc tmp X=1 -- "${SUP}" sh -c '${svc}'`, env);
+    let runs = 0;
+    for (let i = 0; i < 100 && runs < 2; i++) {
+      try {
+        runs = readFileSync(join(dir, "runs"), "utf8").trim().split("\n").length;
+      } catch {
+        /* not started yet */
+      }
+      execFileSync("sleep", ["0.1"]);
+    }
+    expect(runs, "restarted once the check failed 3 times in a row").toBe(2);
+    execFileSync("sleep", ["1.5"]);
+    expect(readFileSync(join(dir, "runs"), "utf8").trim().split("\n").length, "a passing check leaves it running").toBe(2);
+    expect(readFileSync(join(dir, "svc.log"), "utf8")).toMatch(/\[supervise\] health check failed 3 times, restarting/);
+    bash("detached_stop svc", env);
+    expect(bash("detached_alive svc && echo yes || echo no", env).trim()).toBe("no");
+  });
+});
