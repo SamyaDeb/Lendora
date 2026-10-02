@@ -11,7 +11,7 @@ if (process.env.TESTNET_GO !== "yes" || !process.env.SMOKE_KEY) {
 
 export default defineConfig({
   testDir: "e2e",
-  testMatch: /(^|\/)testnet\.spec\.ts$/,
+  testMatch: /(^|\/)testnet(Edge)?\.spec\.ts$/,
   workers: 1,
   fullyParallel: false,
   retries: 0,
