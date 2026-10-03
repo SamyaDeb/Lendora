@@ -1,5 +1,5 @@
 # Lendora
-
+<img width="1452" height="798" alt="Screenshot 2026-10-03 at 11 30 50 AM" src="https://github.com/user-attachments/assets/1678642d-b9f3-4930-a020-92a889aea03f" />
 Stock lending on Robinhood Chain, built on unmodified Morpho Blue and Morpho Vault V2.
 
 [![ci](https://github.com/SamyaDeb/Lendora/actions/workflows/ci.yml/badge.svg)](https://github.com/SamyaDeb/Lendora/actions/workflows/ci.yml)
